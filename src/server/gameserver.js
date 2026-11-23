@@ -67,6 +67,7 @@ export class GameServer {
     if (name.length < 2) return { ok: false, error: 'Names need at least 2 letters.' };
     const key = name.toLowerCase();
     let P = this.players.get(this.byName.get(key));
+    if (P && create) return { ok: false, error: 'That name is already taken. If it is yours, use "Log in as existing".' };
     if (!P) {
       if (!create) return { ok: false, error: 'No such character.' };
       if (!BASE_CLASSES.includes(create.classId)) return { ok: false, error: 'Pick one of the six starting classes.' };

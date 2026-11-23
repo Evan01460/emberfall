@@ -36,7 +36,9 @@ export { sendChunked, chunkReader };
 export async function connectPublic(login, room = PUBLIC_ROOM) {
   const id = idFor(room);
   // the restore copy of this character (if this browser has played it before) travels with the login
-  const vault = load(CKEY(login.name)); if (vault?.P && !login.create) login = { ...login, restore: vault.P };
+  const vault = load(CKEY(login.name));
+  if (vault?.P && login.create) throw new Error(`A character named ${login.name} is saved in this browser. Creating a new one would overwrite it — use "Log in as existing" (it restores that character), or pick another name.`);
+  if (vault?.P) login = { ...login, restore: vault.P };
   try { return await joinAsGuest(login, room, id); }
   catch (e) { if (e.code !== 'nohost') throw e; }
   try { return await becomeHost(login, room, id); }

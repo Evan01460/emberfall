@@ -20,7 +20,9 @@ export function connectWs(url, login) {
     net.send = (m) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)); };
     net.close = () => { net.closed = true; try { ws.close(); } catch {} };
     const VK = `emberfall-vault-${(() => { try { return new URL(url).host; } catch { return 'x'; } })()}-${String(login.name ?? '').trim().toLowerCase()}`;
-    let restore = null; try { restore = !login.create ? JSON.parse(localStorage.getItem(VK) ?? 'null') : null; } catch { /* none */ }
+    let restore = null; try { restore = JSON.parse(localStorage.getItem(VK) ?? 'null'); } catch { /* none */ }
+    if (login.create && restore) { clearTimeout(timer); try { ws.close(); } catch {} return reject(new Error(`A character named ${login.name} is saved in this browser from this server. Creating a new one would overwrite it — use "Log in as existing" (it restores that character), or pick another name.`)); }
+    if (login.create) restore = null;
     ws.onopen = () => ws.send(JSON.stringify({ t: 'login', ...login, ...(restore ? { restore } : {}) }));
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch { return; }

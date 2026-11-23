@@ -113,3 +113,9 @@ test('if the world is wiped, what the market was holding for a player (listings,
   assert.equal(R.count(P, 'iron_ore'), ore0 + 10); assert.ok(P.gear.some((x) => x.id === 'iron_sword' && x.q === 0.8)); assert.ok(P.mail.some((m) => /market was holding/.test(m)));
   const B = installRestored(fresh, JSON.parse(JSON.stringify(buyer.P))); const gold = B.gilt; applyHeld(B, heldB); assert.equal(B.gilt, gold + 200, 'escrowed gilt is returned');
 });
+
+test('creating a character with a name that already exists never replaces or re-enters it', () => {
+  const { srv } = world(); const a = client(srv, 'Taken', 'warrior'); a.P.level = 9; a.P.gilt = 777; const id = a.P.id;
+  const conn = { msgs: [], send(m) { this.msgs.push(m); }, session: null }; const r = srv.join(conn, { name: 'taken', create: { classId: 'mage' } });
+  assert.equal(r.ok, false); assert.match(r.error, /already taken/); assert.equal(srv.players.get(id).level, 9); assert.equal(srv.players.get(id).gilt, 777); assert.equal(srv.players.get(id).classId, 'warrior'); assert.equal(srv.players.size, 1);
+});

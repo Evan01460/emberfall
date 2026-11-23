@@ -10,7 +10,7 @@ characters, monsters, icons, attack effects, text and UI are drawn in code as pi
 ```bash
 npm install
 npm start            # online server + game at http://localhost:8080
-npm test             # 84 tests
+npm test             # 85 tests
 npm run build        # → dist/emberfall.html : one self-contained file, solo mode, double-click to play
 ```
 

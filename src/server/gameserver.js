@@ -284,6 +284,7 @@ export class GameServer {
   }
 
   afterChange(S) {
+    for (const t of R.earnTitles(S.P)) this.toast(S, ` New title earned: ${t.name} — wear it from Character > Journal.`, 'secret');
     this.levelNotices(S); if (this.reqs?.some((r) => r.to === S.id && r.status === 'accepted')) this.pushReqs(S);   // a crafter's open requests re-check what they now hold
     for (const h of R.checkHints(S.P)) this.toast(S, ' Your journal has a new entry.', 'secret');
     this.touch(S);
@@ -737,7 +738,7 @@ export class GameServer {
     const groups = {}, nw = this.now();
     for (const S of this.sessions.values()) (groups[S.map] ??= []).push(S);
     for (const [mapId, list] of Object.entries(groups)) {
-      const players = list.map((S) => ({ id: S.id, n: S.P.name, c: S.P.classId, l: S.P.level, x: +S.x.toFixed(2), y: +S.y.toFixed(2), d: S.dir, mv: S.moving ? 1 : 0, a: +S.aim.toFixed(2), h: Math.round(S.hp), mh: S.rt.maxHp, mp: Math.round(S.mp), mm: S.rt.maxMp, dd: S.dead ? 1 : 0, gd: nw < S.guardUntil ? 1 : 0, sl: nw < S.stealthUntil ? 1 : 0, sn: nw < S.stunUntil ? 1 : 0, dl: S.duel ? 1 : 0, pv: S.pvp ? 1 : 0, sh: S.shield > 0 && nw < S.shieldUntil ? 1 : 0, g: S.gather ? 1 : 0, pt: S.partyId, gl: S.P.guild ?? null }));
+      const players = list.map((S) => ({ id: S.id, n: S.P.name, c: S.P.classId, as: S.P.asc?.path ?? null, tt: S.P.title ?? null, l: S.P.level, x: +S.x.toFixed(2), y: +S.y.toFixed(2), d: S.dir, mv: S.moving ? 1 : 0, a: +S.aim.toFixed(2), h: Math.round(S.hp), mh: S.rt.maxHp, mp: Math.round(S.mp), mm: S.rt.maxMp, dd: S.dead ? 1 : 0, gd: nw < S.guardUntil ? 1 : 0, sl: nw < S.stealthUntil ? 1 : 0, sn: nw < S.stunUntil ? 1 : 0, dl: S.duel ? 1 : 0, pv: S.pvp ? 1 : 0, sh: S.shield > 0 && nw < S.shieldUntil ? 1 : 0, g: S.gather ? 1 : 0, pt: S.partyId, gl: S.P.guild ?? null }));
       const mobs = this.mobs.filter((m) => m.map === mapId && !m.deadUntil).map((m) => ({ id: m.id, k: m.key, l: m.level, x: +m.x.toFixed(2), y: +m.y.toFixed(2), h: Math.round(m.hp), mh: m.maxHp, nm: m.name, bo: m.boss ? 1 : 0, rd: m.radius, sn: m.stunUntil > nw ? 1 : 0, vu: m.vulnUntil > nw ? 1 : 0, ch: m.target ? 1 : 0, fl: nw - m.flash < 120 ? 1 : 0, en: m.enraged ? 1 : 0,
         w: m.wind ? { k: m.wind.mv.kind, p: Math.min(1, (nw - m.wind.t0) / m.wind.dur), a: +m.wind.a.toFixed(2), tx: +m.wind.tx.toFixed(2), ty: +m.wind.ty.toFixed(2), r: m.wind.mv.radius ?? 0, rg: m.wind.mv.range ?? 0, ar: m.wind.mv.arc ?? 0, at: m.wind.mv.at ?? '', ds: m.wind.mv.dist ?? 0 } : null }));
       const projs = this.projs.filter((p) => p.map === mapId).map((p) => ({ id: p.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), vx: +p.vx.toFixed(2), vy: +p.vy.toFixed(2), r: p.r, o: p.owner.k, ty: p.type, c: p.col ?? null, vi: p.vi ?? null, f: p.face ?? null }));
@@ -752,6 +753,7 @@ export class GameServer {
   }
 
   on_ping(S, m) { S.conn.send({ t: 'pong', c: m.c, now: this.now() }); }
+  on_title_set(S, m) { if (R.setTitle(S.P, typeof m.title === 'string' ? m.title : null)) { this.touch(S); this.toast(S, S.P.title ? `Now wearing the title ${S.P.title}.` : 'Title removed.', ''); } }
   on_who(S) { S.conn.send({ t: 'who', players: [...this.sessions.values()].map((o) => ({ n: o.P.name, c: o.P.classId, l: o.P.level, map: getMap(o.map).name })) }); }
 }
 

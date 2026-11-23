@@ -8,6 +8,7 @@ import * as I from './icons.js';
 import { refreshWindow, gearLabel } from './panels.js';
 import { gearFxLines } from './customui.js';
 import { whisperTo } from './ui.js';
+import { browser, pickCard, statChips, fitIcons, ingredientRow } from './browse.js';
 
 const send = (m) => G.net.send(m), netSend = send;
 const FAM = { blacksmith: 'Blacksmith', alchemist: 'Alchemist' };
@@ -48,7 +49,7 @@ function reqCard(r, me) {
   else actions = [h('button', { class: 'btn small', disabled: r.have < r.qty, title: r.have < r.qty ? 'Make it first' : 'Tell them it is ready', onclick: () => send({ t: 'req.ready', id: r.id }) }, r.ready ? 'Tell again: ready' : 'It is ready'),
     h('button', { class: 'btn small primary', disabled: r.have < r.qty, onclick: () => { const uids = r.stock ? (picked.get(r.id)?.length === r.qty ? picked.get(r.id) : r.stock.slice(0, r.qty).map((g) => g.uid)) : undefined; send({ t: 'req.deliver', id: r.id, uids }); picked.delete(r.id); } }, `Deliver for ${fmt(r.price)}g`), h('button', { class: 'btn small ghost', onclick: () => send({ t: 'req.reject', id: r.id }) }, 'Call off'), ...common];
   return h('div', { class: 'card', style: { marginBottom: '8px' } },
-    h('div', { class: 'row sb' }, h('div', {}, h('div', { class: 'dim', style: { fontSize: '12px' } }, head), itemRow(r.itemId, r.qty)), h('div', { style: { textAlign: 'right' } }, h('b', { class: 'gold' }, `${fmt(r.price)}g`), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '3px' } }, tags))),
+    h('div', { class: 'row sb' }, h('div', {}, h('div', { class: 'dim', style: { fontSize: '12px' } }, head), itemRow(r.itemId, r.qty), h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', marginTop: '3px' } }, ...statChips(r.itemId, r.minQ > 0 ? r.minQ : 1), fitIcons(r.itemId, me, 3))), h('div', { style: { textAlign: 'right' } }, h('b', { class: 'gold' }, `${fmt(r.price)}g`), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '3px' } }, tags))),
     !mineReq && r.status === 'pending' && !r.canMake ? h('p', { class: 'red', style: { fontSize: '12px', margin: '6px 0' } }, `You cannot make this yet (needs craft level ${r.needLvl}${r.secret ? ' and a secret recipe' : ''}). You can only reject.`) : null,
     !mineReq && r.status === 'accepted' ? h('div', {}, h('p', { class: 'dim', style: { fontSize: '12px', margin: '6px 0' } }, `You hold ${r.have} fitting ${it?.n ?? 'item'}${r.have === 1 ? '' : 's'}${r.minQ > 0 ? ` (quality ${Math.round(r.minQ * 100)}%+; customised, enchanted or special-effect pieces all count)` : ' (customised, enchanted or special-effect pieces all count)'}. ${r.have >= r.qty ? 'Pick which to hand over, then Deliver — or press Ready to tell them first.' : 'Forge or brew it at your station, then come back.'}`),
       r.stock?.length ? r.stock.map((g, i) => { const sel = picked.get(r.id) ?? r.stock.slice(0, r.qty).map((x) => x.uid), on = sel.includes(g.uid); return h('label', { class: 'row', style: { margin: '3px 0', alignItems: 'flex-start', cursor: 'pointer' } }, h('input', { type: r.qty > 1 ? 'checkbox' : 'radio', name: `pick${r.id}`, checked: on, onchange: () => { const cur = new Set(picked.get(r.id) ?? r.stock.slice(0, r.qty).map((x) => x.uid)); if (r.qty === 1) { cur.clear(); cur.add(g.uid); } else if (cur.has(g.uid)) cur.delete(g.uid); else cur.add(g.uid); picked.set(r.id, [...cur]); } }), h('span', {}, gearLabel(g), gearFxLines(g).length ? h('div', { class: 'dim', style: { fontSize: '11px' } }, gearFxLines(g).join(' · ')) : null)); }) : null,
@@ -69,17 +70,25 @@ function findView(me) {
 function draftView(me) {
   const d = draft, fam = d.fam, opts = RECIPES.filter((r) => r.craft === fam && !r.smelt && ITEMS[r.out] && ITEMS[r.out].k !== 'quest');
   if (!d.itemId || !opts.some((r) => r.out === d.itemId)) { d.itemId = opts[0]?.out; d.price = priceTag(d.itemId); }
-  const rec = opts.find((r) => r.out === d.itemId), tooHigh = d.cl != null && rec && rec.lvl > d.cl, gear = ITEMS[d.itemId]?.k === 'gear';
-  const sel = h('select', { onchange: (e) => { d.itemId = e.target.value; d.price = priceTag(d.itemId); refreshWindow('character'); } }, opts.map((r) => h('option', { value: r.out, selected: r.out === d.itemId }, `${ITEMS[r.out].n}  (craft Lv ${r.lvl}${r.secret ? ', secret' : ''})`)));
+  const recOf = () => opts.find((r) => r.out === d.itemId), detail = h('div', { class: 'card hl pickdetail' });
   const qty = h('input', { type: 'number', min: 1, max: 5, value: d.qty, style: { width: '56px' }, oninput: (e) => { d.qty = Math.max(1, Math.min(5, Math.round(+e.target.value) || 1)); } });
-  const mq = h('input', { type: 'number', min: 0, max: 99, value: Math.round(d.minQ * 100), style: { width: '60px' }, disabled: !gear, oninput: (e) => { d.minQ = Math.max(0, Math.min(99, +e.target.value || 0)) / 100; } });
+  const mq = h('input', { type: 'number', min: 0, max: 99, value: Math.round(d.minQ * 100), style: { width: '60px' }, oninput: (e) => { d.minQ = Math.max(0, Math.min(99, +e.target.value || 0)) / 100; } });
   const send = h('button', { class: 'btn primary' }, ''), upd = () => { send.textContent = `Send request (${fmt(d.price)}g in escrow)`; send.disabled = me.gilt < d.price; };
   const pr = h('input', { type: 'number', min: 1, value: d.price, style: { width: '96px' }, oninput: (e) => { d.price = Math.max(1, Math.round(+e.target.value) || 1); upd(); } });   // no re-render here: it would swallow the click on the button
-  return h('div', { class: 'card' }, h('h3', {}, `Request from ${d.to} (${FAM[fam]}${d.cl != null ? `, level ${d.cl}` : ''})`),
-    h('div', { class: 'row', style: { margin: '6px 0' } }, 'Item', sel), h('div', { class: 'row', style: { margin: '6px 0' } }, 'Qty', qty, gear ? ['Min quality %', mq] : null, 'Payment', pr, 'g'),
-    tooHigh ? h('p', { class: 'red', style: { fontSize: '12px' } }, `${d.to} is level ${d.cl}; this needs craft level ${rec.lvl}. They would only be able to reject it.`) : null,
-    h('p', { class: 'dim', style: { fontSize: '12px' } }, `The payment is held in escrow until it is delivered, or returned if they reject it or you cancel. You can haggle in private chat and propose a new price afterwards. You have ${fmt(me.gilt)}g.`),
-    h('div', { class: 'row' }, (upd(), send.onclick = () => { netSend({ t: 'req.new', to: d.to, itemId: d.itemId, qty: d.qty, minQ: d.minQ, price: d.price }); draft = null; sub = 'requests'; refreshWindow('character'); }, send), h('button', { class: 'btn ghost', onclick: () => { draft = null; refreshWindow('character'); } }, 'Back')));
+  const qRow = h('div', { class: 'row', style: { margin: '6px 0', flexWrap: 'wrap' } });
+  const paintDetail = () => {
+    const rec = recOf(), it = ITEMS[d.itemId], gear = it?.k === 'gear', tooHigh = d.cl != null && rec && rec.lvl > d.cl; if (!rec) return;
+    mq.disabled = !gear; qRow.replaceChildren('Qty', qty, gear ? ['Min quality %', mq] : null, 'Payment', pr, 'g', h('button', { class: 'btn small ghost', title: 'Suggested price', onclick: () => { d.price = priceTag(d.itemId); pr.value = d.price; upd(); } }, `Suggest ${fmt(priceTag(d.itemId))}g`));
+    detail.replaceChildren(h('div', { class: 'row', style: { gap: '12px', alignItems: 'flex-start' } }, I.item(d.itemId, 48), h('div', { style: { flex: 1 } }, h('div', { class: 'row sb' }, h('h3', { style: { margin: 0 } }, it.n), h('span', { class: 'tag' }, `craft Lv ${rec.lvl}${rec.secret ? ' · secret recipe' : ''}`)),
+      h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap', margin: '4px 0' } }, ...statChips(d.itemId), fitIcons(d.itemId, me, 6)), it.desc ? h('div', { class: 'dim', style: { fontSize: '12px' } }, it.desc) : null,
+      h('div', { class: 'dim', style: { fontSize: '12px', marginTop: '4px' } }, 'Materials the crafter needs: ', ingredientRow(rec, null)), tooHigh ? h('p', { class: 'red', style: { fontSize: '12px', margin: '6px 0 0' } }, `${d.to} is level ${d.cl}; this needs craft level ${rec.lvl}. They would only be able to reject it.`) : null)));
+  };
+  const br = browser({ key: `req-${fam}`, family: fam, recipes: opts, me, cols: 2, card: (r) => pickCard(r, { selected: r.out === d.itemId, me, crafterLvl: d.cl, onPick: (rr) => { d.itemId = rr.out; d.price = priceTag(rr.out); pr.value = d.price; upd(); paintDetail(); br.refresh(); } }) });
+  paintDetail(); upd();
+  return h('div', {}, h('div', { class: 'row sb', style: { margin: '0 0 6px' } }, h('h3', { style: { margin: 0 } }, `Request from ${d.to} (${FAM[fam]}${d.cl != null ? `, level ${d.cl}` : ''})`), h('button', { class: 'btn small ghost', onclick: () => { draft = null; refreshWindow('character'); } }, 'Back')),
+    h('div', { class: 'dim', style: { fontSize: '12px', margin: '4px 0' } }, 'Your request'), detail, qRow,
+    h('div', { class: 'row', style: { margin: '6px 0' } }, (send.onclick = () => { netSend({ t: 'req.new', to: d.to, itemId: d.itemId, qty: d.qty, minQ: d.minQ, price: d.price }); draft = null; sub = 'requests'; refreshWindow('character'); }, send), h('span', { class: 'dim', style: { fontSize: '12px' } }, `The payment is held in escrow until delivery (refunded if they reject or you cancel). You can haggle in private chat afterwards. You have ${fmt(me.gilt)}g.`)),
+    h('div', { class: 'card', style: { padding: '8px', marginTop: '8px' } }, h('div', { class: 'dim', style: { fontSize: '12px', margin: '0 0 6px' } }, 'Pick a different item — search, filter by type or metal, or sort'), br.el));
 }
 
 // ── players nearby ───────────────────────────────────────────────────────────

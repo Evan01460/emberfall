@@ -83,7 +83,7 @@ function enter({ net, welcome }) {
   view = new WorldView(canvas); view.setMap(G.map);
   view.onPrompt = setPrompt; view.onClickPlayer = (p, e) => playerMenu(p, e);
   buildHud(app, { character: () => openCharacter(), journal: () => openCharacter('journal'), help: openHelp, leave: leave, escape: () => { const t = topWindow(); if (t) closeWindow(t); }, touchKey: (k, d) => { view.keys[k] = d; }, interact: () => view.interact(), touchAttack: (d) => { view.touchAtk = d; }, touchSkill: (i) => view.useSkill(i), touchDodge: () => view.dodge() });
-  G.openAscend = () => openCharacter('ascend'); G.openTrading = () => openCharacter('trading'); G.reqs = []; G.crafters = []; G.buffs = {}; G.guild = null; G.guildLoaded = false;
+  G.refresh = refreshWindow; G.openAscend = () => openCharacter('ascend'); G.openTrading = () => openCharacter('trading'); G.reqs = []; G.crafters = []; G.buffs = {}; G.guild = null; G.guildLoaded = false;
   listen(document, 'click', (e) => { if (e.target.closest?.('.btn, .choice, .chat-tab')) sfx('click', 30); });
   wire(net); updateHud(); setTimeout(() => { if (running) startTutorial(G.me); }, 1800);
   for (const m of welcome.mail ?? []) toast(m, 'good');

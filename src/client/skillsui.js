@@ -5,6 +5,8 @@ import * as L from '../loadout.js';
 import { h } from '../ui-lib.js';
 import { ask } from './ask.js';
 import * as I from './icons.js';
+import { TITLES, titleInfo } from '../rules.js';
+import { TITLE_COL } from './badges.js';
 
 const send = (m) => G.net.send(m);
 const pct = (v) => `${v >= 1 ? '+' : ''}${Math.round((v - 1) * 100)}%`;
@@ -64,6 +66,18 @@ export function ascendTab(me) {
 export function deedsLog(me) {
   const log = me.qlog ?? [];
   return h('div', {}, h('h3', { style: { marginTop: '10px' } }, 'Hidden deeds'), log.length ? log.map((e) => h('p', { class: 'clue' }, e.text)) : h('p', { class: 'dim' }, 'Nothing you have discovered yet is worth writing down.'),
-    me.titles?.length ? h('p', {}, h('b', {}, 'Titles: '), me.titles.join(' · ')) : null,
+    titlesPanel(me),
     h('div', { class: 'row' }, h('button', { class: 'btn small ghost', onclick: () => ask('legends', 'legends') }, 'Hall of Legends'), h('button', { class: 'btn small ghost', onclick: () => ask('leaderboard', 'leaderboard') }, 'Leaderboards')));
+}
+
+// Titles: feats to show off. Click an earned title to wear it (it appears above your class plate); click it again to take it off.
+let showLocked = false;
+function titlesPanel(me) {
+  const owned = me.titles ?? [], worn = me.title ?? null, tp = (name) => titleInfo(name);
+  const chip = (name, have) => { const i = tp(name), col = TITLE_COL[i.rar] ?? '#d8cdbd', on = worn === name; return h('button', { class: `chip ${on ? 'on' : ''}`, style: { borderColor: have ? col : '#3a2d52', color: have ? col : '#6a5f80', opacity: have ? 1 : 0.7 }, title: `${i.rar} — ${i.desc}`, disabled: !have, onclick: () => { send({ t: 'title.set', title: on ? null : name }); setTimeout(() => G.refresh?.('character'), 250); } }, on ? `★ ${name}` : name); };
+  const locked = TITLES.filter((t) => !owned.includes(t.name) && t.test);
+  return h('div', { class: 'card', style: { margin: '10px 0' } }, h('div', { class: 'row sb' }, h('h3', { style: { margin: 0 } }, `Titles (${owned.length} earned)`), h('span', { class: 'dim', style: { fontSize: '12px' } }, worn ? `Wearing: ${worn}` : 'No title worn')),
+    h('div', { class: 'chips', style: { margin: '8px 0' } }, owned.length ? owned.map((n) => chip(n, true)) : h('span', { class: 'dim' }, 'Nothing earned yet — feats like levelling, crafting, trading and exploring award titles.')),
+    h('button', { class: 'btn small ghost', onclick: () => { showLocked = !showLocked; G.refresh?.('character'); } }, showLocked ? 'Hide unearned titles' : `Show ${locked.length} unearned titles`),
+    showLocked ? h('div', { style: { marginTop: '6px' } }, locked.map((t) => h('div', { class: 'row', style: { margin: '2px 0', fontSize: '12px' } }, h('span', { style: { color: '#6a5f80', minWidth: '140px' } }, t.name), h('span', { class: 'dim' }, t.desc)))) : null);
 }

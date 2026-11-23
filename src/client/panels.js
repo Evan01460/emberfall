@@ -11,6 +11,7 @@ import { prop } from './sprites.js';
 import { skillsTab, ascendTab, deedsLog } from './skillsui.js';
 import { createForgeStage } from './forgecanvas.js';
 import { tradingTab, pendingForMe } from './tradeui.js';
+import { browser, statChips, fitIcons } from './browse.js';
 import { startTutorial } from './tutorial.js';
 import { ACTIONS, keyOf, keyLabel, setKey, resetKeys, RESERVED } from './keys.js';
 import { openCustomForge, openCustomBrew, enchantPanel, gearFxLines, flaskText } from './customui.js';
@@ -135,18 +136,21 @@ let extras = new Set();
 export function openCraft(family) {
   openWindow('craft', family === 'blacksmith' ? 'Forge & Anvil' : 'Alchemist\'s Cauldron', () => {
     const me = G.me, recs = RECIPES.filter((r) => r.craft === family && (!r.secret || me.flags?.[r.secret]) && (recAll || r.lvl <= me.level + 4 || r.smelt)).sort((a, b) => a.lvl - b.lvl || a.out.localeCompare(b.out));
+    const canMake = (r) => me.level >= r.lvl && Object.entries(r.in).every(([id, n]) => count(id) >= n);
+    const bw = browser({ key: `craft-${family}`, family, recipes: recs, me, have: count, canMake, card: (r) => {
+      const it = ITEMS[r.out], locked = me.level < r.lvl, ok = canMake(r), fake = it.k === 'gear' ? { id: r.out, q: 0.5 } : null;
+      return h('div', { class: 'card cc', style: { opacity: locked ? 0.5 : 1 } },
+        h('div', { class: 'row sb' }, h('b', { class: 'row' }, I.item(r.out, 28), it.n), h('span', { class: 'tag' }, locked ? `Lv${r.lvl}` : r.smelt ? 'refine' : it.k === 'gear' ? 'gear' : it.k === 'key' ? 'key' : 'potion')),
+        h('div', { class: 'row', style: { gap: '4px', flexWrap: 'wrap', margin: '4px 0' } }, ...statChips(r.out), fitIcons(r.out, me)),
+        h('div', { style: { margin: '6px 0' } }, Object.entries(r.in).map(([id, n]) => h('div', { class: count(id) >= n ? '' : 'red' }, itemLabel(id, n), h('span', { class: 'dim' }, ` (have ${count(id)})`)))),
+        fake ? h('div', { class: 'dim', style: { fontSize: '11px' } }, gearStatText(fake) + ' @50%') : (it.desc ?? r.desc) ? h('div', { class: 'dim', style: { fontSize: '11px' } }, it.desc ?? r.desc) : null,
+        h('div', { class: 'row', style: { marginTop: '8px' } }, h('button', { class: 'btn primary', disabled: !ok, onclick: () => send({ t: 'craft.start', recipe: r.id, extras: [...extras] }) }, family === 'blacksmith' ? 'Forge' : 'Brew'), family === 'blacksmith' ? h('button', { class: 'btn small ghost', disabled: !ok, title: 'Skip the minigame (poor quality)', onclick: () => send({ t: 'craft.auto', recipe: r.id }) }, 'Auto') : null, family === 'blacksmith' && it.k === 'gear' ? h('button', { class: 'btn small gold', disabled: !ok || !canCustomise(me), title: canCustomise(me) ? 'Attach custom effects' : 'Custom work needs level 5', onclick: () => openCustomForge(r) }, 'Customize') : null));
+    } });
     return h('div', {}, h('div', { class: 'row' }, bigSprite(prop(family === 'blacksmith' ? 'anvil' : 'cauldron', 0), 64), h('p', { class: 'dim' }, family === 'blacksmith' ? 'Stop the marker inside the glowing sweet spot. Quality sets the stats and the price of everything you forge. Remember: your creations can only be sold to Merchants or to players who order them.' : 'Add catalyst for more bottles - every addition raises the risk of a burst. Your brews can only be sold to Merchants or to players who order them.')),
       family === 'alchemist' ? h('div', { class: 'card hl', style: { margin: '8px 0' } }, h('div', { class: 'row sb' }, h('div', {}, h('b', {}, 'Custom brewing'), h('div', { class: 'dim', style: { fontSize: '12px' } }, 'Draughts, thrown flasks and enchanting essences with effects you choose.')), h('button', { class: 'btn gold', disabled: !canCustomise(me), title: canCustomise(me) ? '' : 'Custom brewing needs level 5', onclick: () => openCustomBrew() }, 'Custom brew'))) : null,
       family === 'alchemist' ? h('div', { class: 'card', style: { margin: '8px 0' } }, h('b', {}, 'Reagents (optional, up to 2, consumed): '), h('span', { class: 'row', style: { display: 'inline-flex', marginLeft: '8px' } }, Object.entries(REAGENTS).map(([id, rg]) => h('button', { class: `btn small ${extras.has(id) ? 'gold' : 'ghost'}`, disabled: count(id) < 1, title: rg.note, onclick: () => { if (extras.has(id)) extras.delete(id); else if (extras.size < 2) extras.add(id); refreshWindow('craft'); } }, `${rg.name} x${count(id)}`)))) : null,
       h('div', { class: 'row', style: { margin: '4px 0' } }, h('button', { class: `btn small ${recAll ? 'gold' : 'ghost'}`, onclick: () => { recAll = !recAll; refreshWindow('craft'); } }, recAll ? 'Showing every recipe' : 'Showing recipes up to your level + 4 (click for all)')),
-      h('div', { class: 'grid g3' }, recs.map((r) => {
-        const it = ITEMS[r.out], locked = me.level < r.lvl, ok = !locked && Object.entries(r.in).every(([id, n]) => count(id) >= n), fake = it.k === 'gear' ? { id: r.out, q: 0.5 } : null;
-        return h('div', { class: 'card', style: { opacity: locked ? 0.5 : 1 } },
-          h('div', { class: 'row sb' }, h('b', { class: 'row' }, I.item(r.out, 24), it.n), h('span', { class: 'tag' }, locked ? `Lv${r.lvl}` : r.smelt ? 'refine' : it.k === 'gear' ? 'gear' : it.k === 'key' ? 'key' : 'potion')),
-          h('div', { style: { margin: '6px 0' } }, Object.entries(r.in).map(([id, n]) => h('div', { class: count(id) >= n ? '' : 'red' }, itemLabel(id, n), h('span', { class: 'dim' }, ` (have ${count(id)})`)))),
-          fake ? h('div', { class: 'dim', style: { fontSize: '11px' } }, gearStatText(fake) + ' @50%') : (it.desc ?? r.desc) ? h('div', { class: 'dim', style: { fontSize: '11px' } }, it.desc ?? r.desc) : null,
-          h('div', { class: 'row', style: { marginTop: '8px' } }, h('button', { class: 'btn primary', disabled: !ok, onclick: () => send({ t: 'craft.start', recipe: r.id, extras: [...extras] }) }, family === 'blacksmith' ? 'Forge' : 'Brew'), family === 'blacksmith' ? h('button', { class: 'btn small ghost', disabled: !ok, title: 'Skip the minigame (poor quality)', onclick: () => send({ t: 'craft.auto', recipe: r.id }) }, 'Auto') : null, family === 'blacksmith' && it.k === 'gear' ? h('button', { class: 'btn small gold', disabled: !ok || !canCustomise(me), title: canCustomise(me) ? 'Attach custom effects' : 'Custom work needs level 5', onclick: () => openCustomForge(r) }, 'Customize') : null));
-      })), family === 'blacksmith' ? enchantPanel(me) : null);
+      bw.el, family === 'blacksmith' ? enchantPanel(me) : null);
   }, { wide: true, icon: family === 'blacksmith' ? 'forge' : 'cauldron' });
 }
 
@@ -234,33 +238,65 @@ export function startForge(m) {
 }
 const rnd = Math.random;
 
-// ── cauldron: reagents → stir → catalysts → bottle ──────────────────────────
+// ── cauldron: press Space to begin → 3-2-1 → stir on the bells → catalysts → bottle ──────────────────────────────────────────────────
 export function startBrew(m) {
   const custom = m.custom ?? null, r = RECIPES.find((x) => x.id === m.recipe) ?? { out: 'heal_potion' }; closeWindow('craft');
-  const ST = m.stir ?? { beats: 6, interval: 850, window: 260 };
-  let b = m.b, done = false, frame = 0, phase = b.stirred ? 'cat' : 'stir', raf = 0, t0 = 0; const taps = [];
-  const caul = h('div', { class: 'cauldron' }), pot = h('div', { class: 'row', style: { justifyContent: 'center' } }), fill = h('i'), msg = h('div', { class: 'fb-msg dim' }), stage = h('div', { class: 'fb-msg dim', style: { fontWeight: 700 } });
+  const ST = m.stir ?? { beats: 6, interval: 850, window: 260 }, total = (ST.beats + 1) * ST.interval, beatAt = (i) => (i + 1) * ST.interval;
+  let b = m.b, done = false, frame = 0, phase = b.stirred ? 'cat' : 'ready', raf = 0, t0 = 0, combo = 0, bestCombo = 0, spaceDown = false; const taps = [], res = Array(ST.beats).fill(null), bellEls = [], resEls = [];   // res[i] = { s: score 0..1, kind, d: ms offset }
+  const caul = h('div', { class: 'cauldron' }), pot = h('div', { class: 'row', style: { justifyContent: 'center' } }), fill = h('i'), msg = h('div', { class: 'fb-msg dim', style: { minHeight: '22px' } }), stage = h('div', { class: 'fb-msg dim', style: { fontWeight: 700 } });
   const paintCaul = () => caul.replaceChildren(bigSprite(prop('cauldron', frame % 3), 112));
-  const bells = h('div', { class: 'fbar' }), mark = h('div', { class: 'fmark' }); bells.append(...Array.from({ length: ST.beats }, (_, i) => h('div', { class: 'fbell', style: { left: `${((i + 1) / (ST.beats + 1)) * 100}%` } })), mark);
-  const stirBtn = h('button', { class: 'btn primary', style: { fontSize: '16px', padding: '10px 28px' }, onclick: () => tap() }, 'STIR!');
+  // the rhythm track: six numbered bells, a smooth marker, a result under every bell and a tick wherever you stirred
+  const track = h('div', { class: 'btrack' }), mark = h('div', { class: 'bmark' }), cd = h('div', { class: 'bcount' });
+  for (let i = 0; i < ST.beats; i++) { const x = `${((i + 1) / (ST.beats + 1)) * 100}%`, wid = `${(ST.window / total) * 200}%`; const zone = h('div', { class: 'bzone', style: { left: x, width: wid } }), bell = h('div', { class: 'bbell', style: { left: x } }, h('span', {}, `${i + 1}`)), rs = h('div', { class: 'bres', style: { left: x } }, ''); bellEls.push(bell); resEls.push(rs); track.append(zone, bell, rs); }
+  track.append(mark, cd);
+  const comboEl = h('div', { class: 'bcombo' }, ''), purEl = h('span', { class: 'tag v' }, 'Purity 0%'), bellN = h('span', { class: 'tag' }, `Bell 0 / ${ST.beats}`), pops = h('div', { class: 'bpops' });
+  const stirBtn = h('button', { class: 'btn primary', style: { fontSize: '16px', padding: '10px 28px', touchAction: 'none' } }, 'PRESS SPACE TO BEGIN');
+  const guide = h('div', { class: 'card bguide' }, h('div', {}, h('b', { class: 'gold' }, 'How to stir'), ' — it is a rhythm game:'), h('ol', {}, h('li', {}, 'Press ', h('b', {}, 'SPACE'), ' (or the button) to begin. A 3-2-1 countdown follows.'), h('li', {}, 'A glowing marker sweeps across ', h('b', {}, '6 purple bells'), '. Press SPACE just as it is over a bell.'), h('li', {}, 'Each bell is scored on its own — the closer, the better. ', h('b', { class: 'gold' }, 'Purity'), ' sets how strong and stable the potion is.')));
   const add = h('button', { class: 'btn primary', onclick: () => { add.disabled = true; send({ t: 'brew.add' }); } }, 'Add catalyst'), stop = h('button', { class: 'btn gold', onclick: () => { add.disabled = stop.disabled = true; send({ t: 'brew.bottle' }); } }, 'Bottle it');
-  const meter = h('div', {}, h('div', { class: 'row sb dim', style: { fontSize: '12px' } }, h('span', {}, 'Stability'), h('span', {}, 'Volatile')), h('div', { class: 'meter' }, fill));
-  const tags = h('div', { class: 'row', style: { justifyContent: 'center', margin: '4px 0' } });
-  const paint = () => { pot.replaceChildren(...Array.from({ length: Math.min(5, b.potency) }, () => (custom ? I.iconEl(I.flaskIcon(custom.form), 32) : I.item(r.out, 32)))); fill.style.width = `${Math.min(100, Math.round(b.instab * 25) * 4)}%`; add.disabled = done || b.potency >= 5; tags.replaceChildren(...(b.extras ?? []).map((id) => h('span', { class: 'tag g' }, `+ ${ITEMS[id].n}`)), b.stirred ? h('span', { class: 'tag v' }, `Purity ${Math.round((b.purity ?? 0) * 100)}%`) : null); };
-  const key = (e) => { if (e.code === 'Space') { e.preventDefault(); if (phase === 'stir') tap(); } };
-  document.addEventListener('keydown', key);
-  const anim = setInterval(() => { frame++; paintCaul(); }, 300);
+  const tags = h('div', { class: 'row', style: { justifyContent: 'center', margin: '4px 0' } }), riskEl = h('div', { class: 'brisk' });
+  const meter = h('div', {}, h('div', { class: 'row sb dim', style: { fontSize: '12px' } }, h('span', {}, 'Stability'), h('span', {}, 'About to burst')), h('div', { class: 'meter' }, fill));
+  const riskNow = () => { const lvl = G.me?.level ?? 1, step = Math.min(0.13, Math.max(0.07, 0.13 - lvl * 0.004)); return b.instab <= 0 ? 0 : Math.min(0.95, b.instab + step); };
+  const paint = () => {
+    pot.replaceChildren(...Array.from({ length: Math.min(5, b.potency) }, () => (custom ? I.iconEl(I.flaskIcon(custom.form), 32) : I.item(r.out, 32)))); fill.style.width = `${Math.min(100, Math.round(b.instab * 25) * 4)}%`; add.disabled = done || b.potency >= 5;
+    const risk = Math.round(riskNow() * 100); riskEl.replaceChildren(h('div', { class: 'row', style: { justifyContent: 'center', gap: '18px' } }, h('span', {}, 'Bottles ', h('b', { class: 'gold', style: { fontSize: '18px' } }, `${b.potency}`), h('span', { class: 'dim' }, ' / 5')), h('span', {}, 'Burst risk for the next catalyst ', h('b', { style: { fontSize: '18px', color: risk < 20 ? '#6fc08b' : risk < 40 ? '#ffd36a' : '#e0645a' } }, `${risk}%`))));
+    add.textContent = b.potency >= 5 ? 'Cauldron is full' : `Add catalyst (+1 bottle, ${risk}% burst)`; stop.textContent = `Bottle it (keep ${b.potency})`;
+    tags.replaceChildren(...[...(b.extras ?? []).map((id) => h('span', { class: 'tag g' }, `+ ${ITEMS[id].n}`)), b.stirred ? h('span', { class: 'tag v' }, `Purity ${Math.round((b.purity ?? 0) * 100)}%`) : null].filter(Boolean));
+  };
   const body = h('div', {});
   const setPhase = () => {
-    if (phase === 'stir') { stage.textContent = '1 / 2 · STIR IN RHYTHM'; stage.style.color = '#a98ad8'; msg.textContent = 'Stir (Space) as the marker crosses each bell. Clean stirring makes a stronger, steadier potion.'; body.replaceChildren(bells, h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '10px' } }, stirBtn)); }
-    else { stage.textContent = '2 / 2 · CATALYSTS'; stage.style.color = '#6fc08b'; msg.textContent = 'Add catalyst for more bottles. Every addition raises the risk of a burst.'; msg.style.color = ''; body.replaceChildren(meter, h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, add, stop)); paint(); }
+    if (phase === 'ready') { stage.textContent = '1 / 2 · STIR IN RHYTHM'; stage.style.color = '#a98ad8'; msg.textContent = 'Take your time — nothing starts until you press SPACE.'; body.replaceChildren(guide, track, h('div', { class: 'row', style: { justifyContent: 'center', gap: '10px', margin: '6px 0' } }, bellN, purEl, comboEl), pops, h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '8px' } }, stirBtn)); }
+    else if (phase === 'cat') { stage.textContent = '2 / 2 · CATALYSTS (press your luck)'; stage.style.color = '#6fc08b'; msg.style.color = ''; msg.textContent = 'Each catalyst adds a bottle but risks the whole batch bursting. Bottle it whenever you are happy.'; body.replaceChildren(h('div', { class: 'card bguide' }, 'Stirring is done. Now decide how greedy to be: every catalyst you add gives ', h('b', { class: 'gold' }, '+1 bottle'), ' (up to 5) but raises the chance the cauldron ', h('b', { class: 'red' }, 'bursts and ruins everything'), '. ', h('b', {}, 'Bottle it'), ' to keep what you have.'), riskEl, meter, h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, add, stop)); paint(); }
   };
-  openWindow('brew', `Brewing ${custom ? custom.name : ITEMS[r.out].n}`, () => h('div', {}, stage, caul, pot, tags, msg, body), { onClose: () => { clearInterval(anim); cancelAnimationFrame(raf); document.removeEventListener('keydown', key); }, icon: 'cauldron' });
+  const key = (e) => { if (e.code === 'Space') { e.preventDefault(); if (!e.repeat && !spaceDown) { spaceDown = true; press(); } } }, keyUp = (e) => { if (e.code === 'Space') spaceDown = false; };
+  document.addEventListener('keydown', key); document.addEventListener('keyup', keyUp); stirBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
+  const anim = setInterval(() => { frame++; paintCaul(); }, 300);
+  openWindow('brew', `Brewing ${custom ? custom.name : ITEMS[r.out].n}`, () => h('div', {}, stage, caul, pot, tags, msg, body), { onClose: () => { clearInterval(anim); cancelAnimationFrame(raf); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); }, icon: 'cauldron' });
   setPhase(); paint(); paintCaul();
-  if (phase === 'stir') { t0 = performance.now(); const total = (ST.beats + 1) * ST.interval; const loop = (now) => { const k = (now - t0) / total; mark.style.left = `${Math.min(100, Math.round(k * 50) * 2)}%`; if (k >= 1) { finishStir(); return; } raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop); }
-  function tap() { if (phase !== 'stir') return; sfx('bubble', 80); const t = performance.now() - t0; if (taps.length && t - taps.at(-1) < 150) return; taps.push(Math.round(t)); const near = Math.min(...Array.from({ length: ST.beats }, (_, i) => Math.abs(t - (i + 1) * ST.interval))); msg.textContent = near < ST.window * 0.35 ? 'Perfect stir!' : near < ST.window ? 'Good' : 'Off-beat…'; msg.style.color = near < ST.window ? '#6fc08b' : '#e0645a'; caul.classList.remove('burst'); void caul.offsetWidth; }
-  function finishStir() { if (phase !== 'stir') return; phase = 'wait'; cancelAnimationFrame(raf); send({ t: 'brew.stir', taps }); }
-  return { state(nb) { b = nb; if (phase !== 'cat') { phase = 'cat'; setPhase(); } else { msg.textContent = b.potency >= 5 ? 'The cauldron brims. Bottle it!' : 'It holds...'; msg.style.color = '#6fc08b'; } paint(); }, burst() { caul.classList.add('burst'); msg.textContent = 'BOOM!'; msg.style.color = '#e0645a'; } };
+  const pop = (text, color, big) => { const p = h('div', { class: `bpop${big ? ' big' : ''}`, style: { color } }, text); pops.append(p); setTimeout(() => p.remove(), 900); if (pops.children.length > 4) pops.firstChild.remove(); };
+  const liveScore = () => res.reduce((a, x) => a + (x ? x.s : 0), 0) / ST.beats;
+  const paintLive = () => { const hit = res.filter((x) => x && x.s > 0).length, passed = res.filter((x, i) => x || performance.now() - t0 > beatAt(i) + ST.window).length; purEl.textContent = `Purity ${Math.round(liveScore() * 100)}%`; bellN.textContent = `Bell ${Math.min(ST.beats, passed)} / ${ST.beats} · ${hit} hit`; comboEl.textContent = combo >= 2 ? `COMBO x${combo}` : ''; comboEl.className = `bcombo${combo >= 2 ? ' on' : ''}`; };
+  const setBell = (i, v) => { res[i] = v; const rs = resEls[i], be = bellEls[i]; be.className = `bbell ${v.kind}`; rs.className = `bres ${v.kind}`; rs.textContent = v.kind === 'miss' ? 'MISS' : v.kind === 'perfect' ? 'PERFECT' : v.d < 0 ? 'EARLY' : 'LATE'; };
+  function press() {
+    if (phase === 'ready') { phase = 'count'; stirBtn.disabled = true; stirBtn.textContent = 'GET READY…'; msg.textContent = 'Watch the marker — stir when it is over a bell.'; msg.style.color = ''; let n = 3; const tick = () => { cd.textContent = n > 0 ? `${n}` : 'STIR!'; cd.className = 'bcount on'; sfx('bubble', 90); if (n === 0) { setTimeout(() => { cd.className = 'bcount'; }, 450); go(); return; } n--; setTimeout(tick, 560); }; tick(); return; }
+    if (phase === 'stir') tap();
+  }
+  function go() {
+    phase = 'stir'; stirBtn.disabled = false; stirBtn.textContent = 'STIR!'; t0 = performance.now();
+    const loop = (now) => { const t = now - t0, k = Math.min(1, t / total); mark.style.left = `${(k * 100).toFixed(3)}%`;
+      for (let i = 0; i < ST.beats; i++) { if (!res[i] && t > beatAt(i) + ST.window) { setBell(i, { s: 0, kind: 'miss', d: 0 }); combo = 0; pop('Missed bell ' + (i + 1), '#e0645a'); } const near = Math.abs(t - beatAt(i)) < ST.window; bellEls[i].classList.toggle('near', near && !res[i]); }
+      paintLive(); if (k >= 1) { finishStir(); return; } raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
+  }
+  function tap() {
+    if (phase !== 'stir') return; const t = performance.now() - t0; if (taps.length && t - taps.at(-1) < 150) return; taps.push(Math.round(t)); frame++; paintCaul(); caul.classList.remove('burst');
+    let bi = 0; for (let i = 1; i < ST.beats; i++) if (Math.abs(t - beatAt(i)) < Math.abs(t - beatAt(bi))) bi = i; const d = t - beatAt(bi), ad = Math.abs(d), s = ad <= ST.window ? 1 - ad / ST.window : 0;
+    const tick = h('div', { class: 'btick', style: { left: `${Math.min(100, (t / total) * 100).toFixed(2)}%`, background: s === 0 ? '#e0645a' : ad < ST.window * 0.35 ? '#ffd36a' : '#6fc08b' } }); track.append(tick); setTimeout(() => tick.remove(), 1400);
+    if (s === 0) { sfx('step', 70); combo = 0; pop('Off the beat…', '#e0645a'); return; }
+    const kind = ad < ST.window * 0.35 ? 'perfect' : 'good', prev = res[bi]; if (!prev || s > prev.s) setBell(bi, { s, kind, d });
+    if (kind === 'perfect') { combo++; bestCombo = Math.max(bestCombo, combo); sfx('pickup', 70); pop(combo >= 2 ? `PERFECT x${combo}!` : 'PERFECT!', '#ffd36a', true); } else { combo = 0; sfx('bubble', 80); pop(`Good — ${d < 0 ? 'a little early' : 'a little late'}`, '#6fc08b'); }
+    bellEls[bi].classList.remove('hit'); void bellEls[bi].offsetWidth; bellEls[bi].classList.add('hit'); paintLive();
+  }
+  function finishStir() { if (phase !== 'stir') return; phase = 'wait'; cancelAnimationFrame(raf); stirBtn.disabled = true; stirBtn.textContent = 'Done!'; msg.style.color = '#a98ad8'; msg.textContent = `Stirring finished — purity ${Math.round(liveScore() * 100)}%${bestCombo >= 2 ? `, best combo x${bestCombo}` : ''}.`; send({ t: 'brew.stir', taps }); }
+  return { state(nb) { b = nb; if (phase !== 'cat') { phase = 'cat'; setPhase(); } else { msg.textContent = b.potency >= 5 ? 'The cauldron brims. Bottle it!' : 'It holds… add another or bottle it.'; msg.style.color = '#6fc08b'; } paint(); }, burst() { caul.classList.add('burst'); msg.textContent = 'BOOM!'; msg.style.color = '#e0645a'; } };
 }
 export function showCraftResult(m, brewCtl) {
   const finish = () => {

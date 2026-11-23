@@ -9,6 +9,8 @@ import { toggleMusic } from './music.js';
 import { toast } from '../ui-lib.js';
 import { listen } from './listeners.js';
 import { actionFor } from './keys.js';
+import { drawBadge, drawTitle, TITLE_COL } from './badges.js';
+import { titleInfo } from '../rules.js';
 import { C, q, blit, flipped, drawText, drawTag, cellAt, pdisc, pring, pline, prect, vignette, hex } from './px.js';
 import { groundTile, wallSprite, doorSprite, treeSprite, rockSprite, crystalSprite, shelfSprite, prop, nodeSprite, personSprite, monsterSprite, shadowSprite, PAL } from './sprites.js';
 import { uiIcon } from './icons.js';
@@ -216,7 +218,7 @@ export class WorldView {
     for (const p of G.players.values()) { const self = p.id === G.id, X = (self ? G.pos.x : (p.rx ?? p.x)) * TS, Y = (self ? G.pos.y : (p.ry ?? p.y)) * TS; list.push({ y: Y + 8, fn: () => this.drawPlayer(g, p, self, X, Y, t) }); }
     list.sort((a, b) => a.y - b.y); for (const it of list) it.fn();
     drawWork(g, t); drawAir(g);
-    for (const [id, b] of G.bubbles) { if (b.until < Date.now()) { G.bubbles.delete(id); continue; } const p = G.players.get(id); if (!p) continue; const self = id === G.id; drawTag(g, b.text.length > 30 ? b.text.slice(0, 29) + '.' : b.text, (self ? G.pos.x : p.rx ?? p.x) * TS, (self ? G.pos.y : p.ry ?? p.y) * TS - 54, '#ffffff', { bg: '#101830', border: '#3a4a7a' }); }
+    for (const [id, b] of G.bubbles) { if (b.until < Date.now()) { G.bubbles.delete(id); continue; } const p = G.players.get(id); if (!p) continue; const self = id === G.id; drawTag(g, b.text.length > 30 ? b.text.slice(0, 29) + '.' : b.text, (self ? G.pos.x : p.rx ?? p.x) * TS, (self ? G.pos.y : p.ry ?? p.y) * TS - 54 - 26 - (p.tt ? 14 : 0), '#ffffff', { bg: '#101830', border: '#3a4a7a' }); }
     for (const p of m.portals) if (Math.abs(p.x - G.pos.x) < 30) drawTag(g, p.label, (p.x + p.w / 2) * TS, (p.y + p.h / 2) * TS - (p.h > p.w ? 0 : 14), '#ffe9a8');
     drawNumbers(g);
     if (!this.locked && !G.dead && this.mouseSeen) { const c = this.cursor, x = c.x * TS, y = c.y * TS; for (const [dx, dy] of [[-8, 0], [-6, 0], [6, 0], [8, 0], [0, -8], [0, -6], [0, 6], [0, 8]]) cellAt(g, x + dx - 1, y + dy - 1, 'rgba(255,255,255,.8)'); cellAt(g, x - 1, y - 1, 'rgba(255,255,255,.9)'); }
@@ -279,6 +281,7 @@ export class WorldView {
     if (p.sh) { for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28 + t / 600; cellAt(g, X + Math.cos(a) * 24, foot - 14 + Math.sin(a) * 24, '#a0dcff'); } }
     if (p.sn) for (let i = 0; i < 3; i++) { const a = t / 200 + i * 2.1; cellAt(g, X + Math.cos(a) * 10, foot - 48 + Math.sin(a) * 3, '#ffe36b'); }
     drawTag(g, `${p.gl ? `[${p.gl.slice(0, 5)}] ` : ''}${p.n} LV${p.l}`, X, foot - 41, self ? '#ffe9a8' : partyMate ? '#a8ffc2' : hostile || p.dl ? '#ff6a5a' : '#ffffff');
+    { const top = drawBadge(g, p, X, foot - 63, t); if (p.tt) drawTitle(g, p.tt, X, top - 2 * C, TITLE_COL[titleInfo(p.tt).rar] ?? '#d8cdbd'); }
     if (!self || p.h < p.mh) { const w = 30; g.fillStyle = '#0c0814'; g.fillRect(q(X - w / 2) - C, foot - 48 + 4 - C, w + 2 * C, 6 + 2 * C); g.fillStyle = self ? '#6fd08a' : '#4fb870'; g.fillRect(q(X - w / 2), foot - 48 + 4, Math.round((w * Math.max(0, p.h / p.mh)) / C) * C, 6); }
     if (self && G.gather) { const k = Math.min(1, (performance.now() - G.gather.start) / G.gather.ms); g.fillStyle = '#0c0814'; g.fillRect(q(X - 16) - C, foot - 66, 32 + 2 * C, 8); g.fillStyle = '#e3b552'; g.fillRect(q(X - 16), foot - 64, Math.round(32 * k / C) * C, 4); }
   }

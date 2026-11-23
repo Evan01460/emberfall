@@ -455,3 +455,30 @@ export function enchantGear(P, gearUid, flaskUid, rng) {
 }
 
 export const customTier = (form, id) => FX_BY_FORM[form]?.[id]?.tier ?? 1;
+
+// ── Titles: feats a player can show off beside their name ────────────────────────────────────────────────────────────────────────────
+// Earned automatically when the test passes (checked after every change); the player chooses which one to wear (P.title).
+export const TITLES = [
+  { name: 'Seasoned', rar: 'common', desc: 'Reach level 10.', test: (P) => P.level >= 10 }, { name: 'Veteran', rar: 'rare', desc: 'Reach level 20.', test: (P) => P.level >= 20 }, { name: 'Champion', rar: 'epic', desc: 'Reach level 30.', test: (P) => P.level >= 30 },
+  { name: 'Ascended', rar: 'common', desc: 'Choose an Ascension path (level 8).', test: (P) => !!P.asc?.path }, { name: 'Masterful', rar: 'rare', desc: 'Earn a Mastery (level 20).', test: (P) => !!P.asc?.mastery },
+  { name: 'Slayer', rar: 'common', desc: 'Fell 500 enemies.', test: (P) => P.stats.kills >= 500 }, { name: 'Exterminator', rar: 'rare', desc: 'Fell 5,000 enemies.', test: (P) => P.stats.kills >= 5000 },
+  { name: 'Edge-Walker', rar: 'rare', desc: 'Win 25 fights while under 25% health.', test: (P) => P.stats.lowSpWins >= 25 },
+  { name: 'Master Craftsman', rar: 'rare', desc: 'Forge 10 masterworks (85%+ quality).', test: (P) => P.stats.masterworks >= 10 }, { name: 'Perfect Brewer', rar: 'rare', desc: 'Brew 10 perfect batches.', test: (P) => P.stats.perfectBrews >= 10 },
+  { name: 'Prolific', rar: 'common', desc: 'Craft 100 items.', test: (P) => P.stats.crafted >= 100 },
+  { name: 'Haggler', rar: 'common', desc: 'Win 15 haggle rolls.', test: (P) => P.stats.haggleWins >= 15 }, { name: 'Tycoon', rar: 'rare', desc: 'Make 5,000g market profit.', test: (P) => P.stats.profit >= 5000 },
+  { name: 'Wealthy', rar: 'common', desc: 'Hold 5,000 gilt.', test: (P) => P.gilt >= 5000 }, { name: 'Magnate', rar: 'epic', desc: 'Hold 50,000 gilt.', test: (P) => P.gilt >= 50000 },
+  { name: 'Shadow-Walker', rar: 'rare', desc: 'Enter the Shadowfell 5 times.', test: (P) => P.stats.hollowVisits >= 5 }, { name: 'Reflection-Breaker', rar: 'epic', desc: 'Slay a Reflection in the Shadowfell.', test: (P) => P.stats.reflectionsSlain >= 1 },
+  { name: 'Duelist', rar: 'common', desc: 'Win 5 duels.', test: (P) => P.stats.duelWins >= 5 }, { name: 'Wayfarer', rar: 'common', desc: 'Walk 3,000 tiles.', test: (P) => P.stats.distance >= 3000 }, { name: 'Globetrotter', rar: 'rare', desc: 'Walk 20,000 tiles.', test: (P) => P.stats.distance >= 20000 },
+  { name: 'Page-Turner', rar: 'rare', desc: 'Find 10 Torn Pages.', test: (P) => P.stats.pagesFound >= 10 }, { name: 'Starfinder', rar: 'epic', desc: 'Find 5 Starmetal Shards.', test: (P) => P.stats.starmetalFound >= 5 },
+  // earned by quests and events elsewhere in the game (they are added to P.titles directly)
+  { name: 'Vault Delver', rar: 'rare', desc: 'Open the Sunken Vault (The Weeping Wall).', test: null }, { name: 'Ringer', rar: 'rare', desc: 'Ring the Silent Bell.', test: null },
+  { name: 'Tyrant-Slayer', rar: 'epic', desc: 'Defeat the Ember Tyrant.', test: null }, { name: 'Titan-Breaker', rar: 'epic', desc: 'Break the Obsidian Titan with your guild.', test: null },
+];
+export const titleInfo = (name) => TITLES.find((t) => t.name === name) ?? (CLASSES[Object.keys(CLASSES).find((k) => CLASSES[k].name === name)]?.mythic ? { name, rar: 'legendary', desc: `Claim the mythic class ${name}.` } : (name.startsWith('The ') ? { name, rar: 'epic', desc: `Awaken the hidden class ${name.slice(4)}.` } : { name, rar: 'epic', desc: 'A rare honour.' }));
+export function earnTitles(P) {
+  P.titles ??= []; const out = [];
+  for (const t of TITLES) if (t.test && !P.titles.includes(t.name) && t.test(P)) { P.titles.push(t.name); out.push(t); }
+  const c = CLASSES[P.classId]; if (c?.hidden && !c.mythic) { const n = `The ${c.name}`; if (!P.titles.includes(n)) { P.titles.push(n); out.push({ name: n, rar: 'epic' }); } }
+  return out;
+}
+export function setTitle(P, name) { if (!name) { P.title = null; return true; } if (!(P.titles ?? []).includes(name)) return false; P.title = name; return true; }

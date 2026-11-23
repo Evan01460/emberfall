@@ -373,3 +373,13 @@ test('Desperado rolls dice before attacks: each die multiplies that shot, All In
   srv.projs.length = 0; a.S.cds = {}; a.S.mp = a.S.rt.maxMp; a.conn.msgs.length = 0; a.send('skill', { i: 1, a: 0, tx: a.S.x + 5, ty: a.S.y }); advance(1400);
   assert.ok(!a.conn.msgs.flatMap((m) => m.ev ?? []).some((e) => e.id === 'dice_roll'), 'All In does not roll');
 });
+
+test('titles: earned from feats, worn by choice, and sent in the snapshot', () => {
+  const { srv, advance } = world(); const a = client(srv, 'Showoff');
+  assert.ok(!a.P.titles.includes('Seasoned')); a.P.level = 12; a.P.stats.kills = 600; srv.afterChange(a.S);
+  assert.ok(a.P.titles.includes('Seasoned') && a.P.titles.includes('Slayer'), 'feat titles are awarded');
+  a.send('title.set', { title: 'Veteran' }); assert.equal(a.P.title ?? null, null, 'cannot wear a title you have not earned');
+  a.send('title.set', { title: 'Slayer' }); assert.equal(a.P.title, 'Slayer');
+  advance(150); const snap = a.conn.msgs.filter((m) => m.t === 'snap').at(-1); const me = snap.players.find((p) => p.id === a.S.id); assert.equal(me.tt, 'Slayer'); assert.equal(me.c, 'warrior');
+  a.send('title.set', { title: null }); assert.equal(a.P.title, null);
+});

@@ -195,5 +195,5 @@ function wire(net) {
 function leaveWith(msg) { stopGame(); showLogin(msg); }
 
 showLogin();
-window.__W = { getMap, blockedAt, inSafeZone };
+window.__W = { getMap, blockedAt, inSafeZone }; window.__ui = { openCraft, openCharacter, startBrew };
 window.__hl = { G, get view() { return view; }, leave };

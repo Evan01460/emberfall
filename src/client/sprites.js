@@ -3,6 +3,7 @@
 import { shrink, sprite, flashed, flipped, hash, shade, tint } from './px.js';
 import { T } from '../world.js';
 import { CLASSES } from '../data.js';
+import { EXP_TIERS } from '../expansion.js';
 
 const cache = new Map();
 const memo = (key, fn) => { let v = cache.get(key); if (!v) { v = fn(); cache.set(key, v); } return v; };
@@ -225,6 +226,7 @@ const NODE = {
   hollow_ore: (d) => sprite(16, 16, (p) => { if (d) { p.ell(8, 11, 5, 3, '#2e2948'); return; } p.ell(8, 12, 7, 3, '#2e2948'); for (const [x, b, h, w] of [[5, 12, 9, 4], [10, 12, 11, 5], [8, 13, 6, 3]]) { for (let y = 0; y < h; y++) p.r(x - Math.floor(w / 2) + (y > h - 3 ? 0 : 1), b - y, Math.max(1, w - Math.floor(y / 3)), 1, y % 3 ? '#7a56d8' : '#a984ff'); } p.p(10, 3, '#ffffff'); p.p(5, 5, '#e0d0ff'); }),
   ghostbloom: (d) => sprite(16, 16, (p) => { if (d) { p.r(7, 11, 2, 3, '#3a3060'); return; } p.r(7, 8, 2, 7, '#5a8a9a'); p.ell(4, 11, 3, 1.5, '#7ab0c0'); p.ell(12, 10, 3, 1.5, '#7ab0c0'); for (const [x, y, r] of [[8, 5, 4]]) { p.disc(x, y, r, '#c8b0ff'); p.disc(x, y, r - 1.5, '#f0e8ff'); p.disc(x, y, 1, '#a984ff'); } for (const [x, y] of [[3, 3], [13, 4], [11, 1]]) p.p(x, y, '#e0d0ff'); }),
 };
+for (const t of EXP_TIERS) NODE[t.id] = (d) => sprite(16, 16, (p) => { p.ell(8, 10, 7, 5, d ? shade(t.ore3[0], 0.7) : t.ore3[0]); p.ell(7, 9, 5, 3.5, d ? shade(t.ore3[1], 0.6) : t.ore3[1]); if (!d) for (const [x, y] of [[4, 8], [9, 6], [11, 10], [6, 11]]) { p.r(x, y, 2, 2, t.ore3[2]); p.p(x, y, '#ffffff'); } });
 export const nodeSprite = (type, depleted) => memo(`n:${type}:${depleted}`, () => NODE[type](depleted));
 
 // ── people (16 × 26): class gear, 4 directions, 4 walk frames ───────────────

@@ -110,10 +110,11 @@ export const combatMethods = {
     if (!id) return this.toast(S, m.kind === 'mana' ? 'No mana potions.' : 'No healing potions.', 'bad');
     if ((S.cds[ck] ?? 0) > now) return;
     const u = R.ITEM_USE[id];
-    if (u.hp && S.hp >= S.rt.maxHp) return; if (u.mp && S.mp >= S.rt.maxMp) return;
+    if ((u.hp || u.pct) && S.hp >= S.rt.maxHp) return; if ((u.mp || u.mpPct) && S.mp >= S.rt.maxMp) return;
     R.removeItem(S.P, id); S.cds[ck] = now + 5000;
-    if (u.hp) this.healPlayer(S, u.hp * HP_SCALE * (R.potionPotency?.(S.P, id) ?? 1));
-    if (u.mp) { S.mp = Math.min(S.rt.maxMp, S.mp + u.mp); this.emit(S.map, { t: 'dmg', x: S.x, y: S.y - 0.8, v: u.mp, k: 'mana' }); }
+    const pot = R.potionPotency?.(S.P, id) ?? 1;
+    if (u.hp || u.pct) this.healPlayer(S, (u.hp ? u.hp * HP_SCALE : S.rt.maxHp * u.pct) * pot);
+    if (u.mp || u.mpPct) { const mp = Math.round(u.mp ?? S.rt.maxMp * u.mpPct); S.mp = Math.min(S.rt.maxMp, S.mp + mp); this.emit(S.map, { t: 'dmg', x: S.x, y: S.y - 0.8, v: mp, k: 'mana' }); }
     S.conn.send({ t: 'cd', k: ck, ms: 5000 }); this.touch(S);
   },
 
@@ -418,10 +419,11 @@ export const combatMethods = {
   },
 
   tickMobs(dt, nw) {
+    const active = new Set(); for (const S of this.sessions.values()) active.add(S.map);   // maps nobody is on do not need to think (the world has hundreds of them)
     for (const mob of this.mobs) {
       if (mob.deadUntil) { if (nw >= mob.deadUntil) this.rollMob(mob, ZONES[mob.map]); continue; }
+      if (!active.has(mob.map)) { if (mob.hp < mob.maxHp) mob.hp = mob.maxHp; continue; }
       const map = getMap(mob.map);
-      if (!this.anyoneOn(mob.map)) { if (mob.hp < mob.maxHp) mob.hp = mob.maxHp; continue; }
       // healing: nothing for 10 s after the last damage, then a slow 2% of max HP per second
       if (mob.hp > 0 && mob.hp < mob.maxHp && nw - (mob.hurtAt ?? 0) > MOB_HEAL_DELAY) mob.hp = Math.min(mob.maxHp, mob.hp + mob.maxHp * MOB_HEAL_RATE * dt);
       if (mob.hp < (mob.lastHp ?? mob.hp)) mob.hurtAt = nw; mob.lastHp = mob.hp;
@@ -485,7 +487,7 @@ export const combatMethods = {
   resolveMobMove(mob, nw) {
     const { mv, a, tx, ty } = mob.wind; mob.wind = null;
     const players = [...this.sessions.values()].filter((S) => S.map === mob.map && !S.dead);
-    const dmgFor = (S) => Math.round(calcDamage(mv.power, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S));
+    const pw = mv.power * (ENEMIES[mob.key]?.pwr ?? 1), dmgFor = (S) => Math.round(calcDamage(pw, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S));
     if (mv.kind === 'melee') {
       this.emit(mob.map, { t: 'slash', x: mob.x, y: mob.y, a, range: mv.range, arc: mv.arc, ty: mv.type, who: `m${mob.id}` });
       for (const S of players) { const d = dist(S.x, S.y, mob.x, mob.y); if (d <= mv.range + 0.35 && (angDiff(ang(mob.x, mob.y, S.x, S.y), a) <= rad(mv.arc) / 2 || d < 0.6)) this.hurtPlayer(S, dmgFor(S), { mob }); }
@@ -495,9 +497,9 @@ export const combatMethods = {
       for (const S of players) if (dist(S.x, S.y, cx, cy) <= mv.radius + 0.3) this.hurtPlayer(S, dmgFor(S), { mob });
     } else if (mv.kind === 'proj') {
       const n = mv.count ?? 1, sp = mv.spread ?? 0;
-      for (let i = 0; i < n; i++) { const off = sp >= 360 ? (i / n) * Math.PI * 2 : n === 1 ? 0 : rad(sp) * (i / (n - 1) - 0.5); this.spawnProj({ map: mob.map, x: mob.x, y: mob.y, a: a + off, speed: mv.speed, r: mv.radius, power: mv.power, type: mv.type, range: mv.range, pierce: 0, aoe: 0, owner: { k: 'm', id: mob.id, atk: mob.atk } }); }
+      for (let i = 0; i < n; i++) { const off = sp >= 360 ? (i / n) * Math.PI * 2 : n === 1 ? 0 : rad(sp) * (i / (n - 1) - 0.5); this.spawnProj({ map: mob.map, x: mob.x, y: mob.y, a: a + off, speed: mv.speed, r: mv.radius, power: mv.power * (ENEMIES[mob.key]?.pwr ?? 1), type: mv.type, range: mv.range, pierce: 0, aoe: 0, owner: { k: 'm', id: mob.id, atk: mob.atk } }); }
     } else if (mv.kind === 'dash') {
-      mob.dash = { a, speed: mv.speed, until: nw + (mv.dist / mv.speed) * 1000, power: mv.power, hit: new Set() };
+      mob.dash = { a, speed: mv.speed, until: nw + (mv.dist / mv.speed) * 1000, power: mv.power * (ENEMIES[mob.key]?.pwr ?? 1), hit: new Set() };
     }
   },
 

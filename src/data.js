@@ -5,13 +5,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { EXTRA_SKILLS, PATHS, MYTHICS, COMBOS } from './skilldata.js';
-import { buildGearSets } from './gearsets.js';
+import { buildGearSets, TIERS } from './gearsets.js';
+import { EXP_TIERS, EXP_ENEMIES, EXP_ZONES, SPIRE_ZONES, EXP_POTIONS } from './expansion.js';
 import { NEW_ENEMIES, NEW_ZONES } from './content2.js';
 export { FIT_BONUS, ARCH, TIERS, fits, fitsOf, archOf, tierOf, classGear, ALL_CLASSES } from './gearsets.js';
 export { PATHS, MYTHICS, COMBOS };
 
 export const TYPE_ICON = { slash: '', pierce: '', blunt: '', arcane: '', guard: '', evade: '', counter: '⟲' };
-export const MAX_LEVEL = 30;
+export const MAX_LEVEL = 100;
 // Player health is HP_SCALE times the old numbers and every enemy hit on a player is HP_SCALE times as large, so fights feel exactly as before —
 // but flat healing (lifesteal, regeneration per hit) is HP_SCALE times smaller in comparison. Potions and shields are scaled up with it.
 export const HP_SCALE = 10;
@@ -428,6 +429,10 @@ export const ZONES = {
   ruined_citadel: { id: 'ruined_citadel', name: 'The Ruined Citadel', realm: 'main', lvl: 20, enemies: ['fallen_knight', 'cursed_priest', 'gargoyle', 'dread_hound'], boss: 'citadel_lord', elite: 'death_knight' },
 };
 Object.assign(ENEMIES, NEW_ENEMIES); Object.assign(ZONES, NEW_ZONES);   // the endgame regions (src/content2.js)
+// The Far Reaches: 48 regions, 10 dungeons and the 120-floor Endless Spire (src/expansion.js).
+Object.assign(ENEMIES, EXP_ENEMIES);
+for (const e of EXP_ZONES) ZONES[e.id] = { id: e.id, name: e.name, realm: 'main', lvl: e.lvl, enemies: e.enemies, boss: e.boss, elite: e.elite, ...(e.dungeon === true ? { dungeon: true } : {}) };
+for (const e of SPIRE_ZONES) ZONES[e.id] = { id: e.id, name: e.name, realm: 'main', lvl: e.lvl, dungeon: true, spire: e.spire, enemies: e.enemies, boss: e.boss, elite: e.elite };
 
 
 // Resource nodes by type
@@ -443,7 +448,11 @@ export const NODE_TYPES = {
   frostbloom: { name: 'Frostbloom', icon: '', item: 'frostbloom', qty: [1, 3], ms: 1600, respawn: 55 },
   echo: { name: 'Echo Crystal', icon: '', item: 'echo_shard', qty: [1, 2], ms: 2400, respawn: 90 },
 };
+TIERS.push(...EXP_TIERS);   // Voidglass … Worldsteel: new ores, ingots, veins and a full set of gear each
 buildGearSets(ITEMS, RECIPES, NODE_TYPES);   // the full gear grid (every class, seven metal tiers), new ores, recipes and honest prices
+
+// Percentage potions for the high levels (see ITEM_USE in rules.js).
+for (const p of EXP_POTIONS) { ITEMS[p.id] = { n: p.n, k: 'cons', v: p.v, icon: '', desc: p.pct ? `Restore ${Math.round(p.pct * 100)}% of your max HP. (key 5)` : `Restore ${Math.round(p.mpPct * 100)}% of your max Mana. (key 6)` }; RECIPES.push({ id: p.id, craft: 'alchemist', lvl: p.lvl, in: p.in, out: p.id, qty: 1, risk: 0.12 + p.lvl * 0.0015, diff: 0.3 }); }
 // Healing potions restore HP_SCALE times the old amount (their text must say so).
 for (const it of Object.values(ITEMS)) if (typeof it.desc === 'string') it.desc = it.desc.replace(/Restore (\d+) HP/, (_, n) => `Restore ${+n * HP_SCALE} HP`);
 

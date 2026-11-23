@@ -3,6 +3,7 @@
 // Coordinates are in tile units (floats). A tile (tx,ty) spans [tx,tx+1) × [ty,ty+1).
 // Two realms: "main" (Lanternfall and its wilds) and "hollow" (the mirror realm).
 // ─────────────────────────────────────────────────────────────────────────────
+import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS } from './expansion.js';
 import { Rng } from './rng.js';
 
 export const TS = 32;
@@ -585,6 +586,29 @@ dungeon('moonlit_barrow_2', 'Moonlit Barrow — Crown Vault', 'snow', 3502, 0, {
 dungeon('aether_vault_1', 'Aether Vault — Antechamber', 'cave', 3601, 0, { rooms: 10, elites: 3, deco: [['pillar', 10], ['bones', 8, { solid: false }]], chestName: 'Sealed Reliquary', up: { label: 'Out to Aether Reach', to: { map: 'aether_reach', x: 0, y: 0 } }, down: { label: 'Down to the Heart', to: { map: 'aether_vault_2' } } });
 dungeon('aether_vault_2', 'Aether Vault — Heart', 'cave', 3602, 0, { rooms: 9, elites: 4, boss: true, bossChest: 'The Warden\'s Aether Cache', deco: [['pillar', 10]], up: { label: 'Up the stairs', to: { map: 'aether_vault_1' }, toKey: 'stairs' } });
 
+
+// ── THE FAR REACHES and the ENDLESS SPIRE (specs generated in src/expansion.js) ─────────────────────────────────────────────────────────
+const TG = { grass: T.GRASS, sand: T.SAND, cobble: T.COBBLE, rock: T.ROCK, water: T.WATER };
+for (const e of EXP_ZONES) {
+  if (e.dungeon === true) {
+    const first = e.floor === 1, nm = e.name, zn = e.parentZone;
+    dungeon(e.id, nm, e.theme, e.seed, 0, first
+      ? { rooms: 10, elites: 3, deco: [['pillar', 8], ['bones', 12, { solid: false }], ['crates', 5]], chestName: `${nm.split(' — ')[0]} Chest`, up: { label: `Out to ${EXP_ZONES.find((z) => z.id === zn).name}`, to: { map: zn, x: 0, y: 0 } }, down: { label: 'Down into the Heart', to: { map: `${e.dk}_2` } } }
+      : { rooms: 9, elites: 4, boss: true, bossChest: `${nm.split(' — ')[0]} Hoard`, deco: [['pillar', 8], ['bones', 10, { solid: false }]], up: { label: 'Up the stairs', to: { map: `${e.dk}_1` }, toKey: 'stairs' } });
+  } else if (e.kind) {
+    Z[e.id] = { kind: e.kind, id: e.id, name: e.name, w: e.w, h: e.h, theme: e.theme, seed: e.seed, ground: TG[e.ground], patch: e.patch ? [e.patch[0], TG[e.patch[1]]] : undefined, edge: e.edge ? TG[e.edge] : undefined, clear: e.clear ? TG[e.clear] : undefined,
+      trees: e.trees, thin: e.thin, water: e.water, rocks: e.rocks, fs: e.fs, fill: e.fill, pool: e.pool, crystal: e.crystal, portals: [], landmarks: e.landmarks, nodes: e.nodes, mobs: e.mobs, elites: e.elites, chests: e.chests, deco: e.deco, waystones: e.waystones };
+  }
+}
+// The Endless Spire: its first floor is entered from Greenmeadow; every floor has a waystone, a stairwell down, and a guardian every tenth floor.
+for (const f of SPIRE_ZONES) {
+  const n = f.spire;
+  dungeon(f.id, f.name, f.theme, f.seed, 0, { rooms: f.rooms, elites: f.elites, boss: f.bossFloor, bossChest: 'Spire Guardian\'s Hoard', chestName: 'Spire Chest', deco: [['pillar', 8], ['bones', 10, { solid: false }], ['crates', 4]],
+    up: n === 1 ? { label: 'Out to Greenmeadow', to: { map: 'greenmeadow', x: 0, y: 0 } } : { label: 'Up the stairs', to: { map: `spire_${n - 1}` }, toKey: 'stairs' },
+    ...(n < SPIRE_FLOORS ? { down: { label: `Down to floor ${n + 1}`, to: { map: `spire_${n + 1}` } } } : {}) });
+}
+Z.greenmeadow.landmarks.push({ t: 'dungeon', at: [0.92, 0.42], to: 'spire_1', label: 'The Endless Spire (Lv 4+)', signName: 'The Endless Spire', lines: ['THE ENDLESS SPIRE. Nobody has found the top. Each floor is harder than the last, and the stairs only go down. (Lv 4 and up)'] });
+
 // Return coordinates for dungeon entrances: just below the cave mouth that leads in.
 for (const dkey of Object.keys(DUN)) { const S = DUN[dkey]; if (S.up.to.x === 0) { const zone = Z[S.up.to.map], L = zone.landmarks.find((l) => l.to === dkey); S.up.to = { map: S.up.to.map, x: Math.max(12, Math.min(zone.w - 13, Math.round(L.at[0] * zone.w))) + 0.5, y: Math.max(10, Math.min(zone.h - 14, Math.round(L.at[1] * zone.h))) + 2.5 }; } }
 const approach = (id, side, at) => { const S = Z[id], a = at ?? 0.5; return side === 's' ? { x: Math.round(a * (S.w - 1)) + 0.5, y: S.h - 5.5 } : side === 'n' ? { x: Math.round(a * (S.w - 1)) + 0.5, y: 5.5 } : side === 'w' ? { x: 5.5, y: Math.round(a * (S.h - 1)) + 0.5 } : { x: S.w - 5.5, y: Math.round(a * (S.h - 1)) + 0.5 }; };
@@ -603,6 +627,12 @@ link('frostpeak', 'w', 0.7, 'ironhold', 'e', 0.45, '< To Ironhold Mines', 'To Fr
 link('crystal_caverns', 'n', 0.5, 'moonspire', 's', 0.5, 'To Moonspire Heights ^', 'To the Crystal Caverns v');
 link('emberwaste', 'e', 0.5, 'cinder_foundry', 'w', 0.5, 'To the Cinder Foundry >', '< To the Emberwaste');
 link('ruined_citadel', 'n', 0.5, 'aether_reach', 's', 0.5, 'To Aether Reach ^', 'To the Ruined Citadel v');
+// The Far Reaches: a main road north from Aether Reach (24 regions), with a side region branching off every one of them.
+{
+  const road = EXP_ZONES.filter((z) => z.kind && z.id.startsWith('far_p')), sides = EXP_ZONES.filter((z) => z.kind && z.id.startsWith('far_s'));
+  for (const z of road) link(z.parent, 'n', 0.5, z.id, 's', 0.5, `To ${z.name} ^`, `To ${Z[z.parent].name} v`);
+  sides.forEach((z, i) => { const east = i % 2 === 0; link(z.parent, east ? 'e' : 'w', 0.5, z.id, east ? 'w' : 'e', 0.5, east ? `To ${z.name} >` : `< To ${z.name}`, east ? `< To ${Z[z.parent].name}` : `To ${Z[z.parent].name} >`); });
+}
 // Existing hand-made maps get their new exits here.
 function openNewExits(m) {
   if (m.id === 'town') { rect(m, 16, 0, 4, 10, T.PATH); portal(m, 16, 0, 4, 1, { map: 'greenmeadow', ...approach('greenmeadow', 's', 0.5) }, 'To Greenmeadow ^'); }

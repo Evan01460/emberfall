@@ -1,7 +1,8 @@
 // A shared item browser for the crafting window and the request tab: search, category and metal filters, "craftable now" / "suits my class"
 // toggles, sorting, icons, headline stats and ingredients on every card. Filtering happens in place, so typing in the search box never
 // loses focus. Filter state is remembered per `key` (so it survives a window refresh).
-import { ITEMS, CLASSES, fitsOf, qualityStatMult, HP_SCALE } from '../data.js';
+import { ITEMS, CLASSES, fitsOf, qualityStatMult, HP_SCALE, TIERS } from '../data.js';
+import { EXP_TIERS } from '../expansion.js';
 import { h } from '../ui-lib.js';
 import * as I from './icons.js';
 
@@ -9,8 +10,8 @@ const STATE = {};
 const CATS = { blacksmith: [['all', 'All'], ['weapon', 'Weapons'], ['armor', 'Armour'], ['charm', 'Charms'], ['refine', 'Ingots'], ['other', 'Keys']], alchemist: [['all', 'All'], ['potion', 'Potions']] };
 const catOf = (r) => (r.smelt ? 'refine' : ITEMS[r.out]?.slot ?? (ITEMS[r.out]?.k === 'cons' ? 'potion' : 'other'));
 const metalOf = (id) => ITEMS[id]?.k === 'gear' ? (ITEMS[id].n ?? '').split(' ')[0] : null;
-const METAL_ORDER = ['Iron', 'Steel', 'Shadowsteel', 'Sunsteel', 'Moonsilver', 'Cinderforged', 'Aetherium'];
-const METAL_COL = { Iron: '#a8b0bc', Steel: '#d8e4f0', Shadowsteel: '#a984ff', Sunsteel: '#ffd36a', Moonsilver: '#bfe8ff', Cinderforged: '#ff9a4a', Aetherium: '#7dffd8' };
+const METAL_ORDER = TIERS.map((t) => t.name);
+const METAL_COL = { Iron: '#a8b0bc', Steel: '#d8e4f0', Shadowsteel: '#a984ff', Sunsteel: '#ffd36a', Moonsilver: '#bfe8ff', Cinderforged: '#ff9a4a', Aetherium: '#7dffd8', ...Object.fromEntries(EXP_TIERS.map((t) => [t.name, t.metal[1]])) };
 export const headlineStats = (id, q = 1) => { const it = ITEMS[id]; if (!it) return []; const m = qualityStatMult(q), out = []; if (it.atk) out.push(['ATK', (it.atk * m).toFixed(0), '#ff9a6a']); if (it.def) out.push(['DEF', (it.def * m).toFixed(0), '#7fb8ff']); if (it.hp) out.push(['HP', Math.round(it.hp * m * HP_SCALE), '#ff7a7a']); if (it.mp) out.push(['MP', Math.round(it.mp * m), '#8ad8ff']); if (it.spd) out.push(['SPD', Math.floor(it.spd * m), '#7dffa0']); return out; };
 export const statChips = (id, q = 1) => headlineStats(id, q).map(([k, v, c]) => h('span', { class: 'sc', style: { color: c } }, `${k} ${v}`));
 export const fitIcons = (id, me, max = 4) => { const fl = fitsOf(id); if (!fl.length) return null; return h('span', { class: 'fits', title: `Made for: ${fl.map((c) => CLASSES[c]?.name ?? c).join(', ')}` }, ...fl.slice(0, max).map((c) => h('span', { class: me && c === me.classId ? 'fit mine' : 'fit' }, I.cls(c, 16))), fl.length > max ? h('span', { class: 'dim', style: { fontSize: '11px' } }, `+${fl.length - max}`) : null); };

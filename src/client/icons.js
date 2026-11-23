@@ -1,13 +1,16 @@
 // Pixel icons (16×16 art px) for items, skills, classes and UI. Replaces every emoji.
 import { sprite, shade, tint } from './px.js';
-import { ITEMS, SKILLS, BASICS, CLASSES } from '../data.js';
+import { ITEMS, SKILLS, BASICS, CLASSES, tierOf } from '../data.js';
+import { EXP_TIERS, EXP_POTIONS } from '../expansion.js';
 import { basicOf } from '../loadout.js';
 
 const cache = new Map();
 const memo = (k, fn) => { let v = cache.get(k); if (!v) { v = fn(); cache.set(k, v); } return v; };
 const TYPE = { slash: '#e8f0ff', pierce: '#ffe9a8', blunt: '#ffb870', arcane: '#b58cff' };
 const METAL = { iron: ['#9aa3ad', '#c8d0d8', '#6f7882'], steel: ['#b8cce8', '#e8f2ff', '#7a90b8'], shadow: ['#9a7ae0', '#d0baff', '#5a3ab0'], sun: ['#e0b24a', '#fff0a8', '#a07a1e'], moon: ['#cfe3f8', '#ffffff', '#7aa0d0'], cinder: ['#ff8a4a', '#ffd0a0', '#a04020'], aether: ['#6af0d0', '#d8fff0', '#2a9a88'] };
-const tier = (id) => (id.startsWith('hollow_') ? 'shadow' : id.startsWith('steel_') || id === 'steel_plate' ? 'steel' : id.startsWith('sun_') ? 'sun' : id.startsWith('moon_') ? 'moon' : id.startsWith('cinder_') ? 'cinder' : id.startsWith('aether_') ? 'aether' : 'iron');
+for (const t of EXP_TIERS) METAL[t.id] = t.metal;
+const tier = (id) => { const td = tierOf(id); if (td) return td === 'hollow' ? 'shadow' : td; return tierByPrefix(id); };
+const tierByPrefix = (id) => (id.startsWith('hollow_') ? 'shadow' : id.startsWith('steel_') || id === 'steel_plate' ? 'steel' : id.startsWith('sun_') ? 'sun' : id.startsWith('moon_') ? 'moon' : id.startsWith('cinder_') ? 'cinder' : id.startsWith('aether_') ? 'aether' : 'iron');
 const wd = ['#8f633a', '#a67546', '#6a4528'];
 
 const sword = (p, m) => { p.line(3, 13, 12, 3, m[0]); p.line(4, 13, 13, 3, m[1]); p.line(2, 14, 4, 12, '#6a4528'); p.r(2, 10, 1, 1, '#e0b24a'); p.line(3, 11, 6, 14, '#e0b24a'); p.p(13, 2, '#ffffff'); };
@@ -64,12 +67,14 @@ const ITEM = {
 function gearIcon(id) {
   const it = ITEMS[id], t = tier(id), m = METAL[t];
   if (it.slot === 'weapon') return id.includes('bow') ? (p) => bow(p, m) : id.includes('hammer') ? (p) => hammer(p, m) : id.includes('wand') ? (p) => wand(p, m) : id.includes('rapier') ? (p) => rapier(p, m) : id.includes('pistol') ? (p) => pistol(p, m) : it.wtype === 'slash' ? (p) => sword(p, m) : it.wtype === 'pierce' ? (p) => spear(p, m) : it.wtype === 'blunt' ? (p) => mace(p, m) : (p) => staff(p, t === 'shadow' ? '#a984ff' : t === 'sun' ? '#ffd36a' : t === 'moon' ? '#bfe0ff' : t === 'cinder' ? '#ff8a4a' : t === 'aether' ? '#6af0d0' : '#8ad8ff');
-  if (it.slot === 'armor' && id.includes('robe')) return (p) => robe(p, { shadow: '#6a3ab0', steel: '#4a6ab8', sun: '#d8b040', moon: '#8ab0e0', cinder: '#c0502a', aether: '#3ac0a8' }[t] ?? '#5a4a9a');
-  if (it.slot === 'armor') return (p) => coat(p, t === 'shadow' ? '#5a3a9a' : t === 'steel' ? '#8aa0c8' : id.includes('mail') ? '#7a8a98' : '#8a5a38', id.includes('plate') || id.includes('aegis') ? 'plate' : id.includes('mail') ? 'mail' : 'leather');
-  const cc = { shadow: '#a984ff', steel: '#6aa8f0', sun: '#ffd36a', moon: '#bfe0ff', cinder: '#ff8a4a', aether: '#6af0d0' }[t];
+  if (it.slot === 'armor' && id.includes('robe')) return (p) => robe(p, { shadow: '#6a3ab0', steel: '#4a6ab8', sun: '#d8b040', moon: '#8ab0e0', cinder: '#c0502a', aether: '#3ac0a8' }[t] ?? METAL[t]?.[0] ?? '#5a4a9a');
+  if (it.slot === 'armor') return (p) => coat(p, t === 'shadow' ? '#5a3a9a' : t === 'steel' ? '#8aa0c8' : METAL[t] && EXP_TIERS.some((x) => x.id === t) ? METAL[t][0] : id.includes('mail') ? '#7a8a98' : '#8a5a38', id.includes('plate') || id.includes('aegis') ? 'plate' : id.includes('mail') ? 'mail' : 'leather');
+  const cc = { shadow: '#a984ff', steel: '#6aa8f0', sun: '#ffd36a', moon: '#bfe0ff', cinder: '#ff8a4a', aether: '#6af0d0' }[t] ?? METAL[t]?.[1];
   return id.includes('forgecharm') ? (p) => { p.r(3, 9, 10, 4, METAL[t][0]); p.r(3, 9, 10, 1, METAL[t][1]); p.r(5, 6, 6, 3, METAL[t][2]); p.r(4, 13, 8, 1, METAL[t][2]); p.p(8, 4, '#ffffff'); p.p(8, 5, cc ?? '#ff9f6b'); } : id.includes('locket') ? (p) => locket(p, cc ?? '#4a90e0') : (p) => band(p, cc ?? '#6fc08b');
 }
 const tomeIcon = (p, sid) => { const c = CLASSES[SKILLS[sid].cls[0]]?.color ?? '#8a7ab0'; p.r(2, 2, 12, 12, shade(c, 0.55)); p.r(3, 3, 10, 10, c); p.r(2, 2, 12, 1, tint(c, '#ffffff', 0.5)); p.r(2, 2, 1, 12, shade(c, 0.4)); p.r(11, 3, 2, 10, '#e8dcc0'); p.r(5, 5, 4, 1, '#e0b24a'); p.r(5, 7, 4, 1, '#e0b24a'); p.r(5, 9, 3, 1, '#e0b24a'); p.p(6, 11, '#e0b24a'); };
+for (const t of EXP_TIERS) { ITEM[t.ore] = (p) => oreIcon(p, t.ore3[0], t.ore3[1], t.ore3[2]); ITEM[t.ing] = (p) => ingotIcon(p, t.metal[0], t.metal[1], t.metal[2]); }
+for (const p of EXP_POTIONS) ITEM[p.id] = (q) => bottle(q, p.color, !!p.pct && p.pct >= 0.45 || !!p.mpPct && p.mpPct >= 0.5);
 export function itemIcon(id) {
   return memo(`i:${id}`, () => sprite(16, 16, (p) => { const it = ITEMS[id]; if (!it) return p.r(4, 4, 8, 8, '#888'); (ITEM[id] ?? (it.skill ? (q) => tomeIcon(q, it.skill) : it.k === 'gear' ? gearIcon(id) : (q) => bottle(q, '#888')))(p); }));
 }

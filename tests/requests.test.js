@@ -138,7 +138,7 @@ test('gear: every class — hidden and mythic too — has weapons and armour mad
   P.equip.weapon = sword.uid; const a0 = rtStats(P).atk; P.equip.weapon = bow.uid; const a1 = rtStats(P).atk;
   assert.ok(a1 >= a0 - 1e-9, 'an archer is at least as strong with the bow made for them as with an equal sword');
   for (const t of TIERS) for (const r of RECIPES.filter((x) => ITEMS[x.out]?.k === 'gear' && x.out.startsWith(t.id + '_'))) { const cost = Object.entries(r.in).reduce((n, [id, q]) => n + ITEMS[id].v * q, 0); assert.ok(ITEMS[r.out].v >= cost * t.mult * 0.98, `${r.out} is not cheaper than its materials`); }
-  assert.ok(ITEMS.sun_blade.v >= 1500 && ITEMS.aether_sword.v > ITEMS.moon_sword.v, 'higher tiers cost more'); assert.equal(TIERS.length, 7, 'seven metal tiers');
+  assert.ok(ITEMS.sun_blade.v >= 1500 && ITEMS.aether_sword.v > ITEMS.moon_sword.v, 'higher tiers cost more'); assert.equal(TIERS.length, 15, 'seven original metal tiers plus the eight Far Reaches metals');
   const ing = RECIPES.find((r) => r.out === 'moonsilver_ingot'); assert.ok(ing && ING_OK(ing)); function ING_OK(r) { return Object.keys(r.in).every((k) => ITEMS[k]); }
   // a fitting piece is 10% stronger than the identical stats worn by a class it is not made for
   const W = R.newPlayer({ id: 'g2', name: 'Fit2', classId: 'warrior' }), Mg = R.newPlayer({ id: 'g3', name: 'Fit3', classId: 'mage' }); W.level = Mg.level = 10;

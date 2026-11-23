@@ -5,7 +5,8 @@ import { modsOf, statusOf } from './loadout.js';
 import { sumGearFx } from './custom.js';
 
 export { MAX_LEVEL, HP_SCALE };
-export const xpForLevel = (lvl) => Math.round(40 * Math.pow(lvl, 1.55));
+// Beyond level 30 each level takes progressively longer, so the road to 100 is a real journey.
+export const xpForLevel = (lvl) => Math.round(40 * Math.pow(lvl, 1.55) * (lvl > 30 ? 1 + (lvl - 30) * 0.12 : 1));
 
 export function gearBonuses(gearList, classId = null) {
   const b = { atk: 0, def: 0, hp: 0, mp: 0, spd: 0, dmg: 0, power: 0, wtype: null, crit: 0, ls: 0, thorns: 0, regen: 0, mpOnHit: 0, slowOnHit: 0, stun: 0 };
@@ -32,7 +33,7 @@ export function rtStats(P) {
     maxMp: Math.round((60 + 6 * (L - 1) + b.mp) * m.mp),
     atk: (cls.atk + 2 * (L - 1) + b.atk) * m.atk,
     def: (cls.def + 1.5 * (L - 1) + b.def) * m.def,
-    dmgMult: (1 + b.dmg + b.power * 0.08) * m.dmg,
+    dmgMult: (1 + b.dmg + b.power * 0.08) * m.dmg * (1 + Math.max(0, L - 30) * 0.03),   // past level 30 you hit harder with every level, keeping fights a sensible length against the tougher monsters
     wtype: b.wtype, move: ((cls.move ?? 1) + b.spd * 0.04) * m.move,
     mpRegen: (cls.mpRegen ?? 1.2) * m.mpRegen, taintImmune: !!cls.taintImmune,
     passives: cls.passives ?? [], status: st, lifesteal: b.ls, crit: b.crit, thorns: b.thorns, regen: b.regen, mpOnHit: b.mpOnHit, slowOnHit: Math.round(b.slowOnHit), stunChance: b.stun,
@@ -46,7 +47,7 @@ export function calcDamage(power, atk, def, res = 1, mult = 1) {
 // Stats for an enemy of a given level. Shades (mirror enemies) copy the target player's class strength.
 export function enemyStats(key, level) {
   const d = ENEMIES[key];
-  const s = (2.1 + 0.3 * (level - 1)) * (d.tough ?? 1), t = d.tough ? 4 : 0;
+  const s = (2.1 + 0.3 * (Math.min(level, 33) - 1) + 0.08 * Math.max(0, level - 33)) * (d.tough ?? 1), t = d.tough ? 4 : 0;   // health grows more slowly past level 33
   return { maxHp: Math.round(d.hp * s), atk: d.atk + level + t, def: d.def + 0.7 * (level - 1) + t, speed: d.speed };
 }
 export function shadeStats(P, level) {

@@ -287,9 +287,11 @@ export function haggleRound(P, cust, h, stance, rng) {
 export const ITEM_USE = {
   heal_potion: { hp: 45 }, ghost_elixir: { hp: 120 }, frost_elixir: { hp: 220 },
   calm_tonic: { mp: 30 }, clarity_draught: { mp: 60 }, lantern_salve: { mp: 40 },
+  // percentage potions (the long climb): heal a share of your maximum, whatever your level
+  greater_tonic: { pct: 0.25 }, superior_elixir: { pct: 0.35 }, grand_elixir: { pct: 0.45 }, supreme_elixir: { pct: 0.55 }, mana_surge: { mpPct: 0.3 }, grand_mana: { mpPct: 0.5 },
 };
-export const quickHeal = (P) => ['frost_elixir', 'ghost_elixir', 'heal_potion'].find((id) => count(P, id) > 0) ?? null;
-export const quickMana = (P) => ['clarity_draught', 'calm_tonic', 'lantern_salve'].find((id) => count(P, id) > 0) ?? null;
+export const quickHeal = (P) => ['supreme_elixir', 'grand_elixir', 'superior_elixir', 'frost_elixir', 'ghost_elixir', 'greater_tonic', 'heal_potion'].find((id) => count(P, id) > 0) ?? null;
+export const quickMana = (P) => ['grand_mana', 'clarity_draught', 'mana_surge', 'lantern_salve', 'calm_tonic'].find((id) => count(P, id) > 0) ?? null;
 
 // ── Kill rewards (per player) ───────────────────────────────────────────────
 export function applyKill(P, { rewards, lowHp }) {

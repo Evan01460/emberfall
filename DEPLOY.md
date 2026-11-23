@@ -16,6 +16,19 @@ One server for everybody: anyone who opens your Render URL and picks **Online ·
   restores it (passphrase-checked, impossible to forge or edit). Keep `VAULT_SECRET` the same across redeploys.
 * For a world that never resets, use a plan with a persistent disk (set `DATA_DIR` to the mounted path) or Fly.io (`fly.toml` included).
 
+## Keeping the market (and everything else) across restarts — recommended, free
+Listings, orders and the gilt held in escrow live in the server's memory and disk, which the free plan wipes. Two layers protect them:
+
+1. **Automatic, no setup:** every player's signed character copy also records what the market is holding for them. If the world is
+   wiped, they get their listed items and escrowed gilt back (with a message) the next time they log in.
+2. **Full backup (5 minutes, free):** the server can save the *whole* world — listings, orders, guilds, accounts — to a private GitHub
+   Gist every ~90 s and on shutdown, and restore it by itself when it starts with an empty disk.
+   * On gist.github.com create a **secret gist** (any file, e.g. `world.json` containing `{}`), and copy its ID from the URL.
+   * On GitHub → Settings → Developer settings → Personal access tokens → *Tokens (classic)* → generate one with **only the `gist` scope**.
+   * In Render → your service → **Environment**, add `BACKUP_GIST_ID` (the gist ID) and `BACKUP_GITHUB_TOKEN` (the token), and save.
+   * In the logs you should see `Gist backup is ON`. After that a restart loses nothing but the last ~90 seconds.
+   (The gist holds salted password hashes, so keep it secret and keep the token private.)
+
 ## Other hosts
 Anything that runs a Docker container and allows WebSockets works: Fly.io (`fly.toml`), Koyeb, Railway, a VPS, or your own PC
 (`npm install && npm start`). Optional: `EMBERFALL_GLOBAL_WS=wss://your.host/ws npm run build` makes the downloadable

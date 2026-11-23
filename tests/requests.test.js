@@ -98,3 +98,18 @@ test('public-world transport: big messages are chunked and reassembled intact, i
   for (let i = 0; i < Math.max(w3.length, w4.length); i++) { if (w3[i]) rd(w3[i]); if (w4[i]) rd(w4[i]); } assert.deepEqual(interleaved.sort(), ['a', 'b'], 'two big messages at once do not mix');
   const { srv } = world(); const c = client(srv, 'Ver', 'warrior'); assert.equal(c.conn.msgs.find((m) => m.t === 'welcome').ver, PROTOCOL);
 });
+
+import { heldFor, applyHeld, installRestored } from '../src/server/restore.js';
+test('if the world is wiped, what the market was holding for a player (listings, order and request escrow) is handed back', () => {
+  const { srv } = world(); const sm = client(srv, 'Lister', 'blacksmith'), buyer = client(srv, 'Payer', 'warrior'); const bd = getMap('town').points.find((p) => p.kind === 'exchange');
+  sm.S.map = 'town'; sm.S.x = bd.x + 0.5; sm.S.y = bd.y + 1.5; sm.send('interact', { id: bd.id }); sm.P.level = 6;
+  R.addItem(sm.P, 'iron_ore', 12); sm.send('market.list', { itemId: 'iron_ore', qty: 10, price: 9 });
+  const g = R.addGear(sm.P, { id: 'iron_sword', q: 0.8 }); sm.send('market.list', { itemId: 'iron_sword', price: 140, uid: g.uid });
+  buyer.P.gilt = 900; buyer.send('req.new', { to: 'Lister', itemId: 'iron_sword', price: 200 });
+  const ore0 = R.count(sm.P, 'iron_ore'), held = heldFor(srv, sm.P); assert.ok(held.items.some(([id, n]) => id === 'iron_ore' && n === 10), 'the 10 ore on the board'); assert.equal(held.gear.length, 1, 'the sword on the board');
+  const heldB = heldFor(srv, buyer.P); assert.equal(heldB.gilt, 200, 'the buyer\'s request escrow');
+  // a brand-new world (wiped disk): the signed copy restores the character, then the held things are returned
+  const { srv: fresh } = world(); const rec = JSON.parse(JSON.stringify(sm.P)); const P = installRestored(fresh, rec); assert.ok(P); applyHeld(P, held);
+  assert.equal(R.count(P, 'iron_ore'), ore0 + 10); assert.ok(P.gear.some((x) => x.id === 'iron_sword' && x.q === 0.8)); assert.ok(P.mail.some((m) => /market was holding/.test(m)));
+  const B = installRestored(fresh, JSON.parse(JSON.stringify(buyer.P))); const gold = B.gilt; applyHeld(B, heldB); assert.equal(B.gilt, gold + 200, 'escrowed gilt is returned');
+});

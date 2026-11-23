@@ -14,3 +14,7 @@ services:
         value: /tmp/emberfall
       - key: VAULT_SECRET        # generated once by Render and kept across restarts; signs the characters saved in players' browsers
         generateValue: true
+      - key: BACKUP_GIST_ID      # optional: a secret gist that backs up the whole world (see DEPLOY.md)
+        sync: false
+      - key: BACKUP_GITHUB_TOKEN # optional: token with the "gist" scope
+        sync: false

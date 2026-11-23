@@ -5,10 +5,10 @@ import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, statSync, createReadStream } from 'node:fs';
 import { join, extname, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scryptSync, randomBytes, timingSafeEqual, createHmac } from 'node:crypto';
+import { scryptSync, randomBytes, timingSafeEqual, createHmac, createHash } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { GameServer } from '../src/server/gameserver.js';
-import { installRestored } from '../src/server/restore.js';
+import { installRestored, heldFor, applyHeld } from '../src/server/restore.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const PORT = +(process.env.PORT || 8080);
@@ -19,6 +19,16 @@ const WORLD_FILE = join(DATA, 'world.json'), ACC_FILE = join(DATA, 'accounts.jso
 const readJson = (f) => { try { return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null; } catch (e) { console.error('could not read', f, e.message); return null; } };
 const writeJson = (f, o) => { const tmp = f + '.tmp'; writeFileSync(tmp, JSON.stringify(o)); renameSync(tmp, f); };
 
+// ── optional off-site backup (a GitHub Gist) ─────────────────────────────────────────────────────────────────────────────────
+// Free hosts wipe the disk on every restart. Set BACKUP_GIST_ID (a secret gist you created) and BACKUP_GITHUB_TOKEN (a token with the
+// "gist" scope) and the whole world — market listings, orders, guilds, accounts — is saved to that gist every ~90 s and on shutdown,
+// and restored automatically when the server starts with an empty disk.
+const GIST_ID = process.env.BACKUP_GIST_ID, GIST_TOKEN = process.env.BACKUP_GITHUB_TOKEN, GITHUB_API = process.env.GITHUB_API || 'https://api.github.com';
+const gh = async (path, opts = {}) => { const r = await fetch(GITHUB_API + path, { ...opts, headers: { authorization: `Bearer ${GIST_TOKEN}`, accept: 'application/vnd.github+json', 'user-agent': 'emberfall-server', 'content-type': 'application/json' } }); if (!r.ok) throw new Error(`GitHub answered ${r.status}`); return r.json(); };
+if (GIST_ID && GIST_TOKEN && !existsSync(WORLD_FILE)) {
+  try { const g = await gh(`/gists/${GIST_ID}`); let n = 0; for (const name of ['world.json', 'accounts.json']) { const f = g.files?.[name]; if (!f) continue; const text = f.truncated ? await (await fetch(f.raw_url)).text() : f.content; if (text) { writeFileSync(join(DATA, name), text); n++; } } console.log(n ? 'Restored the world from the gist backup' : 'The gist backup is empty — starting fresh'); }
+  catch (e) { console.error('Could not restore from the gist backup:', e.message); }
+}
 const state = readJson(WORLD_FILE);
 const accounts = readJson(ACC_FILE) ?? {};
 const game = new GameServer({ state: state?.v === 2 ? state : null });
@@ -32,14 +42,14 @@ const SECRET_FILE = join(DATA, 'vault.key');
 const VAULT_SECRET = process.env.VAULT_SECRET || (existsSync(SECRET_FILE) ? readFileSync(SECRET_FILE, 'utf8') : (() => { const k = randomBytes(32).toString('hex'); try { writeFileSync(SECRET_FILE, k); } catch {} return k; })());
 if (!process.env.VAULT_SECRET) console.warn('VAULT_SECRET is not set: characters saved in players\' browsers only survive a wipe if this disk (data/vault.key) survives. Set VAULT_SECRET to a long random string on free hosting.');
 const sign = (s) => createHmac('sha256', VAULT_SECRET).update(s).digest('hex');
-const vaultFor = (S) => { game.syncRecord(S); const rec = JSON.stringify({ v: 1, name: S.P.name, acc: accounts[S.P.name.toLowerCase()] ?? null, P: S.P, ts: Date.now() }); return { rec, sig: sign(rec) }; };
+const vaultFor = (S) => { game.syncRecord(S); const rec = JSON.stringify({ v: 2, name: S.P.name, acc: accounts[S.P.name.toLowerCase()] ?? null, P: S.P, held: heldFor(game, S.P), ts: Date.now() }); return { rec, sig: sign(rec) }; };
 function restoreFromVault(name, pass, v) {
   try {
     if (!v || typeof v.rec !== 'string' || typeof v.sig !== 'string') return false;
     const a = Buffer.from(sign(v.rec)), b = Buffer.from(v.sig); if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
-    const r = JSON.parse(v.rec); if (r.v !== 1 || String(r.name).toLowerCase() !== name.toLowerCase() || !r.acc) return false;
+    const r = JSON.parse(v.rec); if (!(r.v === 1 || r.v === 2) || String(r.name).toLowerCase() !== name.toLowerCase() || !r.acc) return false;
     if (!timingSafeEqual(hash(pass, Buffer.from(r.acc.salt, 'hex')), Buffer.from(r.acc.hash, 'hex'))) return false;
-    if (!installRestored(game, r.P)) return false;
+    const P = installRestored(game, r.P); if (!P) return false; applyHeld(P, r.held);
     accounts[name.toLowerCase()] = r.acc; writeJson(ACC_FILE, accounts); return true;
   } catch { return false; }
 }
@@ -112,8 +122,15 @@ setInterval(() => { for (const ws of wss.clients) { if (!ws.isAlive) { ws.termin
 setInterval(() => { try { game.tick(); } catch (e) { console.error('tick error', e); } }, 50);
 const save = () => { try { writeJson(WORLD_FILE, game.exportState()); } catch (e) { console.error('save failed', e.message); } };
 setInterval(save, 30000);
+let lastBackup = '';
+async function backupToGist() {
+  if (!GIST_ID || !GIST_TOKEN) return;
+  const world = JSON.stringify(game.exportState()), acc = JSON.stringify(accounts), sum = createHash('sha1').update(world).update(acc).digest('hex'); if (sum === lastBackup) return;
+  await gh(`/gists/${GIST_ID}`, { method: 'PATCH', body: JSON.stringify({ files: { 'world.json': { content: world }, 'accounts.json': { content: acc } } }) }); lastBackup = sum;
+}
+if (GIST_ID && GIST_TOKEN) { console.log('Gist backup is ON'); setInterval(() => backupToGist().catch((e) => console.error('gist backup failed:', e.message)), +(process.env.BACKUP_EVERY_MS || 90000)); }
 // every connected player gets a fresh signed copy of their own character every 20 s
 setInterval(() => { for (const S of game.sessions.values()) { try { S.conn.send({ t: 'vault', ...vaultFor(S) }); } catch {} } }, 20000);
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { console.log(`\n${sig}: saving world…`); save(); process.exit(0); });
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { console.log(`\n${sig}: saving world…`); save(); try { await Promise.race([backupToGist(), new Promise((r) => setTimeout(r, 8000))]); } catch (e) { console.error('final gist backup failed:', e.message); } process.exit(0); });
 
 server.listen(PORT, () => console.log(`Emberfall online → http://localhost:${PORT}   (ws path /ws, data in ${DATA})`));

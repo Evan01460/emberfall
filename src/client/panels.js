@@ -472,6 +472,15 @@ export function openRaid(m) {
       st.busy ? h('p', { class: 'red' }, `The Bastion is occupied by ${st.by}'s raid.`) : null),
     h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, h('button', { class: 'btn primary', disabled: st.busy, onclick: () => { send({ t: 'raid.enter' }); closeWindow('raid'); } }, 'Enter the Bastion'), h('button', { class: 'btn ghost', onclick: () => closeWindow('raid') }, 'Not yet'))), { icon: 'forge' });
 }
+export function openRaid2(m) {
+  const st = m.status;
+  openWindow('raid2', m.name, () => h('div', {}, h('p', { class: 'speech' }, st.blurb),
+    h('div', { class: 'card' }, h('div', { class: 'row', style: { flexWrap: 'wrap' } }, h('span', { class: 'tag g' }, `Level ${st.minLevel}+`), h('span', { class: 'tag' }, st.solo ? 'solo world: 1 player is enough' : `a party of 2-${st.size} standing together`), h('span', { class: 'tag v' }, `${st.wings.length} wings`), h('span', { class: 'tag' }, `title: ${st.title}`)),
+      ...st.wings.map((w, i) => h('div', { class: 'row sb', style: { margin: '6px 0', alignItems: 'flex-start' } }, h('div', {}, h('b', { style: { color: st.color } }, `Wing ${i + 1} — ${w.name}`), h('div', { class: 'dim', style: { fontSize: '12px' } }, w.bosses.join(' & ') + (w.link ? ' (linked: kill them close together)' : ''))), h('span', { class: 'tag' }, `Lv ${w.lvl}`))),
+      h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Every wing is a separate fight with phases: servants, falling stars, enrages and shields. Each cleared wing rewards gilt, XP and a chance at raid-forged gear with a powerful effect, tomes and starmetal; the last boss drops the best. If everyone falls, the raid resets.'),
+      st.busy ? h('p', { class: 'red' }, `Occupied by ${st.by}'s raid (wing ${st.wing}).`) : null),
+    h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, h('button', { class: 'btn primary', disabled: st.busy, onclick: () => { send({ t: 'raid2.enter', raid: st.id }); closeWindow('raid2'); } }, 'Enter the raid'), h('button', { class: 'btn ghost', onclick: () => closeWindow('raid2') }, 'Not yet'))), { icon: 'forge' });
+}
 export function openBounty(m) {
   openWindow('bounty', 'Bounty Board', () => {
     const mine = m.list.filter((b) => b.accepted && !b.claimed), offers = m.list.filter((b) => !b.accepted && !b.claimed);

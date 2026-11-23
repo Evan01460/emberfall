@@ -104,6 +104,14 @@ src/client/*                pixel renderer, sprites, icons, effects, UI, music, 
 host/server.mjs             Node host: static files, WebSocket, accounts (scrypt), autosave
 ```
 
+## The Far Reaches, the Spire and the raids
+
+Beyond the original continent lies a second one with **48 new regions** across 12 biomes (Ashen, Hoarfrost, Starlit, Sunbaked, Riftscarred, Celestial, Gilded and Primeval regions ...), reached by roads from the existing zones, **10 more dungeons** (multi-floor, with bosses), **482 new enemy types** and **8 new metal tiers** (Voidglass, Drakesteel, Celestine, Eternium, Nullsteel, Solarite, Mythril, Worldsteel — ore, ingots, recipes and gear for every class). The **level cap is now 100**; past level 30 each level takes longer and gives a little more damage.
+
+* **The Endless Spire** — 120 floors, starting in Greenmeadow. Floor 1 is for beginners; the enemy level climbs with every floor, with a boss every few floors. Reaching floors 25 / 70 / 120 earns the titles Spire-Walker, Spire-Warden and Spire-Crowned.
+* **Citadel of the Void Emperor** (level 40+, 4 wings) and **Wyrmcrown Sanctum** (level 80+, 5 wings) — real multi-boss raids entered from gatekeepers in the Far Reaches by a party standing together (a solo world lets one player try). Each wing is a separate boss fight with phases: servants, falling stars aimed at raiders, enrages, shields that hold while the boss's servants live, and twin bosses that must be killed close together. Every cleared wing pays gilt, XP and a chance at raid-forged gear with a powerful effect, tomes and starmetal; the last boss drops the best. If everyone falls the raid resets. Clearing them earns the titles Voidbreaker and Wyrmslayer.
+* **Health scale:** all health is ten times larger (a starting warrior has ~300 HP), enemy damage was raised to match, shields and the old potions scale too, and the new percentage potions (Greater Marrow Tonic ... Supreme Elixir, Mana Surge, Grand Mana) heal a share of your maximum. Damage dealt is unchanged, so life steal (a flat number) is roughly ten times weaker than before relative to your health.
+
 ## Known limits
 
 * Balance was tuned with bots and unit tests, **not by human playtesting**; expect to adjust numbers in `src/data.js` and `src/skilldata.js`.

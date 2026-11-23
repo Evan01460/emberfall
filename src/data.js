@@ -7,6 +7,7 @@
 import { EXTRA_SKILLS, PATHS, MYTHICS, COMBOS } from './skilldata.js';
 import { buildGearSets, TIERS } from './gearsets.js';
 import { EXP_TIERS, EXP_ENEMIES, EXP_ZONES, SPIRE_ZONES, EXP_POTIONS } from './expansion.js';
+import { RAIDS, RAID_ENEMIES } from './raids.js';
 import { NEW_ENEMIES, NEW_ZONES } from './content2.js';
 export { FIT_BONUS, ARCH, TIERS, fits, fitsOf, archOf, tierOf, classGear, ALL_CLASSES } from './gearsets.js';
 export { PATHS, MYTHICS, COMBOS };
@@ -432,6 +433,8 @@ Object.assign(ENEMIES, NEW_ENEMIES); Object.assign(ZONES, NEW_ZONES);   // the e
 // The Far Reaches: 48 regions, 10 dungeons and the 120-floor Endless Spire (src/expansion.js).
 Object.assign(ENEMIES, EXP_ENEMIES);
 for (const e of EXP_ZONES) ZONES[e.id] = { id: e.id, name: e.name, realm: 'main', lvl: e.lvl, enemies: e.enemies, boss: e.boss, elite: e.elite, ...(e.dungeon === true ? { dungeon: true } : {}) };
+Object.assign(ENEMIES, RAID_ENEMIES);
+for (const R of Object.values(RAIDS)) for (const w of R.wings) ZONES[w.id] = { id: w.id, name: `${R.name} — ${w.name}`, realm: 'main', lvl: w.lvl, enemies: [], raid: R.id };
 for (const e of SPIRE_ZONES) ZONES[e.id] = { id: e.id, name: e.name, realm: 'main', lvl: e.lvl, dungeon: true, spire: e.spire, enemies: e.enemies, boss: e.boss, elite: e.elite };
 
 

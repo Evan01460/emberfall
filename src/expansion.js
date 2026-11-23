@@ -75,6 +75,7 @@ function mobDef(name, shape, color, L, role, tier, res = {}, drops = []) {
 const eliteDef = (name, shape, color, L, tier) => ({ tough: 2.3, name, shape, color, hp: Math.round(52 * effLevel(L)), atk: Math.round(1.25 * L), def: Math.round(1.05 * L), speed: 2.6, moves: ['smash', 'lunge', 'nova', 'void_slam'], res: { arcane: 0.8 }, xp: Math.round(75 * L), gold: [Math.round(L * 28), Math.round(L * 45)], pwr: Math.max(1, +(L / 33).toFixed(2)), drops: [[tier.ore, 1, 1, 3], [tier.ing, 0.25, 1, 2], ['starmetal', 0.05, 1, 1]], tomes: TOMES });
 const bossDef = (name, shape, color, L, tier, moves) => ({ tough: 2.5, name, shape, color, hp: Math.round(76 * effLevel(L)), atk: Math.round(1.2 * L), def: Math.round(0.85 * L), speed: 2.4, moves, res: { arcane: 0.7, blunt: 0.9 }, xp: Math.round(190 * L), gold: [Math.round(L * 50), Math.round(L * 85)], pwr: Math.max(1, +(L / 33).toFixed(2)), drops: [[tier.ore, 1, 3, 6], [tier.ing, 0.7, 1, 3], ['starmetal', 0.4, 1, 1], ['echo_shard', 0.6, 1, 3]], boss: true, tomes: TOMES });
 
+export { mobDef, eliteDef, bossDef, ROLE, BOSS_MOVES };
 export const EXP_ENEMIES = {};   // id → enemy definition
 export const EXP_ZONES = [];     // zone specs for the data tables AND the map builder
 const VENDORS = ['Marek the Far-Trader', 'Isolde the Wayfinder', 'Bram Ironcoat', 'Sable the Peddler', 'Tobin Longstride', 'Yara of the Caravans', 'Dun the Haggler', 'Ottilie Brass', 'Kestrel the Courier', 'Old Hale'];

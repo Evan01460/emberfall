@@ -5,8 +5,9 @@
 //                zones whether flagged or not. The winner takes 10% of the loser's guild bank. Mixed into GameServer.
 // ─────────────────────────────────────────────────────────────────────────────
 import { getMap, inSafeZone } from '../world.js';
+import { RAID_ARENA_IDS } from '../raids.js';
 
-export const PVP = { minLevel: 5, levelGap: 10, unflagMs: 15000, farmMs: 120000, noMaps: new Set(['raid_bastion', 'guild_raid']) };
+export const PVP = { minLevel: 5, levelGap: 10, unflagMs: 15000, farmMs: 120000, noMaps: new Set(['raid_bastion', 'guild_raid', ...RAID_ARENA_IDS]) };
 export const WAR = { dur: 30 * 60000, goal: 25, prize: 0.10, askMs: 5 * 60000, cooldown: 60 * 60000, minMembers: 2 };
 const gkey = (n) => String(n ?? '').toLowerCase();
 const pairKey = (a, b) => [a, b].sort().join('|');

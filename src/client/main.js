@@ -13,7 +13,7 @@ import { sfx, toggleMute, isMuted } from './sfx.js';
 import { playTrack, trackFor, stopMusic } from './music.js';
 import { startTitleScene } from './title.js';
 import { dayPhase, isNight } from '../world.js';
-import { openCharacter, openWindow, closeWindow, closeAll, refreshWindow, isOpen, topWindow, showDialog, showSecret, showSecretDone, showLegends, showLoot, openWaystone, openRaid, openGraid, openBounty, showLeaderboard, openVendor, openTavern, openCraft, openExchange, updateExchange, startForge, startBrew, showCraftResult, startHaggle, openHelp } from './panels.js';
+import { openCharacter, openWindow, closeWindow, closeAll, refreshWindow, isOpen, topWindow, showDialog, showSecret, showSecretDone, showLegends, showLoot, openWaystone, openRaid, openRaid2, openGraid, openBounty, showLeaderboard, openVendor, openTavern, openCraft, openExchange, updateExchange, startForge, startBrew, showCraftResult, startHaggle, openHelp } from './panels.js';
 import { ingest, syncProjectiles } from './fx.js';
 import { h, $, toast, modal } from '../ui-lib.js';
 import * as I from './icons.js';
@@ -143,6 +143,7 @@ function wire(net) {
       case 'tavern': return openTavern();
       case 'waystone': return openWaystone(m);
       case 'raid': return openRaid(m);
+      case 'raid2': return openRaid2(m);
       case 'graid': return openGraid(m);
       case 'bounty': return openBounty(m);
       case 'dialog': return showDialog(m);
@@ -195,5 +196,5 @@ function wire(net) {
 function leaveWith(msg) { stopGame(); showLogin(msg); }
 
 showLogin();
-window.__W = { getMap, blockedAt, inSafeZone }; window.__ui = { openCraft, openCharacter, startBrew };
+window.__W = { getMap, blockedAt, inSafeZone };
 window.__hl = { G, get view() { return view; }, leave };

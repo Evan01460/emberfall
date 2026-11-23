@@ -4,6 +4,7 @@
 // Two realms: "main" (Lanternfall and its wilds) and "hollow" (the mirror realm).
 // ─────────────────────────────────────────────────────────────────────────────
 import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS } from './expansion.js';
+import { RAIDS } from './raids.js';
 import { Rng } from './rng.js';
 
 export const TS = 32;
@@ -730,6 +731,10 @@ function buildGuildRaid() {
 function addHiddenSpots(m) {
   const way = (x, y) => pt(m, 'waystone', 'waystone', x, y, { name: 'Waystone' });
   if (m.id === 'town') { way(31, 21); pt(m, 'board', 'bounties', 21, 21, { name: 'Bounty Board' }); pt(m, 'npc', 'guildmaster', 29, 23, { name: 'Guildmaster Orren', role: 'graid', lines: ['Guilds that fight together, rise together.'] }); } if (m.id === 'quarry') way(6, 17); if (m.id === 'gloomwood') way(58, 16); if (m.id === 'archive') way(31, 3);
+  for (const R of Object.values(RAIDS)) if (m.id === R.entry.map) {
+    const sx = Math.floor(m.spawn.x), sy = Math.floor(m.spawn.y);
+    for (const [dx, dy] of [[3, -3], [-3, -3], [4, -2], [-4, -2], [3, 3], [-3, 3], [5, 0], [-5, 0], [0, -4]]) { const x = sx + dx, y = sy + dy; if (!isBlockedTile(m, x, y) && !isBlockedTile(m, x + 1, y) && !isBlockedTile(m, x, y + 1) && !m.points.some((q) => Math.abs(q.x - x) + Math.abs(q.y - y) < 2)) { pt(m, 'npc', `raid_${R.id}`, x, y, { name: R.entry.npc, role: 'raid2', raid: R.id, lines: R.entry.say }); m.raidExit = { x: x + 0.5, y: y + 1.8 }; break; } }
+  }
   if (m.id === 'emberwaste') { const sx = Math.floor(m.spawn.x), sy = Math.floor(m.spawn.y); for (const [dx, dy] of [[2, -2], [-2, -2], [2, 2], [-2, 2], [3, 0]]) { const x = sx + dx, y = sy + dy; if (!isBlockedTile(m, x, y) && !isBlockedTile(m, x + 1, y)) { pt(m, 'npc', 'raidwarden', x, y, { name: 'Cinderhold Gatekeeper', role: 'raid', lines: ['The Bastion is open to those who dare.'] }); break; } } }
   if (m.id === 'hollow_reach') way(35, 38);
   if (m.id === 'town') {
@@ -757,7 +762,19 @@ function addHiddenSpots(m) {
   }
 }
 
-const BUILDERS = { town: buildTown, quarry: buildQuarry, gloomwood: buildGloomwood, archive: buildArchive, hollow_reach: buildShadowReach, hollow_depths: buildShadowDepths, ...Object.fromEntries(Object.entries(DUN).map(([id, S]) => [id, () => genDungeon(S)])), raid_bastion: buildRaid, guild_raid: buildGuildRaid, root_cellar: buildRootCellar, world_tree: buildWorldTree, sunken_vault: buildSunkenVault, void_rift: buildVoidRift, ...Object.fromEntries(Object.entries(Z).map(([id, S]) => [id, () => (S.kind === 'cave' ? genCave(S) : genOutdoor(S))])) };
+// ── raid arenas: one walled hall per wing (see src/raids.js and src/server/raids.js) ─────────────────────────────────────────────────────
+function genRaidArena(R, W) {
+  const w = 64, h = 48, floor = W.theme === 'snow' ? T.FLOOR : T.COBBLE, m = mk(W.id, `${R.name} — ${W.name}`, w, h, floor, W.theme), rng = new Rng(W.seed);
+  m.spawn = { x: 32.5, y: 43.5 }; ring(m, T.WALL); rect(m, 2, 2, w - 4, h - 4, floor); ring(m, T.WALL); rect(m, 27, h - 3, 11, 3, T.FLOOR);
+  rect(m, 22, 6, 20, 22, T.RUG);                                                         // the dais the encounter happens on
+  for (const [x, y, ww, hh] of [[4, 5, 7, 9], [w - 11, 5, 7, 9], [4, 24, 7, 9], [w - 11, 24, 7, 9]]) if (W.theme !== 'main') rect(m, x, y, ww, hh, W.theme === 'volcano' ? T.WATER : T.ROCK);
+  for (const [x, y] of [[14, 10], [w - 15, 10], [14, 22], [w - 15, 22], [14, 34], [w - 15, 34], [26, 18], [37, 18], [26, 30], [37, 30]]) deco(m, 'pillar', x, y);
+  for (const [x, y] of [[20, 40], [w - 21, 40], [20, 4], [w - 21, 4]]) deco(m, 'lamp', x, y, { solid: false });
+  void rng; portal(m, 27, h - 1, 11, 1, { map: R.entry.map }, 'Flee the raid', { toKey: 'raidExit' });
+  m.bossSpawn = { x: 32, y: 14 }; m.raidArena = { raid: R.id, wing: W.id }; return m;
+}
+const RAID_BUILDERS = Object.fromEntries(Object.values(RAIDS).flatMap((R) => R.wings.map((W) => [W.id, () => genRaidArena(R, W)])));
+const BUILDERS = { town: buildTown, quarry: buildQuarry, gloomwood: buildGloomwood, archive: buildArchive, hollow_reach: buildShadowReach, hollow_depths: buildShadowDepths, ...Object.fromEntries(Object.entries(DUN).map(([id, S]) => [id, () => genDungeon(S)])), raid_bastion: buildRaid, guild_raid: buildGuildRaid, ...RAID_BUILDERS, root_cellar: buildRootCellar, world_tree: buildWorldTree, sunken_vault: buildSunkenVault, void_rift: buildVoidRift, ...Object.fromEntries(Object.entries(Z).map(([id, S]) => [id, () => (S.kind === 'cave' ? genCave(S) : genOutdoor(S))])) };
 const cache = {};
 export function getMap(id) { if (!cache[id]) { cache[id] = BUILDERS[id](); openNewExits(cache[id]); addHiddenSpots(cache[id]); } return cache[id]; }
 export const MAP_IDS = Object.keys(BUILDERS);

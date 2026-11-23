@@ -9,6 +9,8 @@ import { Rng, clamp } from '../rng.js';
 import { combatMethods } from './combat.js';
 import { progressMethods } from './progress.js';
 import { liveMethods } from './live.js';
+import { raidMethods } from './raids.js';
+import { RAID_ARENA_IDS, RAIDS } from '../raids.js';
 import { pvpMethods } from './pvp.js';
 import { requestMethods } from './requests.js';
 import { PROTOCOL } from '../version.js';
@@ -45,7 +47,7 @@ export class GameServer {
       this.markets = { main: createMarket(this.rng, 'main'), hollow: createMarket(this.rng, 'hollow') };
     }
     this.customers = [];            // customer entities currently in town
-    this.initProgress(state); this.initLive(state); this.initPvp(state); this.initRequests(state);
+    this.initProgress(state); this.initLive(state); this.initRaids(); this.initPvp(state); this.initRequests(state);
     this.initCombat();
     this.refillBotOrders();
     this.spawnCustomers();
@@ -79,6 +81,7 @@ export class GameServer {
     // Safety: never resume inside a dead map/blocked tile.
     const mp = getMap(P.map in POINTS ? P.map : 'town');
     if (!(P.map in POINTS) || blockedAt(mp, P.x, P.y)) { P.map = 'town'; P.x = 26.5; P.y = 19.5; }
+    else if (RAID_ARENA_IDS.includes(P.map)) { const R0 = Object.values(RAIDS).find((r) => r.wings.some((w) => w.id === P.map)), ex = getMap(R0.entry.map).raidExit ?? getMap(R0.entry.map).spawn; P.map = R0.entry.map; P.x = ex.x; P.y = ex.y; }
     const S = { conn, P, id: P.id, map: P.map, x: P.x, y: P.y, dir: 'd', moving: false, lastMoveAt: this.now(), immuneUntil: this.now() + 4000, gather: null, ticket: null, haggle: null, market: null, dirtyMe: true, visSig: '', lastChat: 0, msgCount: 0, msgWindow: 0, partyId: null, tradeId: null, listening: new Set() };
     this.initPlayerCombat(S);
     conn.session = S;
@@ -161,6 +164,7 @@ export class GameServer {
     S.map = mapId; S.x = x; S.y = y; S.gather = null; S.market = null; S.immuneUntil = this.now() + 3500; S.moving = false;
     if (!wasShadow && realmOf(mapId) === 'hollow') { S.P.stats.hollowVisits++; this.toast(S, ' You step into the Shadowfell. Your mana drains away while you are out here.', 'secret'); }
     S.conn.send({ t: 'map', id: mapId, x, y, vis: this.visibleIds(S) });
+    const fl = ZONES[mapId]?.spire; if (fl && fl > (S.P.stats.spire ?? 0)) { S.P.stats.spire = fl; if (fl % 10 === 0) this.toast(S, `* Endless Spire: floor ${fl} reached!`, 'secret'); }
     this.touch(S);
   }
 
@@ -241,6 +245,7 @@ export class GameServer {
     if (p.role === 'tavern') { S.tavern = { x: p.x, y: p.y }; return S.conn.send({ t: 'ui', panel: 'tavern' }); }
     if (p.role === 'hidden') return this.offerHidden(S, p);
     if (p.role === 'graid') return S.conn.send({ t: 'ui', panel: 'graid', name: p.name, status: this.graidStatus(S) });
+    if (p.role === 'raid2') return S.conn.send({ t: 'ui', panel: 'raid2', name: p.name, status: this.raid2Status(S, p.raid) });
     if (p.role === 'raid') return S.conn.send({ t: 'ui', panel: 'raid', name: p.name, status: this.raidStatus(S) });
     return S.conn.send({ t: 'ui', panel: 'dialog', name: p.name, icon: p.icon, lines: p.lines });
   }
@@ -758,4 +763,4 @@ export class GameServer {
   on_who(S) { S.conn.send({ t: 'who', players: [...this.sessions.values()].map((o) => ({ n: o.P.name, c: o.P.classId, l: o.P.level, map: getMap(o.map).name })) }); }
 }
 
-Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, pvpMethods, requestMethods);
+Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, raidMethods, pvpMethods, requestMethods);

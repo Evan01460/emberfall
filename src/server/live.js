@@ -41,7 +41,7 @@ export const liveMethods = {
       if (!mob || mob.deadUntil) { this.worldBoss = null; this.nextWorldBoss = nw + WB_EVERY; }
       else if (nw >= this.worldBoss.until) { this.mobs = this.mobs.filter((m) => m !== mob); this.worldBoss = null; this.nextWorldBoss = nw + WB_EVERY; this.announceAll('The Colossus retreats', 'It sinks back into the ground. Another will rise.'); }
     }
-    this.tickRaid(nw); this.tickGraid(nw); this.tickWars(nw); this.tickRequests(nw);
+    this.tickRaid(nw); this.tickRaids2(nw); this.tickGraid(nw); this.tickWars(nw); this.tickRequests(nw);
   },
   worldBossLoot(S) {
     const P = S.P; P.gilt += 400; R.addItem(P, 'sunsteel_ore', 4); const got = ['400g', '4× Sunsteel Ore'];
@@ -242,7 +242,7 @@ export const liveMethods = {
     const gg = R.addGear(P, { id: gearId, q: this.rng.range(0.85, 0.99), affix: this.rng.pick(AFFIXES).id, fx: ok.length ? [{ id: this.rng.pick(ok), k: 1.2 }] : [], cname: `Titan-forged ${ITEMS[gearId].n}`, by: g?.name ? `the ${g.name} guild` : undefined }); got.push(R.gearName(gg));
     if (this.rng.chance(0.7)) { R.addItem(P, 'starmetal', 1); got.push('Starmetal Shard'); }
     const tm = eligibleTomes(P, TOMES).filter((id) => !R.count(P, `tome_${id}`)); if (tm.length) { const id = this.rng.pick(tm); R.addItem(P, `tome_${id}`, 1); got.push(ITEMS[`tome_${id}`].n); }
-    P.stats.graids = (P.stats.graids ?? 0) + 1; if (!P.titles.includes('Titan-Breaker')) P.titles.push('Titan-Breaker');
+    if (!P.titles.includes('Titan-Breaker')) P.titles.push('Titan-Breaker');
     S.conn.send({ t: 'secret.done', name: 'The Obsidian Titan falls', msg: `Spoils: ${got.join(' · ')}. The guild bank received 3000g.` }); this.afterChange(S);
   },
 

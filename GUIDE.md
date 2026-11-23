@@ -241,3 +241,13 @@ Ascending, mastery, every hidden class and each of the five mythic classes play 
 ## 19. Desperado dice
 
 Before every attack except **All In** the Desperado rolls dice (one per projectile; one for the basic attack). Each die's face multiplies that shot's base damage (face x 0.28-0.3 of the old base, so the average is about the same, a 6 is roughly twice and a 1 roughly a third). The dice hover above the Desperado so you can read the roll; a 6 glows gold. Loaded Dice are thrown slower and fanned wider so each one is easy to follow.
+
+## 20. The Far Reaches, the Spire and the new raids
+
+* **Health ×10.** Everything that heals or shields you scales with it; flat life steal does not, so it matters far less. Old potions now heal ten times as much; the new percentage potions (alchemist, level 30+) are best for late fights.
+* **The Endless Spire** begins at the monument in Greenmeadow. Floor numbers are real levels of difficulty: do not go past floor 10 at level 10. The titles Spire-Walker (25), Spire-Warden (70) and Spire-Crowned (120) are earned simply by arriving.
+* **Raids:** talk to the Citadel Gatekeeper (a far region, level 40+) or the Wyrmcrown Warden (level 80+) with your party close by.
+  * Citadel wing 1: kill Krosh quickly — at half health he calls thralls. Wing 2: the Oracle twins heal and rage when the other dies; burst the second one down within seconds. Wing 3: kill the acolytes, the Choir takes only a tenth of the damage while any lives. Wing 4: the Emperor adds a court at 66%, falling stars at 40% (the red rings show where; step out), and everything at 18%.
+  * Wyrmcrown follows the same rules with five wings; the Worldwyrm is the longest fight in the game.
+  * Raids reset if everyone dies; a raid is also ended after 40 minutes. Only one group can be in each raid at a time.
+* Eight new ores/metals (Voidglass, Drakesteel, Celestine, Eternium, Nullsteel, Solarite, Mythril, Worldsteel) are mined in the Far Reaches and forged into gear for every class.

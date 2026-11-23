@@ -87,7 +87,7 @@ export const BASICS = {
 
 // Signature artwork for the hidden classes' basic attacks (drawn by client/skillfx.js): no hidden class borrows another's look.
 Object.assign(BASICS.desperado, { vi: 'card', vfxEnd: 'card_hit', quiet: true }); Object.assign(BASICS.archivist, { vi: 'quill', vfxEnd: 'ink_pop', quiet: true });
-Object.assign(BASICS.soulsmith, { vfx: 'soulsmith_basic', quiet: true }); Object.assign(BASICS.broker, { vi: 'cheque', vfxEnd: 'cash_pop', quiet: true }); Object.assign(BASICS.transmuter, { vi: 'prism', vfxEnd: 'prism_pop', quiet: true });
+Object.assign(BASICS.broker, { vi: 'cheque', vfxEnd: 'cash_pop', quiet: true }); Object.assign(BASICS.transmuter, { vi: 'prism', vfxEnd: 'prism_pop', quiet: true });
 
 // ── Enemy moves (telegraphed; the red shape on the ground is what will hit) ──
 // melee: arc in front · aoe: circle (at self or at target) · proj: projectile fan · dash: charge

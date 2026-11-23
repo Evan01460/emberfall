@@ -189,3 +189,4 @@ Each rewards a powerful **class-specific hidden skill** (e.g. Warrior: Phantom E
 * **Enemies chase until you are ~32 tiles away** (no more leash to their spawn), and after **10 seconds** without taking damage they heal slowly (2% of max HP per second).
 * **Requests are the only direct sale for crafters:** open Character → Trading. Everything else a Blacksmith/Alchemist makes can only be sold through Merchants (wholesale orders / a direct trade with a Merchant).
 * **Keybinds:** press **K**. **Tutorial:** Help (H) → Replay the tutorial. **Public world:** one global room; your character is also saved in your own browser.
+* **Bows (for Archers):** Short Bow (Blacksmith lvl 2: 2 Iron Ingot + 2 Leather), Longbow (lvl 5: 2 Steel Ingot + 3 Leather), Shadowsteel Bow (lvl 7: 2 Shadowsteel Ingot + 2 Leather + 1 Echo Shard), Sunsteel Bow (lvl 11: 3 Sunsteel Ingot + 2 Leather). New Archers start with a Short Bow; ask a Blacksmith for the rest in Character → Trading.

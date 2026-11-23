@@ -19,7 +19,7 @@ export function newPlayer({ id, name, classId = 'warrior' }) {
     flags: {}, journal: [], rumorsHeard: 0, pendingGilt: 0, cooldowns: {}, crafted: {},
     asc: { path: null, mastery: null }, learned: [], loadout: null, quests: {}, titles: [], ways: [], qlog: [], pot: {}, flasks: [],
   };
-  const starter = { warrior: 'iron_sword', mage: 'focus_rod', archer: 'hunting_spear', blacksmith: 'iron_mace', alchemist: 'focus_rod', merchant: 'hunting_spear' }[classId] ?? 'iron_sword';
+  const starter = { warrior: 'iron_sword', mage: 'focus_rod', archer: 'short_bow', blacksmith: 'iron_mace', alchemist: 'focus_rod', merchant: 'hunting_spear' }[classId] ?? 'iron_sword';
   const w = addGear(P, { id: starter, q: 0.4 }), a = addGear(P, { id: 'leather_coat', q: 0.4 });
   P.equip.weapon = w.uid; P.equip.armor = a.uid;
   ensureSkillState(P);

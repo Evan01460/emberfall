@@ -12,6 +12,7 @@ const wd = ['#8f633a', '#a67546', '#6a4528'];
 
 const sword = (p, m) => { p.line(3, 13, 12, 3, m[0]); p.line(4, 13, 13, 3, m[1]); p.line(2, 14, 4, 12, '#6a4528'); p.r(2, 10, 1, 1, '#e0b24a'); p.line(3, 11, 6, 14, '#e0b24a'); p.p(13, 2, '#ffffff'); };
 const spear = (p, m) => { p.line(2, 14, 12, 4, wd[0]); p.line(3, 14, 13, 4, wd[1]); p.r(11, 1, 3, 5, m[0]); p.r(12, 0, 1, 4, m[1]); p.p(12, 0, '#ffffff'); p.p(10, 4, m[2]); p.p(14, 5, m[2]); };
+const bow = (p, m) => { p.line(9, 1, 5, 4, wd[0]); p.line(5, 4, 4, 8, wd[0]); p.line(4, 8, 5, 12, wd[0]); p.line(5, 12, 9, 15, wd[0]); p.line(10, 1, 6, 4, wd[1]); p.line(6, 4, 5, 8, wd[1]); p.line(5, 8, 6, 12, wd[1]); p.line(6, 12, 10, 15, wd[1]); p.line(10, 1, 10, 15, '#e8e0d0'); p.line(3, 8, 14, 8, wd[2]); p.r(13, 7, 2, 3, m[0]); p.p(14, 8, '#ffffff'); p.r(2, 7, 2, 1, '#c8d0d8'); p.r(2, 9, 2, 1, '#c8d0d8'); p.p(9, 1, m[1]); p.p(9, 15, m[1]); };
 const mace = (p, m) => { p.line(2, 14, 9, 7, wd[0]); p.line(3, 14, 10, 7, wd[1]); p.disc(11, 5, 3.5, m[0]); p.disc(10, 4, 2, m[1]); for (const [x, y] of [[11, 0], [15, 5], [11, 9], [7, 5]]) p.p(x, y, m[2]); p.p(10, 3, '#ffffff'); };
 const staff = (p, c) => { p.line(3, 14, 11, 6, wd[0]); p.line(4, 14, 12, 6, wd[1]); p.disc(12, 4, 3, c); p.disc(11, 3, 1.5, tint(c, '#ffffff', 0.6)); p.p(14, 1, '#ffffff'); p.p(15, 6, c); };
 const coat = (p, c, kind) => { const d = shade(c, 0.6), l = tint(c, '#ffffff', 0.3); p.r(3, 3, 10, 11, c); p.r(3, 3, 10, 1, l); p.r(1, 3, 3, 7, c); p.r(12, 3, 3, 7, c); p.r(1, 3, 3, 1, l); p.r(12, 3, 3, 1, l); p.r(6, 2, 4, 3, shade(c, 0.5)); p.r(7, 3, 2, 8, d); p.r(3, 11, 10, 1, '#3a2a20'); p.p(8, 11, '#e0b24a');
@@ -52,7 +53,7 @@ const ITEM = {
 };
 function gearIcon(id) {
   const it = ITEMS[id], t = tier(id), m = METAL[t];
-  if (it.slot === 'weapon') return it.wtype === 'slash' ? (p) => sword(p, m) : it.wtype === 'pierce' ? (p) => spear(p, m) : it.wtype === 'blunt' ? (p) => mace(p, m) : (p) => staff(p, t === 'shadow' ? '#a984ff' : '#8ad8ff');
+  if (it.slot === 'weapon') return id.includes('bow') ? (p) => bow(p, m) : it.wtype === 'slash' ? (p) => sword(p, m) : it.wtype === 'pierce' ? (p) => spear(p, m) : it.wtype === 'blunt' ? (p) => mace(p, m) : (p) => staff(p, t === 'shadow' ? '#a984ff' : '#8ad8ff');
   if (it.slot === 'armor') return (p) => coat(p, t === 'shadow' ? '#5a3a9a' : t === 'steel' ? '#8aa0c8' : id.includes('mail') ? '#7a8a98' : '#8a5a38', id.includes('plate') || id.includes('aegis') ? 'plate' : id.includes('mail') ? 'mail' : 'leather');
   return id.includes('locket') ? (p) => locket(p, t === 'shadow' ? '#a984ff' : '#4a90e0') : (p) => band(p, '#6fc08b');
 }

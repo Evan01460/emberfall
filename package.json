@@ -1,0 +1,21 @@
+{
+  "name": "emberfall",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node host/server.mjs",
+    "test": "node --test",
+    "serve": "node host/server.mjs",
+    "build": "node build.mjs",
+    "dev": "node host/server.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "peer": "^1.0.2"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.5",
+    "ws": "^8.23.0"
+  }
+}

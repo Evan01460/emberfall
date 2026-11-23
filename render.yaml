@@ -1,0 +1,16 @@
+# One-click deploy on Render (https://render.com): New → Blueprint → pick this repository.
+# The free plan sleeps after ~15 min without visitors and its disk is wiped whenever it restarts. Characters survive anyway: every player's
+# browser holds a copy signed with VAULT_SECRET (the world itself — market, guilds — starts fresh after a wipe).
+services:
+  - type: web
+    name: emberfall
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DATA_DIR
+        value: /tmp/emberfall
+      - key: VAULT_SECRET        # generated once by Render and kept across restarts; signs the characters saved in players' browsers
+        generateValue: true

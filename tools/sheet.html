@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#2a2030"><canvas id="c" width="1500" height="1100"></canvas>
+<script type="module">
+import * as S from '../src/client/sprites.js';
+import { T } from '../src/world.js';
+const c = document.getElementById('c'), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+const Z = 3; let x = 8, y = 8, rowH = 0;
+const put = (spr, label) => { if (!spr) return; const w = spr.width * Z, h = spr.height * Z; if (x + w > 1480) { x = 8; y += rowH + 8; rowH = 0; } g.drawImage(spr, x, y, w, h); x += w + 8; rowH = Math.max(rowH, h); };
+const nl = () => { x = 8; y += rowH + 12; rowH = 0; };
+for (const th of ['main', 'hollow']) { for (const t of [T.GRASS, T.PATH, T.SAND, T.COBBLE, T.FLOOR, T.RUG, T.WATER, T.HOLLOW, T.VOID, T.CHASM, T.BRIDGE]) put(S.groundTile(t, 1, th, false, 0)); put(S.groundTile(T.FLOOR, 1, th, true)); put(S.wallSprite(th, true)); put(S.wallSprite(th, false)); put(S.doorSprite(th, 0)); put(S.doorSprite(th, 2)); put(S.doorSprite(th, 3)); put(S.treeSprite(th, 0)); put(S.treeSprite(th, 1)); put(S.rockSprite(th, 1)); put(S.crystalSprite(0)); put(S.shelfSprite(1)); nl(); }
+for (const n of ['anvil','furnace','cauldron','board','counter','barrel','crates','table','bench','stool','plant','lamp','fireplace','rack','grindstone','coalbin','potions','herbs','scale','window','stall','well','fountain','flowers','cart','bones','stump','mushrooms','grave','pillar','obelisk','chest','campfire','gate','lectern','coldforge','starfall','sign']) put(S.prop(n, 0));
+put(S.prop('chest', 1)); put(S.prop('gate', 1)); put(S.prop('furnace', 1)); put(S.prop('cauldron', 1)); nl();
+for (const n of ['ore','coal','herb','hide','shelf','hollow_ore','ghostbloom']) { put(S.nodeSprite(n, false)); put(S.nodeSprite(n, true)); } nl();
+const cols = { warrior: '#c8402f', mage: '#6f8ad8', archer: '#6fc08b', blacksmith: '#d98a3a', alchemist: '#a98ad8', merchant: '#e3b552', desperado: '#b04080', archivist: '#8ad8d0', soulsmith: '#ff9f6b', broker: '#e8e8ff', transmuter: '#d0a0ff' };
+let s = 0; for (const [cls, col] of Object.entries(cols)) { put(S.personSprite(cls, 'd', 0, s, col)); put(S.personSprite(cls, 'u', 0, s, col)); put(S.personSprite(cls, 'r', 1, s, col)); s += 5; } nl();
+const mons = [['hound','#8a7466'],['imp','#c0503a'],['brute','#6a6360'],['stag','#6a7a4a'],['wisp','#6ac0b0'],['witch','#7a4a7a'],['wraith','#3a3a5a'],['worm','#b0a070'],['warden','#8a7a9a'],['husk','#5a4a72'],['unwritten','#d8d0ff']];
+for (const [m, col] of mons) { put(S.monsterSprite(m, col, 0)); put(S.monsterSprite(m, col, 1)); }
+</script>

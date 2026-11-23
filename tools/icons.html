@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#2a2030"><canvas id="c" width="1300" height="520"></canvas>
+<script type="module">
+import * as I from '../src/client/icons.js';
+import { ITEMS, SKILLS, CLASSES } from '../src/data.js';
+const c = document.getElementById('c'), g = c.getContext('2d'); g.imageSmoothingEnabled = false; const Z = 3; let x = 6, y = 6;
+const put = (s) => { if (x + s.width * Z > 1290) { x = 6; y += 16 * Z + 14; } g.drawImage(s, x, y, s.width * Z, s.height * Z); x += s.width * Z + 4; };
+const nl = () => { x = 6; y += 16 * Z + 14; };
+Object.keys(ITEMS).forEach((id) => put(I.itemIcon(id))); nl();
+Object.keys(SKILLS).forEach((id) => put(I.skillIcon(id))); nl();
+Object.keys(CLASSES).forEach((id) => put(I.classIcon(id))); ['warrior','mage','archer'].forEach((id) => put(I.basicIcon(id))); nl();
+['bag','book','people','help','power','coin','heart','mana','skull','customer','chest','gate','forge','cauldron','stall','sparkle','star','arrow_up','arrow_down','swords','hammer','flask','anvil'].forEach((n) => put(I.uiIcon(n)));
+</script>

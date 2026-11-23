@@ -30,15 +30,41 @@ const GROUP_MODS = {
   A: [{ move: 1.03, dmg: 1.06, atk: 1.04 }, { move: 1.03, dmg: 1.07, atk: 1.05, hp: 1.05 }, { move: 1.04, dmg: 1.1, atk: 1.07, hp: 1.06 }],
   X: [{ hp: 1.06, mp: 1.06, dmg: 1.04 }, { hp: 1.07, mp: 1.08, dmg: 1.05, def: 1.05 }, { hp: 1.09, mp: 1.1, dmg: 1.07, def: 1.06 }],
 };
+// ── HIDDEN and MYTHIC classes ──────────────────────────────────────────────────────────────────────────────────────────────
+// They do not ascend; instead they RANK UP five times (hidden: 12 / 24 / 40 / 60 / 80, mythic: 20 / 35 / 50 / 70 / 90). Every rank gives a title, a
+// stat tier that is bigger than anything an ordinary class earns, and one new signature skill (src/hmskills.js).
+export const HM = {
+  desperado: { lv: [12, 24, 40, 60, 80], names: ['Gambler', 'Card Shark', 'High Roller', 'Outlaw Legend', 'The House'] },
+  archivist: { lv: [12, 24, 40, 60, 80], names: ['Scribe', 'Lorekeeper', 'Grand Archivist', 'Author of Ends', 'The Last Page'] },
+  soulsmith: { lv: [12, 24, 40, 60, 80], names: ['Emberhand', 'Soulforger', 'Coldforge Master', 'Starsmith', 'Heart of the Forge'] },
+  broker: { lv: [12, 24, 40, 60, 80], names: ['Floor Trader', 'Market Maker', 'Hedge Lord', 'Oracle of the Exchange', 'The Invisible Hand'] },
+  transmuter: { lv: [12, 24, 40, 60, 80], names: ['Adept', 'Royal Alchemist', 'Quicksilver Sage', 'Opus Weaver', 'The Great Work'] },
+  apostle: { lv: [20, 35, 50, 70, 90], names: ['Seedbearer', 'Rootwalker', 'Canopy Warden', 'Heartwood Saint', 'Voice of Yggdrasil'] },
+  void_sovereign: { lv: [20, 35, 50, 70, 90], names: ['Rift Walker', 'Null Prince', 'Horizon King', 'Unmaker', 'The Last Dark'] },
+  titan_forgemaster: { lv: [20, 35, 50, 70, 90], names: ['Hammerlord', 'Slagking', 'Colossus Smith', 'Worldsmith', 'Anvil of Ages'] },
+  philosopher: { lv: [20, 35, 50, 70, 90], names: ['Quicksilver Heir', 'Stonebearer', 'Lord of Equivalence', 'Quintessent', 'Philosopher Eternal'] },
+  gilded: { lv: [20, 35, 50, 70, 90], names: ['Tycoon', 'Magnate Sovereign', 'Vaultlord', 'Golden Tyrant', 'Sovereign of Gold'] },
+};
+const HM_TIERS = [{ hp: 1.05, dmg: 1.04 }, { hp: 1.06, mp: 1.06, dmg: 1.05 }, { hp: 1.07, def: 1.06, dmg: 1.06, atk: 1.04 }, { hp: 1.08, mp: 1.08, dmg: 1.07, atk: 1.05 }, { hp: 1.1, def: 1.08, dmg: 1.1, atk: 1.07, mp: 1.1 }];
+const MYTHIC_ID = new Set(['apostle', 'void_sovereign', 'titan_forgemaster', 'philosopher', 'gilded']);
+export const hmTier = (cls, level) => (HM[cls] ? HM[cls].lv.filter((l) => level >= l).length : 0);
+export const hmRank = (cls, level) => { const t = hmTier(cls, level); return t ? HM[cls].names[t - 1] : null; };
+export const hmLevels = (cls) => HM[cls]?.lv ?? null;
+export const hmMods = (cls, level) => {
+  const m = {}, k = MYTHIC_ID.has(cls) ? 1.25 : 1;
+  for (let i = 0; i < hmTier(cls, level); i++) for (const [key, v] of Object.entries(HM_TIERS[i])) m[key] = (m[key] ?? 1) * (1 + (v - 1) * k);
+  return m;
+};
 export const advGroup = (cls) => (cls === 'warrior' ? 'W' : cls === 'mage' ? 'M' : cls === 'archer' ? 'A' : 'X');
 // the mods of everything a character at `level` has reached; `pathId` null = a hidden/mythic class (the same stat tiers, no named rank)
 export function advMods(level, cls) {
+  if (HM[cls]) return hmMods(cls, level);   // hidden and mythic classes rank up on their own ladder
   const g = GROUP_MODS[advGroup(cls)], m = {};
   ADV_LEVELS.forEach((lv, i) => { if (level >= lv) for (const [k, v] of Object.entries(g[i])) m[k] = (m[k] ?? 1) * v; });
   return m;
 }
-export const advTier = (level) => ADV_LEVELS.filter((l) => level >= l).length;
-export const advName = (pathId, level) => { const n = ADV_NAMES[pathId], t = advTier(level); return n && t ? n[t - 1] : null; };
+export const advTier = (level, cls = null) => (cls && HM[cls] ? hmTier(cls, level) : ADV_LEVELS.filter((l) => level >= l).length);
+export const advName = (pathId, level, cls = null) => { if (cls && HM[cls]) return hmRank(cls, level); const n = ADV_NAMES[pathId], t = advTier(level); return n && t ? n[t - 1] : null; };
 
 // steps: { t: <primitive>, at: ms after the cast, ... }.  from: 'self' | 'cursor'.  See skillscripts.js for every parameter.
 export function registerAdvanced(add, sk, PATHS) {

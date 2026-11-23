@@ -7,7 +7,7 @@ import { ask } from './ask.js';
 import * as I from './icons.js';
 import { TITLES, titleInfo } from '../rules.js';
 import { TITLE_COL } from './badges.js';
-import { ADV_LEVELS, ADV_NAMES, advMods } from '../advskills.js';
+import { ADV_LEVELS, ADV_NAMES, HM, advMods } from '../advskills.js';
 
 const send = (m) => G.net.send(m);
 const pct = (v) => `${v >= 1 ? '+' : ''}${Math.round((v - 1) * 100)}%`;
@@ -44,19 +44,24 @@ export function skillsTab(me, refresh) {
     hidden ? h('p', { class: 'clue', style: { marginTop: '8px' } }, `There ${hidden === 1 ? 'is' : 'are'} ${hidden} hidden technique${hidden === 1 ? '' : 's'} for your class. They are not for sale and nobody will say where they are.`) : null);
 }
 
-// Advancements (levels 35 / 55 / 80): a named rank, a stat tier and one new skill per path.
+// Advancements: ordinary paths grow at levels 35 / 55 / 80; hidden and mythic classes RANK UP five times (their own ladder, see HM in advskills.js).
+// Every step is a named rank, a stat tier and one new skill.
 function advancementCard(me, cur) {
-  const tiers = ADV_LEVELS.map((lv, i) => { const skill = cur ? Object.values(SKILLS).find((s) => s.path === cur.id && s.lvl === lv) : null, got = me.level >= lv;
-    return h('div', { class: 'card', style: { flex: '1', minWidth: '200px', opacity: got ? 1 : 0.6, borderColor: got ? '#ffd36a' : undefined } },
-      h('div', { class: 'row sb' }, h('b', { class: got ? 'gold' : '' }, cur ? ADV_NAMES[cur.id][i] : `Tier ${i + 1}`), h('span', { class: `tag ${got ? 'g' : ''}` }, got ? 'reached' : `level ${lv}`)),
-      h('div', { class: 'tag', style: { margin: '4px 0' } }, modText(advMods(lv, me.classId) && (() => { const a = advMods(lv, me.classId), b = i ? advMods(ADV_LEVELS[i - 1], me.classId) : {}, d = {}; for (const k of Object.keys(a)) d[k] = a[k] / (b[k] ?? 1); return d; })())),
+  const hm = HM[me.classId], levels = hm ? hm.lv : ADV_LEVELS;
+  const tiers = levels.map((lv, i) => { const skill = hm ? Object.values(SKILLS).find((s) => s.kind === 'script' && !s.path && s.cls.includes(me.classId) && L.skillLevel(s, me.classId) === lv) : cur ? Object.values(SKILLS).find((s) => s.path === cur.id && s.lvl === lv) : null, got = me.level >= lv;
+    const a = advMods(lv, me.classId), b = i ? advMods(levels[i - 1], me.classId) : {}, d = {}; for (const k of Object.keys(a)) d[k] = a[k] / (b[k] ?? 1);
+    return h('div', { class: 'card', style: { flex: '1', minWidth: hm ? '170px' : '200px', opacity: got ? 1 : 0.6, borderColor: got ? '#ffd36a' : undefined } },
+      h('div', { class: 'row sb' }, h('b', { class: got ? 'gold' : '' }, hm ? hm.names[i] : cur ? ADV_NAMES[cur.id][i] : `Tier ${i + 1}`), h('span', { class: `tag ${got ? 'g' : ''}` }, got ? 'reached' : `level ${lv}`)),
+      h('div', { class: 'tag', style: { margin: '4px 0' } }, modText(d)),
       skill ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'flex-start' } }, I.skill(skill.id, 32), h('div', {}, h('b', {}, skill.name), h('div', { class: 'dim', style: { fontSize: '12px' } }, skill.desc), h('div', { class: 'dim', style: { fontSize: '11px' } }, cdText(skill)))) : h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Your class grows stronger at this level.'));
   });
-  return h('div', {}, h('h3', { style: { marginTop: '14px' } }, 'Advancements (levels 35, 55, 80)'), h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Each advancement raises your stats and teaches a skill built around a mechanic of its own — orbiting blades, shockwaves, vortices, familiars, totems, walls of force. Equip them in the Skills tab.'), h('div', { class: 'row', style: { alignItems: 'stretch' } }, tiers));
+  return h('div', {}, h('h3', { style: { marginTop: '14px' } }, hm ? `Ranks (levels ${levels.join(', ')})` : 'Advancements (levels 35, 55, 80)'),
+    h('p', { class: 'dim', style: { fontSize: '12px' } }, hm ? 'Your class keeps ranking up. Each rank gives a title, a stat tier and a signature skill built from mechanics only you have. Equip them in the Skills tab.' : 'Each advancement raises your stats and teaches a skill built around a mechanic of its own — orbiting blades, shockwaves, vortices, familiars, totems, walls of force. Equip them in the Skills tab.'),
+    h('div', { class: 'row', style: { alignItems: 'stretch', flexWrap: 'wrap' } }, tiers));
 }
 export function ascendTab(me) {
   const cls = CLASSES[me.classId], cur = L.pathOf(me), mas = L.masteryOf(me);
-  if (cls.mythic) return h('div', {}, h('h2', { class: 'gold' }, cls.name), h('div', { class: 'card hl' }, h('b', {}, cls.status.name), h('p', {}, cls.status.desc)), h('p', { class: 'dim' }, cls.desc), h('p', { class: 'clue' }, 'There is no one else like you in this world. There never will be.'));
+  if (cls.mythic) return h('div', {}, h('h2', { class: 'gold' }, cls.name), h('div', { class: 'card hl' }, h('b', {}, cls.status.name), h('p', {}, cls.status.desc)), h('p', { class: 'dim' }, cls.desc), h('p', { class: 'clue' }, 'There is no one else like you in this world. There never will be.'), advancementCard(me, null));
   if (cls.hidden) return h('div', {}, h('p', { class: 'dim' }, `${cls.name} is a hidden class with its own path. It does not ascend.`), advancementCard(me, null));
   const pathCard = (p) => h('div', { class: `card ${cur?.id === p.id ? 'hl' : ''}`, style: { flex: '1', minWidth: '230px' } },
     h('h3', { style: { color: p.color } }, p.name), h('p', { class: 'dim', style: { fontSize: '12px' } }, p.blurb), h('div', { class: 'tag' }, modText(p.mods) || 'no stat change'),

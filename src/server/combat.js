@@ -196,7 +196,7 @@ export const combatMethods = {
         this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: 'trap', trap: true, owner: S.id, power: sk.power, type: sk.type, stun: sk.stun, until: now + sk.dur, armedAt: now + 700, sk });
         break;
       }
-      case 'script': this.runScript(S, sk, a, tx, ty); break;
+      case 'script': this.runScript(S, sk, a, tx, ty, rolls); break;
       case 'field': {
         const [cx, cy] = this.aimPoint(S, sk, tx, ty), f = sk.field;
         this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: sk.k ?? 'holy', field: f, owner: S.id, power: f.dmg ?? 0, type: sk.type, every: f.every, next: now + f.every, until: now + sk.dur, sk });
@@ -330,6 +330,7 @@ export const combatMethods = {
     const th = (st?.thorns ?? 0) + (S.rt.thorns ?? 0); if (th && o.mob) this.reflect(S, o.mob, rawMob * th);
     if (S.shield > 0 && now < S.shieldUntil) { const ab = Math.min(S.shield, dmg); S.shield -= ab; dmg -= ab; }
     dmg = Math.round(dmg); S.lastHurt = now;
+    if (bf?.undying && dmg >= S.hp) dmg = Math.max(0, S.hp - 1);   // "Last Hand": nothing can finish you while it lasts
     if (dmg > 0 && st?.revive && S.hp - dmg <= 0 && now >= S.reviveAt) {
       S.reviveAt = now + st.revive; S.hp = Math.round(S.rt.maxHp * 0.5); S.iframeUntil = now + 1500;
       for (const m of this.mobs) if (m.map === S.map && !m.deadUntil && dist(m.x, m.y, S.x, S.y) < 6) m.stunUntil = now + 2500;

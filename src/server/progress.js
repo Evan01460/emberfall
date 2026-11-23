@@ -64,7 +64,7 @@ export const progressMethods = {
   levelNotices(S) {
     const P = S.P, from = S.seenLevel ?? P.level; S.seenLevel = P.level; if (P.level <= from) return;
     for (const s of L.knownSkills(P)) { const lv = L.skillLevel(s, P.classId); if ((s.src === 'level' || s.src === 'path') && lv > from && lv <= P.level) this.toast(S, `* New skill learned: ${s.name}.`, 'good'); }
-    if (advTier(P.level) > advTier(from)) { const nm = advName(P.asc?.path, P.level); this.toast(S, `* ADVANCEMENT${nm ? `: you are now a ${nm}` : ''}! Your stats grew${nm ? ' and a new skill awaits' : ''}.`, 'secret'); this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: 3, c: 'heal' }); }
+    if (advTier(P.level, P.classId) > advTier(from, P.classId)) { const nm = advName(P.asc?.path, P.level, P.classId); this.toast(S, `* ADVANCEMENT${nm ? `: you are now a ${nm}` : ''}! Your stats grew${nm ? ' and a new skill awaits' : ''}.`, 'secret'); this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: 3, c: 'heal' }); }
     if (from < L.ASCEND_LVL && P.level >= L.ASCEND_LVL && L.canAscend(P)) this.toast(S, '* You may now ASCEND. Open your Character window (I) → Ascension.', 'secret');
     if (from < L.MASTERY_LVL && P.level >= L.MASTERY_LVL && L.canMaster(P)) this.toast(S, '* A second Ascension awaits: choose a Mastery in Character → Ascension.', 'secret');
   },

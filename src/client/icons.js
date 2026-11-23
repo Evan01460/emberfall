@@ -80,7 +80,60 @@ export function itemIcon(id) {
 }
 
 // ── skill icons: shape by kind, colour by damage type ───────────────────────
+
+// ── script skills (advancements, hidden/mythic ranks): a big motif for the skill's theme + a little badge for its main mechanic ──────────────────
+const MOTIF = {
+  blade: (p, c) => { p.line(3, 13, 13, 3, '#e8f0ff'); p.line(4, 13, 14, 3, '#ffffff'); p.line(2, 12, 5, 15, c); p.line(1, 14, 3, 12, '#6a4528'); p.p(13, 2, '#fff'); },
+  rune: (p, c) => { p.r(2, 2, 12, 12, shade(c, 0.5)); p.r(3, 3, 10, 10, '#17101a'); p.line(4, 4, 11, 11, c); p.line(11, 4, 4, 11, c); p.r(7, 2, 2, 12, tint(c, '#fff', 0.4)); p.r(2, 7, 12, 2, tint(c, '#fff', 0.4)); },
+  rock: (p, c) => { p.r(3, 5, 10, 9, c); p.r(5, 3, 7, 3, c); p.r(3, 5, 10, 1, tint(c, '#fff', 0.35)); p.r(3, 12, 10, 2, shade(c, 0.55)); p.p(6, 8, shade(c, 0.6)); p.p(9, 10, shade(c, 0.6)); },
+  shield: (p, c) => { p.r(3, 2, 10, 8, c); p.r(4, 10, 8, 2, c); p.r(6, 12, 4, 2, c); p.r(3, 2, 10, 1, tint(c, '#fff', 0.5)); p.r(7, 3, 2, 9, '#fff'); p.r(4, 6, 8, 2, '#fff'); },
+  light: (p, c) => { p.disc(8, 8, 3.4, '#fff6c0'); p.disc(8, 8, 2, '#fff'); for (const [x, y] of [[8, 0], [8, 14], [0, 8], [14, 8], [3, 3], [12, 3], [3, 12], [12, 12]]) p.r(x, y, 2, 2, c); },
+  sun: (p, c) => { p.disc(8, 8, 4.5, c); p.disc(8, 8, 3, '#fff6c0'); for (const [x, y] of [[7, 0], [7, 14], [0, 7], [14, 7], [2, 2], [12, 2], [2, 12], [12, 12]]) p.r(x, y, 2, 2, c); },
+  flame: (p, c) => { p.r(5, 7, 6, 7, c); p.r(6, 4, 4, 4, c); p.r(7, 2, 2, 3, c); p.r(6, 9, 4, 5, '#ffd36a'); p.r(7, 11, 2, 3, '#fff6c0'); p.r(4, 9, 1, 3, shade(c, 0.7)); p.r(11, 8, 1, 4, shade(c, 0.7)); },
+  ember: (p, c) => { p.disc(8, 9, 4.5, c); p.disc(7, 8, 2.8, '#ffd36a'); p.disc(7, 8, 1.2, '#fff6c0'); for (const [x, y] of [[3, 3], [12, 2], [13, 6], [2, 7]]) p.p(x, y, '#ffb84a'); },
+  soul: (p, c) => { p.r(4, 3, 8, 9, c); p.r(5, 2, 6, 1, c); for (const x of [4, 7, 10]) p.r(x, 12, 2, 2, c); p.r(4, 3, 8, 1, tint(c, '#fff', 0.5)); p.r(5, 6, 2, 3, '#0c0814'); p.r(9, 6, 2, 3, '#0c0814'); },
+  petal: (p, c) => { for (const [x, y] of [[8, 2], [3, 6], [13, 6], [5, 12], [11, 12]]) p.disc(x, y + 1, 2.6, c); p.disc(8, 8, 2.2, '#fff0a0'); },
+  thorn: (p, c) => { for (const x of [3, 7, 11]) { p.line(x, 14, x + 1, 2, c); p.line(x + 1, 14, x + 2, 2, shade(c, 0.7)); p.p(x + 1, 1, '#fff'); } },
+  feather: (p, c) => { p.line(3, 14, 13, 2, '#fff'); for (let i = 0; i < 6; i++) { p.line(4 + i * 1.6, 13 - i * 1.8, 8 + i * 1.6, 12 - i * 1.8, c); p.line(4 + i * 1.6, 13 - i * 1.8, 1 + i * 1.6, 11 - i * 1.8, shade(c, 0.7)); } },
+  bolt: (p, c) => { p.r(8, 1, 4, 3, c); p.r(6, 4, 4, 3, c); p.r(4, 7, 8, 2, c); p.r(6, 9, 3, 3, c); p.r(5, 12, 3, 3, c); p.p(10, 2, '#fff'); },
+  wind: (p, c) => { for (const [y, w] of [[3, 10], [7, 12], [11, 9]]) { p.r(2, y, w, 2, c); p.r(2 + w, y - 1, 2, 1, c); p.r(2 + w + 1, y, 1, 3, c); } p.p(4, 3, '#fff'); },
+  spirit: (p, c) => { p.disc(8, 8, 6, shade(c, 0.6)); p.disc(8, 8, 4.5, c); p.disc(8, 8, 2.2, '#fff'); },
+  bomb: (p, c) => { p.disc(7, 10, 5, '#22202c'); p.disc(6, 9, 3, '#3a3844'); p.line(9, 5, 12, 2, '#c8a070'); p.r(12, 0, 3, 3, '#ffe36b'); p.p(13, 1, '#fff'); },
+  gear: (p, c) => { p.disc(8, 8, 5.5, c); p.disc(8, 8, 2.5, '#17101a'); for (const [x, y] of [[7, 0], [7, 14], [0, 7], [14, 7], [2, 2], [12, 2], [2, 12], [12, 12]]) p.r(x, y, 2, 2, c); p.r(4, 4, 2, 1, tint(c, '#fff', 0.5)); },
+  void: (p, c) => { p.disc(8, 8, 6.5, c); p.disc(8, 8, 4.8, '#0c0814'); p.disc(8, 8, 2.4, shade(c, 0.5)); p.p(5, 5, '#fff'); p.p(11, 11, tint(c, '#fff', 0.5)); },
+  eye: (p, c) => { p.r(1, 6, 14, 5, '#f4eefc'); p.r(3, 4, 10, 9, '#f4eefc'); p.r(1, 6, 14, 1, c); p.disc(8, 8, 3.6, c); p.disc(8, 8, 1.8, '#0c0814'); p.p(7, 7, '#fff'); },
+  coin: (p, c) => { p.disc(8, 8, 6, '#b8862a'); p.disc(8, 8, 5, c); p.disc(8, 8, 3.2, tint(c, '#fff', 0.45)); p.r(7, 5, 2, 6, '#b8862a'); p.p(5, 5, '#fff'); },
+  crown: (p, c) => { p.r(2, 7, 12, 6, c); p.r(2, 4, 2, 4, c); p.r(7, 2, 2, 6, c); p.r(12, 4, 2, 4, c); p.r(2, 7, 12, 1, tint(c, '#fff', 0.5)); p.r(2, 12, 12, 2, '#b8862a'); p.p(8, 9, '#ff5a6a'); p.p(4, 9, '#6ad0ff'); p.p(12, 9, '#6adf8a'); },
+  potion: (p, c) => { p.r(6, 1, 4, 4, '#e8f0ff'); p.r(5, 5, 6, 1, '#e8f0ff'); p.disc(8, 10, 5, c); p.disc(8, 10, 4, tint(c, '#fff', 0.15)); p.r(5, 9, 2, 3, 'rgba(255,255,255,.7)'); p.p(10, 12, shade(c, 0.6)); },
+  gem: (p, c) => { p.r(5, 2, 6, 2, tint(c, '#fff', 0.5)); p.r(3, 4, 10, 3, c); p.r(4, 7, 8, 2, c); p.r(5, 9, 6, 2, shade(c, 0.8)); p.r(7, 11, 2, 2, shade(c, 0.6)); p.r(5, 4, 2, 3, tint(c, '#fff', 0.6)); },
+  dice: (p, c) => { p.r(2, 2, 12, 12, '#fbf6ea'); p.r(2, 12, 12, 2, '#d8cfb8'); p.r(2, 2, 12, 1, '#fff'); for (const [x, y] of [[4, 4], [10, 4], [7, 7], [4, 10], [10, 10]]) p.r(x, y, 2, 2, '#1a1420'); p.r(2, 2, 1, 12, c); p.r(13, 2, 1, 12, c); },
+  card: (p, c) => { p.r(3, 1, 10, 14, '#fbf6ea'); p.r(3, 1, 10, 1, '#fff'); p.r(3, 14, 10, 1, '#d8cfb8'); p.line(8, 4, 11, 8, c); p.line(11, 8, 8, 12, c); p.line(8, 12, 5, 8, c); p.line(5, 8, 8, 4, c); p.r(7, 6, 2, 4, c); p.r(4, 2, 2, 2, c); p.r(10, 12, 2, 2, c); },
+  page: (p, c) => { p.r(3, 1, 10, 14, '#f4ecd0'); p.r(3, 1, 10, 1, '#fff'); p.r(3, 14, 10, 1, '#c8b890'); for (const y of [4, 6, 8, 10]) p.r(5, y, y === 10 ? 4 : 6, 1, c); p.r(11, 1, 2, 3, shade(c, 0.7)); },
+  quill: (p, c) => { p.line(3, 14, 13, 2, c); p.line(4, 14, 14, 2, '#fff'); for (let i = 0; i < 5; i++) { p.line(5 + i * 1.8, 12 - i * 2, 9 + i * 1.8, 11 - i * 2, c); p.line(5 + i * 1.8, 12 - i * 2, 3 + i * 1.8, 9 - i * 2, shade(c, 0.7)); } p.r(2, 13, 2, 2, '#1a1420'); },
+  ink: (p, c) => { p.r(6, 2, 4, 3, '#0c1418'); p.r(4, 5, 8, 8, '#0c1418'); p.r(5, 4, 6, 1, '#0c1418'); p.r(6, 13, 4, 1, '#0c1418'); p.r(4, 5, 8, 1, c); p.r(4, 6, 1, 6, c); p.r(6, 7, 2, 3, 'rgba(255,255,255,.5)'); },
+  hammer: (p, c) => { p.line(3, 14, 10, 6, '#7a5a34'); p.line(4, 14, 11, 6, '#a07a4a'); p.r(7, 1, 8, 5, '#aab2bc'); p.r(7, 1, 8, 1, '#e8eef4'); p.r(7, 5, 8, 1, '#6f7882'); p.r(7, 3, 8, 1, c); },
+  hourglass: (p, c) => { p.r(3, 1, 10, 2, '#6a5a3a'); p.r(3, 13, 10, 2, '#6a5a3a'); p.r(4, 3, 8, 2, 'rgba(255,255,255,.4)'); p.r(5, 5, 6, 2, 'rgba(255,255,255,.4)'); p.r(7, 7, 2, 2, c); p.r(5, 9, 6, 2, c); p.r(4, 11, 8, 2, c); },
+  seed: (p, c) => { p.disc(8, 8, 4.2, c); p.disc(8, 10, 3, shade(c, 0.7)); p.line(8, 3, 8, 13, '#fff'); p.p(6, 6, '#fff'); p.line(8, 3, 11, 1, '#5fd06a'); p.p(12, 1, '#9af0b0'); },
+  leaf: (p, c) => { p.r(4, 3, 8, 9, c); p.r(5, 2, 6, 1, c); p.r(6, 12, 4, 1, c); p.line(8, 2, 8, 14, '#fff'); p.line(8, 6, 5, 4, shade(c, 0.6)); p.line(8, 8, 11, 6, shade(c, 0.6)); p.r(4, 3, 8, 1, tint(c, '#fff', 0.4)); },
+};
+const BADGE = {
+  orbit: (p, c) => { p.disc(2, 2, 2, c); p.p(2, 2, '#17101a'); p.p(4, 0, '#fff'); }, rings: (p, c) => { p.disc(2, 2, 2.5, c); p.disc(2, 2, 1.2, '#17101a'); }, beams: (p, c) => { p.line(0, 4, 4, 0, c); p.line(0, 2, 2, 0, c); p.line(2, 4, 4, 2, c); },
+  rain: (p, c) => { for (const x of [0, 2, 4]) { p.p(x, 0 + (x % 4 ? 1 : 0), c); p.p(x, 2 + (x % 4 ? 1 : 0), c); p.p(x, 4, c); } }, lanes: (p, c) => { p.r(0, 0, 5, 1, c); p.r(0, 2, 5, 1, c); p.r(0, 4, 5, 1, c); },
+  chain: (p, c) => { p.line(0, 4, 2, 0, c); p.line(2, 0, 3, 4, c); p.line(3, 4, 4, 0, c); }, vortex: (p, c) => { p.r(0, 0, 5, 1, c); p.r(4, 0, 1, 4, c); p.r(1, 4, 4, 1, c); p.r(1, 2, 1, 2, c); p.r(2, 2, 2, 1, c); },
+  leap: (p, c) => { p.r(2, 0, 1, 5, c); p.p(1, 1, c); p.p(3, 1, c); p.p(0, 2, c); p.p(4, 2, c); }, blink: (p, c) => { p.p(0, 2, c); p.p(1, 2, c); p.p(3, 2, c); p.p(4, 2, c); p.p(2, 0, c); p.p(2, 4, c); },
+  summon: (p, c) => { p.disc(2, 1, 1.2, c); p.r(1, 2, 3, 3, c); }, totem: (p, c) => { p.r(1, 0, 3, 5, c); p.r(0, 4, 5, 1, c); p.p(2, 1, '#17101a'); }, wall: (p, c) => { p.r(1, 0, 3, 5, c); p.r(2, 0, 1, 5, '#fff'); },
+  bombs: (p, c) => { p.disc(2, 3, 2, c); p.p(3, 0, '#ffe36b'); }, zone: (p, c) => { p.r(0, 1, 5, 3, c); p.r(1, 0, 3, 5, c); p.r(1, 2, 3, 1, '#17101a'); }, nova: (p, c) => { p.r(2, 0, 1, 5, c); p.r(0, 2, 5, 1, c); p.p(1, 1, c); p.p(3, 3, c); p.p(3, 1, c); p.p(1, 3, c); },
+  buff: (p, c) => { p.r(2, 0, 1, 1, c); p.r(1, 1, 3, 1, c); p.r(0, 2, 5, 1, c); p.r(2, 3, 1, 2, c); }, heal: (p, c) => { p.r(2, 0, 1, 5, '#5fe08a'); p.r(0, 2, 5, 1, '#5fe08a'); }, shots: (p, c) => { p.line(0, 2, 4, 2, c); p.p(3, 1, c); p.p(3, 3, c); },
+  pull: (p, c) => { p.p(0, 0, c); p.p(1, 1, c); p.p(4, 0, c); p.p(3, 1, c); p.p(0, 4, c); p.p(1, 3, c); p.p(4, 4, c); p.p(3, 3, c); p.p(2, 2, '#fff'); }, mark: (p, c) => { p.r(2, 0, 1, 2, c); p.r(2, 3, 1, 2, c); p.r(0, 2, 2, 1, c); p.r(3, 2, 2, 1, c); },
+  mine: (p, c) => { p.disc(2, 2, 2.4, c); p.p(2, 2, '#17101a'); p.p(2, 0, '#ffe36b'); }, seekers: (p, c) => { p.line(0, 4, 2, 2, c); p.line(2, 2, 4, 3, c); p.p(4, 3, '#fff'); p.p(0, 0, c); },
+};
+function scriptArt(p, sk) {
+  const c = sk.col ?? '#ffd36a'; (MOTIF[sk.theme] ?? MOTIF.spirit)(p, c);
+  const kinds = (sk.steps ?? []).filter((s) => BADGE[s.t]), main = kinds.slice().sort((a, b) => (b.power ?? 0) - (a.power ?? 0))[0] ?? kinds[0];
+  if (main) { p.r(10, 10, 6, 6, '#17101a'); p.r(10, 10, 6, 1, shade(c, 0.5)); const q = { ...p, p: (x, y, col) => p.p(x + 10.5 | 0, y + 10.5 | 0, col), r: (x, y, w, h, col) => p.r(x + 10.5 | 0, y + 10.5 | 0, w, h, col), disc: (x, y, r, col) => p.disc(x + 10.5, y + 10.5, r, col), line: (a, b, cc, d, col) => p.line(a + 10.5 | 0, b + 10.5 | 0, cc + 10.5 | 0, d + 10.5 | 0, col) }; BADGE[main.t](q, tint(c, '#ffffff', 0.35)); }
+}
 function skillArt(p, sk) {
+  if (sk.kind === 'script') return scriptArt(p, sk);
   const c = sk.col ?? TYPE[sk.type] ?? '#fff', d = shade(c, 0.6);
   switch (sk.kind) {
     case 'melee': { p.line(3, 13, 12, 4, '#c8d0d8'); p.line(4, 13, 13, 4, '#ffffff'); p.line(2, 14, 4, 12, '#6a4528'); const n = sk.arc > 150 ? 6 : 3; for (let i = 0; i < n; i++) { const a = -2.4 + i * 0.5; p.p(Math.round(8 + Math.cos(a) * 7), Math.round(8 + Math.sin(a) * 7), c); p.p(Math.round(8 + Math.cos(a) * 6), Math.round(8 + Math.sin(a) * 6), d); } if (sk.hits > 1) { p.line(2, 4, 6, 8, c); p.line(10, 12, 14, 14, c); } break; }

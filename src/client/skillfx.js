@@ -293,3 +293,11 @@ Object.assign(VFX, {
 const COIN_FRAMES = (i) => squashCoin(COIN, [7, 5, 3, 1, 3, 5][i]);
 export const VFX_DUR = Object.fromEntries(Object.entries(VFX).map(([k, v]) => [k, v.dur]));
 void [SP, glyph, rot90];
+
+// projectile art added with the hidden/mythic ranks (src/hmskills.js)
+Object.assign(PROJ2, {
+  // a glowing red-hot rivet: bright head, steel shank, a trail of cooling sparks
+  rivet: (g, x, y, a, col, t, p) => { const id = p?.id ?? 0, ca = Math.cos(a), sa = Math.sin(a);
+    for (let i = 1; i <= 7; i++) cellAt(g, x - ca * i * 5 + (seeded(i + id) - 0.5) * 5, y - sa * i * 5 + (seeded(i * 3 + id) - 0.5) * 5, i < 3 ? '#fff0a0' : i < 5 ? '#ff9a2e' : '#a8401e', i < 4 ? 2 : 1);
+    pline(g, x - ca * 10, y - sa * 10, x + ca * 3, y + sa * 3, '#c8d0d8'); pline(g, x - ca * 10, y - sa * 10 - 1, x + ca * 3, y + sa * 3 - 1, '#eef4f8'); pdisc(g, x + ca * 4, y + sa * 4, 4, '#ff7a2e'); pdisc(g, x + ca * 4 - 1, y + sa * 4 - 1, 2, '#fff3b0'); },
+});

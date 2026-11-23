@@ -7,7 +7,7 @@ import * as L from '../src/loadout.js';
 import { getMap } from '../src/world.js';
 import { rtStats } from '../src/units.js';
 
-const scripts = Object.values(SKILLS).filter((s) => s.kind === 'script');
+const scripts = Object.values(SKILLS).filter((s) => s.kind === 'script' && s.path);   // advancement skills of the 15 paths (hidden/mythic ranks: hmskills.test.js)
 
 test('advancements: three tiers per path (35/55/80), one distinct skill each, all registered and unlockable by level', () => {
   assert.deepEqual(ADV_LEVELS, [35, 55, 80]); assert.equal(scripts.length, Object.keys(PATHS).length * 3, '45 skills, 3 per path');

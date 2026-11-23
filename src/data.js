@@ -4,7 +4,7 @@
 //     A second realm, "The Shadowfell", has its own monsters, materials and market.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { EXTRA_SKILLS, PATHS, MYTHICS, COMBOS } from './skilldata.js';
+import { EXTRA_SKILLS, PATHS, MYTHICS, COMBOS, HM_KITS } from './skilldata.js';
 import { buildGearSets, TIERS } from './gearsets.js';
 import { EXP_TIERS, EXP_ENEMIES, EXP_ZONES, SPIRE_ZONES, EXP_POTIONS } from './expansion.js';
 import { RAIDS, RAID_ENEMIES } from './raids.js';
@@ -162,6 +162,8 @@ for (const [id, m] of Object.entries(MYTHICS)) {
   CLASSES[id] = { id, group: m.group, mythic: true, hidden: true, name: m.name, icon: '', color: m.color, tie: m.color, hp: m.hp, hpPer: m.hpPer, atk: m.atk, def: m.def, move: m.move, mpRegen: m.mpRegen, gather: m.gather, craftFamily: m.craftFamily, desc: m.desc, status: m.status, skills: m.skills };
   BASICS[id] = { icon: '', ...m.basic };
 }
+// Hidden classes rank up too: their new skills (src/hmskills.js) join the kit.
+for (const [cid, kit] of Object.entries(HM_KITS)) if (CLASSES[cid]) CLASSES[cid].skills.push(...kit);
 // Every class's level-kit skills: remember which class learns them at which level.
 for (const c of Object.values(CLASSES)) for (const [id, l] of c.skills) {
   const sk = SKILLS[id]; if (!sk) continue;

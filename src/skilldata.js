@@ -390,3 +390,7 @@ Object.assign(MYTHICS.philosopher.basic, { vi: 'stone', vfxEnd: 'gold_flash', qu
 // ── Advancements (levels 35 / 55 / 80): a new skill per path, see advskills.js ──
 import { registerAdvanced } from './advskills.js';
 registerAdvanced(add, sk, PATHS);
+// ── Hidden and mythic class ranks: five more signature skills each, see hmskills.js ──
+import { registerHM, HM_KITS } from './hmskills.js';
+registerHM(add, sk, MYTHICS);
+export { HM_KITS };

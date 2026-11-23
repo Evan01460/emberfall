@@ -35,7 +35,7 @@ export function ingest(events) {
       case 'vfx': { const d = VFX[e.id]; if (!d) break; list.push({ ...e, k: 'vfx', vid: e.id, t0: now, dur: d.dur }); if (['slap', 'jackpot', 'epilogue', 'hammer_smash', 'coldstar', 'grand', 'buyout', 'liquidation', 'allin_fire', 'wrath', 'roots', 'oblivion', 'titan_slam', 'forge_nova', 'event_horizon', 'titan_grip'].includes(e.id)) sfx('boom', 120); else if (['dice_pop', 'chain_end'].includes(e.id)) sfx('hit', 40); break; }
       case 'shake': if (e.who === G.id) hooks.shake?.(e.m ?? 1); break;
       case 'bossmsg': hooks.bossmsg?.(e); break;
-      case 'chainfx': case 'blinkfx': scriptEvent(e); break;
+      case 'chainfx': case 'blinkfx': case 'pullfx': case 'markfx': scriptEvent(e); break;
       case 'boom': list.push({ k: 'boom', t0: now, dur: 640, ...e }); sfx('boom', 120);
         for (let i = 0; i < 10; i++) { const a = rnd() * 6.28, sp = 1 + rnd() * 2.5; list.push({ k: 'bit', t0: now, dur: 420 + rnd() * 300, x: e.x + Math.cos(a) * e.r * 0.3, y: e.y + Math.sin(a) * e.r * 0.3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.2, col: BOOM_COL[e.g]?.[i % 3] ?? [TYPE_COL[e.ty] ?? '#fff', '#ffffff', shade(TYPE_COL[e.ty]?.length === 7 ? TYPE_COL[e.ty] : '#ffffff', 0.7)][i % 3], g: 2.2 }); }
         break;

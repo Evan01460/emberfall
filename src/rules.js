@@ -470,15 +470,16 @@ export const TITLES = [
   { name: 'Shadow-Walker', rar: 'rare', desc: 'Enter the Shadowfell 5 times.', test: (P) => P.stats.hollowVisits >= 5 }, { name: 'Reflection-Breaker', rar: 'epic', desc: 'Slay a Reflection in the Shadowfell.', test: (P) => P.stats.reflectionsSlain >= 1 },
   { name: 'Duelist', rar: 'common', desc: 'Win 5 duels.', test: (P) => P.stats.duelWins >= 5 }, { name: 'Wayfarer', rar: 'common', desc: 'Walk 3,000 tiles.', test: (P) => P.stats.distance >= 3000 }, { name: 'Globetrotter', rar: 'rare', desc: 'Walk 20,000 tiles.', test: (P) => P.stats.distance >= 20000 },
   { name: 'Page-Turner', rar: 'rare', desc: 'Find 10 Torn Pages.', test: (P) => P.stats.pagesFound >= 10 }, { name: 'Starfinder', rar: 'epic', desc: 'Find 5 Starmetal Shards.', test: (P) => P.stats.starmetalFound >= 5 },
-  // earned by quests and events elsewhere in the game (they are added to P.titles directly)
-  { name: 'Vault Delver', rar: 'rare', desc: 'Open the Sunken Vault (The Weeping Wall).', test: null }, { name: 'Ringer', rar: 'rare', desc: 'Ring the Silent Bell.', test: null },
-  { name: 'Tyrant-Slayer', rar: 'epic', desc: 'Defeat the Ember Tyrant.', test: null }, { name: 'Titan-Breaker', rar: 'epic', desc: 'Break the Obsidian Titan with your guild.', test: null },
+  // quest and raid titles: also derived from saved progress, so anyone who did these before titles existed still gets them
+  { name: 'Vault Delver', rar: 'rare', desc: 'Open the Sunken Vault (The Weeping Wall).', test: (P) => !!P.quests?.vault?.done }, { name: 'Ringer', rar: 'rare', desc: 'Ring the Silent Bell.', test: (P) => !!P.quests?.bell?.done },
+  { name: 'Tyrant-Slayer', rar: 'epic', desc: 'Defeat the Ember Tyrant.', test: (P) => (P.stats.raids ?? 0) >= 1 }, { name: 'Titan-Breaker', rar: 'epic', desc: 'Break the Obsidian Titan with your guild.', test: (P) => (P.stats.graids ?? 0) >= 1 },
 ];
 export const titleInfo = (name) => TITLES.find((t) => t.name === name) ?? (CLASSES[Object.keys(CLASSES).find((k) => CLASSES[k].name === name)]?.mythic ? { name, rar: 'legendary', desc: `Claim the mythic class ${name}.` } : (name.startsWith('The ') ? { name, rar: 'epic', desc: `Awaken the hidden class ${name.slice(4)}.` } : { name, rar: 'epic', desc: 'A rare honour.' }));
 export function earnTitles(P) {
   P.titles ??= []; const out = [];
   for (const t of TITLES) if (t.test && !P.titles.includes(t.name) && t.test(P)) { P.titles.push(t.name); out.push(t); }
   const c = CLASSES[P.classId]; if (c?.hidden && !c.mythic) { const n = `The ${c.name}`; if (!P.titles.includes(n)) { P.titles.push(n); out.push({ name: n, rar: 'epic' }); } }
+  if (c?.mythic && !P.titles.includes(c.name)) { P.titles.push(c.name); out.push({ name: c.name, rar: 'legendary' }); }
   return out;
 }
 export function setTitle(P, name) { if (!name) { P.title = null; return true; } if (!(P.titles ?? []).includes(name)) return false; P.title = name; return true; }

@@ -86,6 +86,7 @@ export class GameServer {
     if (P.guild && !this.guildOf(P)) P.guild = null;
     R.checkHints(P);
     conn.send({ t: 'welcome', ver: PROTOCOL, id: P.id, map: S.map, x: S.x, y: S.y, dayMs: this.dayMs, serverNow: this.now(), me: this.meView(S), vis: this.visibleIds(S), mail: P.mail.splice(0) });
+    { const got = R.earnTitles(P); if (got.length) S.conn.send({ t: 'toast', msg: `You earned ${got.length} title${got.length === 1 ? '' : 's'} for past feats: ${got.map((x) => x.name).join(', ')}. Wear one from Character > Journal.`, kind: 'secret' }); }   // catch-up for progress made before a title existed
     this.systemChat(`${P.name} the ${CLASSES[P.classId].name} has arrived.`); this.pushReqs(S);
     return { ok: true, id: P.id };
   }

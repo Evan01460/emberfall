@@ -383,3 +383,11 @@ test('titles: earned from feats, worn by choice, and sent in the snapshot', () =
   advance(150); const snap = a.conn.msgs.filter((m) => m.t === 'snap').at(-1); const me = snap.players.find((p) => p.id === a.S.id); assert.equal(me.tt, 'Slayer'); assert.equal(me.c, 'warrior');
   a.send('title.set', { title: null }); assert.equal(a.P.title, null);
 });
+
+test('titles are granted retroactively from saved progress (quests, raids, current class) on login', () => {
+  const { srv } = world(); const a = client(srv, 'Veteran1'); srv.leave(a.conn);
+  a.P.level = 22; a.P.quests.vault = { step: 9, done: true }; a.P.stats.raids = 2; a.P.stats.kills = 800; a.P.titles = []; a.P.classId = 'archivist';
+  const conn = { msgs: [], send(m) { this.msgs.push(m); }, session: null }; assert.ok(srv.join(conn, { name: 'Veteran1', pass: undefined }).ok || conn.session, 'rejoin');
+  const P = conn.session?.P ?? a.P; const have = P.titles;
+  for (const t of ['Vault Delver', 'Tyrant-Slayer', 'Slayer', 'Veteran', 'The Archivist']) assert.ok(have.includes(t), `missing ${t}`);
+});

@@ -117,3 +117,4 @@ host/server.mjs             Node host: static files, WebSocket, accounts (scrypt
 * **Seven gear tiers** (new: Moonsilver, Cinderforged, Aetherium) with gear **made for every class** (+10% when it fits, shown on every item and in Character → Overview); honest prices; no gear from chests.
 * **Three new regions and two new dungeons** with new enemies, bosses and ores.
 * **Accepted bounties never expire**; customer orders can be promised and kept for 3 days.
+* **Signature skill effects for every hidden and mythic skill** (`src/client/skillfx.js`): tumbling dice, spinning playing cards, a giant ace and a casino jackpot for the Desperado; ink strokes, flying words and a falling ink column for the Archivist; a gnarled-root eruption for the Apostle's Rootbind, a black hole for Event Horizon, and so on. Their damage is also 30% higher than before.

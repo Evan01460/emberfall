@@ -94,6 +94,17 @@ HC('quicklime_flask', 'Quicklime Flask', 'proj', { power: 42, count: 1, speed: 1
 HC('lead_to_gold', 'Lead to Gold', 'aoe', { power: 48, cd: 10000, cast: 450, radius: 2.5, range: 8, at: 'cursor', stun: 2400, type: 'arcane', g: 'coin', col: '#ffd36a', mp: 20, desc: 'Turn enemies to lead for 2.4s — heavy, helpless, and worth their weight in gold.' });
 HC('catalytic_surge', 'Catalytic Surge', 'buff', { cd: 20000, dur: 9000, buff: { dmg: 0.3, regen: 0.05, mpRegen: 2.5 }, radius: 0, g: 'drop', col: '#d0a0ff', mp: 14, desc: 'Your veins run with catalyst: +30% damage, strong regeneration and fast mana for 9s.' });
 HC('grand_transmutation', 'Grand Transmutation', 'aoe', { power: 105, cd: 17000, cast: 900, radius: 3.8, at: 'self', stun: 1500, type: 'arcane', g: 'drop', col: '#e8c8ff', mp: 34, desc: 'The great work: everything near you changes state at once — a huge blast and a long stun.' });
+// Signature visuals: each hidden skill names its own projectile artwork (`vi`) and timed effects (`vfx*`, drawn by client/skillfx.js).
+// `quiet` switches off the generic slash/boom/aura so the signature effect is the whole show.
+const SIG = {
+  loaded_dice: { vi: 'dice', vfx: 'dice_cast', vfxEnd: 'dice_pop' }, bluff_step: { vfx: 'bluff', vfxLand: 'slap' }, dead_mans_draw: { vi: 'card', vfxCast: 'deadman_cast', vfx: 'deadman' },
+  all_in: { vi: 'ace', vfxCast: 'allin_cast', vfx: 'allin_fire', vfxEnd: 'jackpot' },
+  inkblade_flurry: { vfx: 'ink_flurry' }, margin_note: { vfx: 'margin_note', vfxLand: 'margin_land' }, living_lexicon: { vi: 'word', vfx: 'lexicon' }, epilogue: { vfxCast: 'epilogue_cast', vfx: 'epilogue' },
+  resonant_hammer: { vfx: 'hammer_smash' }, forged_soul: { vfx: 'forged_soul' }, ember_chains: { vi: 'chain', vfxEnd: 'chain_end' }, coldstar_nova: { vfx: 'coldstar' },
+  foresight_volley: { vi: 'silver', vfx: 'foresight' }, margin_call: { vfx: 'margin_call' }, leveraged_buyout: { vfx: 'buyout' }, liquidation: { vfx: 'liquidation' },
+  quicklime_flask: { vi: 'vial', vfxEnd: 'vial_end' }, lead_to_gold: { vfx: 'lead_gold' }, catalytic_surge: { vfx: 'catalytic' }, grand_transmutation: { vfxCast: 'grand_cast', vfx: 'grand' },
+};
+for (const [id, o] of Object.entries(SIG)) Object.assign(EXTRA_SKILLS[id], o, { quiet: true });
 
 // ── Paths (Ascension). 4 skills per fighter path, 2 per trade path, plus one ultimate per mastery. ─────────────
 // mods are multipliers; perk are class-specific systems hooks (crafting / economy).
@@ -360,3 +371,15 @@ export function describeSkill(s) {
 MY('titan_forgemaster', 'titan_grip', 'Titan Grip', 'melee', { power: 54, cd: 3600, cast: 200, range: 3.1, arc: 100, stun: 900, type: 'blunt', vulnHit: { v: 0.3, ms: 5000 }, g: 'anvil', col: '#ff8a2a', desc: 'Seize the enemy in a titan\'s grip: long reach, a stun, and 30% more damage taken after.' });
 MY('philosopher', 'quicksilver_burst', 'Quicksilver Burst', 'proj', { power: 46, count: 3, spread: 18, speed: 14, range: 10, radius: 0.36, aoe: 1.7, slow: 2200, cd: 4800, cast: 200, type: 'arcane', g: 'drop', col: '#e8f0ff', desc: 'Three globes of living quicksilver that burst into slowing clouds.' });
 MY('gilded', 'gilded_barrage', 'Gilded Barrage', 'proj', { power: 26, count: 7, spread: 44, speed: 20, range: 11, radius: 0.28, pierce: 2, cd: 5200, cast: 160, type: 'pierce', g: 'coin', col: '#ffe36b', desc: 'Seven heavy gold coins in a fan, each punching through two enemies.' });
+
+// ── Mythic signatures (artwork in client/skillfx.js) and the power of the best classes in the game ──────────────────────────────────
+const SIGM = {
+  thorn_lash: { vfx: 'thorn_lash' }, rootbind: { vfx: 'roots', dot: { ticks: 6, every: 400, k: 'root' } }, seed_barrage: { vi: 'seed', vfxEnd: 'seed_burst' }, bloom: { vfx: 'bloom', k: 'bloomz' }, worldtree_wrath: { vfxCast: 'wrath_cast', vfx: 'wrath' },
+  void_rend: { vfx: 'void_rend' }, rift_step: { vfx: 'rift_step' }, event_horizon: { vfxCast: 'eh_cast', vfx: 'event_horizon' }, null_barrage: { vi: 'nullbolt', vfxEnd: 'null_pop' }, oblivion: { vfxCast: 'oblivion_cast', vfx: 'oblivion' },
+  titan_grip: { vfx: 'titan_grip' }, titan_slam: { vfx: 'titan_slam' }, molten_chain: { vi: 'molten', vfxEnd: 'lava_splat' }, forge_nova: { vfx: 'forge_nova' },
+  quicksilver_burst: { vi: 'quick', vfxEnd: 'quick_end' }, elixir_storm: { vi: 'flaskstorm', vfxEnd: 'flask_pop' }, aurum_flask: { vi: 'aurum', vfxEnd: 'aurum_end' }, panacea: { vfx: 'panacea' },
+  gilded_barrage: { vi: 'gcoin', vfxEnd: 'gold_flash' }, gilded_cage: { vfx: 'gilded_cage' }, coin_storm: { vi: 'gcoin', vfx: 'coin_storm' }, golden_parachute: { vfx: 'parachute', vfxLand: 'gold_land' },
+};
+for (const [id, o] of Object.entries(SIGM)) Object.assign(EXTRA_SKILLS[id], o, { quiet: true });
+// Hidden and mythic classes are the strongest in the game: every one of their skills hits 30% harder than first designed.
+for (const id of new Set([...Object.keys(SIG), ...Object.keys(SIGM)])) { const k = EXTRA_SKILLS[id]; if (k.power) k.power = Math.round(k.power * 1.3); if (k.land?.power) k.land = { ...k.land, power: Math.round(k.land.power * 1.3) }; if (k.field?.dmg) k.field = { ...k.field, dmg: Math.round(k.field.dmg * 1.3) }; }

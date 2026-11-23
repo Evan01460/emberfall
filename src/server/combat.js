@@ -143,7 +143,8 @@ export const combatMethods = {
 
   cast(S, sk, a, tx, ty) {
     S.aim = a; S.lastAct = this.now(); S.stealthUntil = Math.min(S.stealthUntil, this.now());
-    this.emit(S.map, { t: 'cast', who: S.id, sk: sk.id, a, ms: sk.cast ?? 0, kind: sk.kind, ty: sk.type, step: sk.step ?? 0, dir: sk.dir ?? 1 });
+    this.emit(S.map, { t: 'cast', who: S.id, sk: sk.id, a, ms: sk.cast ?? 0, kind: sk.kind, ty: sk.type, step: sk.step ?? 0, dir: sk.dir ?? 1, q: sk.quiet ? 1 : 0 });
+    if (sk.vfxCast) { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.emit(S.map, { t: 'vfx', id: sk.vfxCast, who: S.id, x: S.x, y: S.y, a, cx, cy, r: sk.radius ?? 0, col: sk.col ?? null }); }
     this.later(sk.cast ?? 0, () => { if (!S.dead && this.sessions.get(S.id) === S) { this.resolveSkill(S, sk, a, tx, ty); this.postEffects(S, sk); } });
   },
   // Aim point for ground-targeted skills, clamped to range.
@@ -154,6 +155,7 @@ export const combatMethods = {
   resolveSkill(S, sk, a, tx, ty) {
     const now = this.now();
     if (sk.stealth && sk.kind !== 'dash') S.stealthUntil = now + sk.stealth;
+    if (sk.vfx && sk.kind !== 'dash') { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.emit(S.map, { t: 'vfx', id: sk.vfx, who: S.id, x: S.x, y: S.y, a, cx, cy, r: sk.radius ?? 0, range: sk.range ?? 0, col: sk.col ?? null }); }
     switch (sk.kind) {
       case 'melee': { const n = sk.hits ?? 1; for (let i = 0; i < n; i++) this.later(i * (sk.interval ?? 0), () => { if (!S.dead) this.meleeHit(S, sk, a); }); break; }
       case 'proj': this.fireProjectiles(S, sk, a); break;
@@ -165,7 +167,7 @@ export const combatMethods = {
         for (const T of targets) {
           if (sk.shield) { T.shield = sk.shield + S.P.level * 4; T.shieldUntil = now + (sk.dur ?? 4000); }
           if (sk.heal) this.healPlayer(T, T.rt.maxHp * sk.heal, S);
-          this.emit(S.map, { t: 'aura', x: T.x, y: T.y, r: 1, c: sk.shield ? 'ward' : 'heal' });
+          if (!sk.quiet) this.emit(S.map, { t: 'aura', x: T.x, y: T.y, r: 1, c: sk.shield ? 'ward' : 'heal' });
         }
         break;
       }
@@ -174,10 +176,10 @@ export const combatMethods = {
         S.tauntRed = sk.red; S.tauntUntil = now + sk.dur; this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: sk.radius, c: 'taunt' }); break;
       case 'mark':
         for (const m of this.mobs) if (m.map === S.map && !m.deadUntil && dist(m.x, m.y, S.x, S.y) <= sk.radius) { m.vulnUntil = now + sk.dur; m.vuln = sk.vuln; }
-        this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: sk.radius, c: 'mark' }); break;
+        if (!sk.quiet) this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: sk.radius, c: 'mark' }); break;
       case 'buff': {
         const targets = [S, ...(sk.radius ? this.allies(S, sk.radius) : [])];
-        for (const T of targets) { T.buff = { id: sk.id, until: now + sk.dur, ...sk.buff }; T.conn.send({ t: 'buff', id: sk.id, ms: sk.dur }); this.emit(S.map, { t: 'aura', x: T.x, y: T.y, r: 1.1, c: 'rage' }); }
+        for (const T of targets) { T.buff = { id: sk.id, until: now + sk.dur, ...sk.buff }; T.conn.send({ t: 'buff', id: sk.id, ms: sk.dur }); if (!sk.quiet) this.emit(S.map, { t: 'aura', x: T.x, y: T.y, r: 1.1, c: 'rage' }); }
         break;
       }
       case 'trap': {
@@ -188,7 +190,7 @@ export const combatMethods = {
       case 'field': {
         const [cx, cy] = this.aimPoint(S, sk, tx, ty), f = sk.field;
         this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: sk.k ?? 'holy', field: f, owner: S.id, power: f.dmg ?? 0, type: sk.type, every: f.every, next: now + f.every, until: now + sk.dur, sk });
-        this.emit(S.map, { t: 'aura', x: cx, y: cy, r: sk.radius, c: 'heal' });
+        if (!sk.quiet) this.emit(S.map, { t: 'aura', x: cx, y: cy, r: sk.radius, c: 'heal' });
         break;
       }
       default: break;
@@ -203,7 +205,7 @@ export const combatMethods = {
   },
 
   meleeHit(S, sk, a) {
-    this.emit(S.map, { t: 'slash', x: S.x, y: S.y, a, range: sk.range, arc: sk.arc, ty: sk.type, who: S.id, step: sk.step ?? 0, dir: sk.dir ?? 1, big: sk.hit ? 1 : 0, mag: sk.mag ? 1 : 0 });
+    if (!sk.quiet) this.emit(S.map, { t: 'slash', x: S.x, y: S.y, a, range: sk.range, arc: sk.arc, ty: sk.type, who: S.id, step: sk.step ?? 0, dir: sk.dir ?? 1, big: sk.hit ? 1 : 0, mag: sk.mag ? 1 : 0 });
     let n = 0;
     for (const t of this.targetsFor(S)) {
       const d = dist(S.x, S.y, t.x, t.y); if (d > sk.range + (t.radius ?? 0.4)) continue;
@@ -236,17 +238,18 @@ export const combatMethods = {
     this.projs.push(p); return p;
   },
   playerAoe(S, sk, cx, cy) {
-    this.emit(S.map, { t: 'boom', x: cx, y: cy, r: sk.radius, ty: sk.type, who: S.id, g: sk.g ?? null });
+    if (!sk.quiet) this.emit(S.map, { t: 'boom', x: cx, y: cy, r: sk.radius, ty: sk.type, who: S.id, g: sk.g ?? null });
     if (sk.dot) { this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: sk.dot.k ?? 'acid', owner: S.id, power: sk.power, type: sk.type, left: sk.dot.ticks, every: sk.dot.every, next: this.now() + sk.dot.every, until: this.now() + sk.dot.ticks * sk.dot.every, sk, slow: sk.slow }); if (sk.stun) for (const t of this.targetsFor(S)) if (!t.isPlayer && dist(cx, cy, t.x, t.y) <= sk.radius + t.radius) t.stunUntil = this.now() + sk.stun; return; }
     for (const t of this.targetsFor(S)) { if (dist(cx, cy, t.x, t.y) <= sk.radius + t.radius) { this.hit(S, t, sk.power, sk.type, sk, ang(cx, cy, t.x, t.y)); if (sk.stun && !t.isPlayer) t.stunUntil = this.now() + sk.stun * (t.boss ? 0.5 : 1); } }
     if (sk.power >= 60) this.emit(S.map, { t: 'shake', who: S.id, m: 1 });
   },
   dash(S, a, d, ms, iframes, sk = null) {
-    const map = getMap(S.map); let x = S.x, y = S.y;
+    const map = getMap(S.map); let x = S.x, y = S.y; const fromX = S.x, fromY = S.y;
     for (let k = 0; k < d / 0.2; k++) { const nx = x + Math.cos(a) * 0.2, ny = y + Math.sin(a) * 0.2; if (blockedAt(map, nx, ny)) break; x = nx; y = ny; }
     const now = this.now(); S.x = x; S.y = y; S.dashLock = now + ms * 0.9; S.iframeUntil = Math.max(S.iframeUntil, now + iframes);
     if (sk?.stealth) S.stealthUntil = now + sk.stealth;
-    S.conn.send({ t: 'dash', x, y, ms }); this.emit(S.map, { t: 'dashfx', who: S.id, x, y });
+    S.conn.send({ t: 'dash', x, y, ms }); if (sk?.vfx) this.emit(S.map, { t: 'vfx', id: sk.vfx, x, y, sx: fromX, sy: fromY, a, r: sk.land?.radius ?? 0, col: sk.col ?? null }); else this.emit(S.map, { t: 'dashfx', who: S.id, x, y });
+    if (sk?.vfxLand) this.later(ms * 0.85, () => { if (!S.dead) this.emit(S.map, { t: 'vfx', id: sk.vfxLand, x: S.x, y: S.y, a, r: sk.land?.radius ?? 2, col: sk.col ?? null }); });
     if (sk?.land) this.later(ms * 0.85, () => { if (!S.dead) this.playerAoe(S, { radius: sk.land.radius, power: sk.land.power, type: sk.type ?? 'blunt', stun: sk.land.stun, mag: sk.mag }, S.x, S.y); });
   },
 
@@ -492,17 +495,17 @@ export const combatMethods = {
   tickProjectiles(dt, nw) {
     const keep = [];
     for (const p of this.projs) {
-      const map = getMap(p.map); p.ttl -= dt; if (p.ttl <= 0) { if (p.aoe) this.projAoe(p); continue; }
+      const map = getMap(p.map); p.ttl -= dt; if (p.ttl <= 0) { this.projEnd(p); if (p.aoe) this.projAoe(p); continue; }
       p.x += p.vx * dt; p.y += p.vy * dt;
-      if (blockedAt(map, p.x, p.y, 0.05)) { if (p.aoe) this.projAoe(p); continue; }
+      if (blockedAt(map, p.x, p.y, 0.05)) { this.projEnd(p); if (p.aoe) this.projAoe(p); continue; }
       let dead = false;
       if (p.owner.k === 'p') {
         const S = this.sessions.get(p.owner.id); if (!S) continue;
         for (const t of this.targetsFor(S)) {
           if (p.hit.has(t.isPlayer ? t.s.id : t.id) || dist(p.x, p.y, t.x, t.y) > p.r + t.radius) continue;
           p.hit.add(t.isPlayer ? t.s.id : t.id); this.hit(S, t, p.power, p.type, p.sk, ang(p.x - p.vx, p.y - p.vy, p.x, p.y));
-          if (p.aoe) { this.projAoe(p); dead = true; break; }
-          if (p.pierce-- <= 0) { dead = true; break; }
+          if (p.aoe) { this.projEnd(p); this.projAoe(p); dead = true; break; }
+          if (p.pierce-- <= 0) { this.projEnd(p); dead = true; break; }
         }
       } else {
         for (const S of this.sessions.values()) {
@@ -515,9 +518,10 @@ export const combatMethods = {
     }
     this.projs = keep;
   },
+  projEnd(p) { if (p.sk?.vfxEnd) this.emit(p.map, { t: 'vfx', id: p.sk.vfxEnd, who: p.owner.id, follow: false, x: p.x, y: p.y, a: Math.atan2(p.vy, p.vx), r: p.aoe || p.sk.radius || 0, col: p.sk.col ?? null }); },
   projAoe(p) {
     const S = this.sessions.get(p.owner.id); if (!S) return;
-    this.emit(p.map, { t: 'boom', x: p.x, y: p.y, r: p.aoe, ty: p.type, who: S.id });
+    if (!p.sk?.quiet) this.emit(p.map, { t: 'boom', x: p.x, y: p.y, r: p.aoe, ty: p.type, who: S.id });
     for (const t of this.targetsFor(S)) if (dist(p.x, p.y, t.x, t.y) <= p.aoe + t.radius && !p.hit.has(t.isPlayer ? t.s.id : t.id)) this.hit(S, t, p.power * 0.6, p.type, p.sk, 0);
   },
   tickZones(nw) {

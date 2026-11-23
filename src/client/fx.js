@@ -4,6 +4,7 @@ import { G } from './state.js';
 import { sfx } from './sfx.js';
 import { TS } from '../world.js';
 import { C, q, cellAt, pdisc, pring, psector, parc, pline, prect, drawText, shade } from './px.js';
+import { PROJ2, VFX } from './skillfx.js';
 
 const TYPE_COL = { slash: '#f0f4ff', pierce: '#ffe9a8', blunt: '#ffb870', arcane: '#b58cff', heal: '#7dffa0', ward: '#7fb8ff', taunt: '#ffcf6a', mark: '#ff9ad5', rage: '#ff3b3b' };
 export const hooks = { shake: null };            // set by the world view
@@ -25,11 +26,12 @@ export function ingest(events) {
   for (const e of events ?? []) {
     switch (e.t) {
       case 'cast': casts.set(e.who, { t: now, a: e.a, kind: e.kind, ty: e.ty, ms: e.ms }); if (e.who === G.id) sfx(e.kind === 'melee' ? 'swing' : e.kind === 'proj' ? 'shoot' : 'cast', 60);
-        if ((e.ms ?? 0) >= 160) list.push({ k: 'charge', t0: now, dur: e.ms + 60, who: e.who, ty: e.ty, kind: e.kind }); break;
+        if ((e.ms ?? 0) >= 160 && !e.q) list.push({ k: 'charge', t0: now, dur: e.ms + 60, who: e.who, ty: e.ty, kind: e.kind }); break;
       case 'dust': for (let i = 0; i < 3; i++) list.push({ k: 'bit', t0: now, dur: 260 + rnd() * 160, x: e.x + (rnd() - 0.5) * 0.4, y: e.y, vx: (rnd() - 0.5) * 1.2, vy: e.up ? -1.2 - rnd() : -0.2 - rnd() * 0.6, col: e.cols[i % e.cols.length], g: e.up ? 3 : 1 }); break;
       case 'slash': { const p = posOf(e.who), me = { x: e.x, y: e.y }; list.push({ k: 'slash', t0: now, dur: e.big ? 440 : 300, ...e, ox: p ? e.x - p.x : 0, oy: p ? e.y - p.y : 0, follow: !!p }); void me; break; }
       case 'spark': for (let i = 0; i < (e.n ?? 4); i++) { const a = (e.a ?? 0) + (rnd() - 0.5) * 2.4, sp = 1.5 + rnd() * 3.5; list.push({ k: 'bit', t0: now, dur: 220 + rnd() * 220, x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.4, col: i % 3 === 0 ? '#ffffff' : (TYPE_COL[e.ty] ?? '#ffe9a8'), g: 0.5 }); }
         list.push({ k: 'star', t0: now, dur: 180, x: e.x, y: e.y, ty: e.ty, big: (e.n ?? 4) > 6 }); break;
+      case 'vfx': { const d = VFX[e.id]; if (!d) break; list.push({ ...e, k: 'vfx', vid: e.id, t0: now, dur: d.dur }); if (['slap', 'jackpot', 'epilogue', 'hammer_smash', 'coldstar', 'grand', 'buyout', 'liquidation', 'allin_fire', 'wrath', 'roots', 'oblivion', 'titan_slam', 'forge_nova', 'event_horizon', 'titan_grip'].includes(e.id)) sfx('boom', 120); else if (['dice_pop', 'chain_end'].includes(e.id)) sfx('hit', 40); break; }
       case 'shake': if (e.who === G.id) hooks.shake?.(e.m ?? 1); break;
       case 'boom': list.push({ k: 'boom', t0: now, dur: 640, ...e }); sfx('boom', 120);
         for (let i = 0; i < 10; i++) { const a = rnd() * 6.28, sp = 1 + rnd() * 2.5; list.push({ k: 'bit', t0: now, dur: 420 + rnd() * 300, x: e.x + Math.cos(a) * e.r * 0.3, y: e.y + Math.sin(a) * e.r * 0.3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.2, col: BOOM_COL[e.g]?.[i % 3] ?? [TYPE_COL[e.ty] ?? '#fff', '#ffffff', shade(TYPE_COL[e.ty]?.length === 7 ? TYPE_COL[e.ty] : '#ffffff', 0.7)][i % 3], g: 2.2 }); }
@@ -57,6 +59,7 @@ export function syncProjectiles(arr) {
 export function drawGround(g, mobs, zones, t) {
   for (const z of zones) {
     const x = z.x * TS, y = z.y * TS, r = z.r * TS, Z = ZCOL[z.k] ?? ZCOL.acid;
+    if (z.k === 'root' || z.k === 'bloomz') continue;
     if (z.k === 'trap') { pring(g, x, y, r * 0.5, C, 'rgba(255,255,255,.25)'); for (let i = 0; i < 4; i++) cellAt(g, x + Math.cos(i * 1.57) * r * 0.3, y + Math.sin(i * 1.57) * r * 0.3, '#c8d0d8'); continue; }
     pdisc(g, x, y, r, Z[0], 0); pdisc(g, x, y, r * 0.7, Z[1], 1); pring(g, x, y, r, C, Z[2]);
     for (let i = 0; i < 6; i++) { const a = t / (z.k === 'fire' ? 180 : 400) + i * 1.1, rr = r * (0.3 + ((i * 37) % 10) / 20); cellAt(g, x + Math.cos(a) * rr, y + (z.k === 'fire' ? -((t / 40 + i * 9) % 18) + Math.sin(a) * rr * 0.4 : Math.sin(a * 1.2) * rr * 0.8), Z[3]); }
@@ -117,15 +120,18 @@ const PROJ = {
   quill: (g, x, y, a) => { const ca = Math.cos(a), sa = Math.sin(a); pline(g, x - ca * 10, y - sa * 10, x + ca * 4, y + sa * 4, '#e8f6f0'); cellAt(g, x + ca * 5, y + sa * 5, '#aef0ff'); trail(g, x - ca * 10, y - sa * 10, a, 4, ['#2f8a8a', 'rgba(47,138,138,.2)'], 3); },
   mob: (g, x, y, a, col, t) => { pdisc(g, x, y, C * 2.8, '#7a1a14'); pdisc(g, x, y, C * 2, '#ff5a4a'); pdisc(g, x, y, C, '#ffd0c8'); trail(g, x, y, a, 5, ['#ff5a4a', 'rgba(255,90,74,.25)'], 3); },
 };
+Object.assign(PROJ, PROJ2);
+const VCTX = { pos: posOf, get mobs() { return G.mobs; }, get players() { return G.players; } };
 export function drawAir(g) {
   const wall = performance.now();
   for (const p of projs.values()) {
     const dt = (wall - p.t) / 1000, x = (p.x + p.vx * dt) * TS, y = (p.y + p.vy * dt) * TS, a = Math.atan2(p.vy, p.vx);
-    const col = p.o === 'm' ? '#ff5a4a' : (p.c ?? TYPE_COL[p.ty] ?? '#ffffff'); (PROJ[p.o === 'm' ? 'mob' : p.vi] ?? PROJ[p.ty === 'pierce' ? 'arrow' : p.ty === 'arcane' ? 'orb' : 'bullet'])(g, x, y, a, col, wall);
+    const col = p.o === 'm' ? '#ff5a4a' : (p.c ?? TYPE_COL[p.ty] ?? '#ffffff'); (PROJ[p.o === 'm' ? 'mob' : p.vi] ?? PROJ[p.ty === 'pierce' ? 'arrow' : p.ty === 'arcane' ? 'orb' : 'bullet'])(g, x, y, a, col, wall, p);
   }
   for (let i = list.length - 1; i >= 0; i--) {
     const e = list[i], k = (wall - e.t0) / e.dur; if (k >= 1) { list.splice(i, 1); continue; }
-    if (e.k === 'slash') drawSlash(g, e, k, wall);
+    if (e.k === 'vfx') VFX[e.vid].draw(g, e, k, wall, VCTX);
+    else if (e.k === 'slash') drawSlash(g, e, k, wall);
     else if (e.k === 'charge') { const p = posOf(e.who); if (!p) continue; const x = p.x * TS, y = p.y * TS + 8, R = 8 + 18 * Math.min(1, k * 1.2), col = e.ty === 'arcane' ? '#b58cff' : e.ty === 'blunt' ? '#ffb870' : '#fff0a0'; pring(g, x, y, R, C, `${col}`); for (let j = 0; j < 8; j++) { const a2 = wall / 260 + (j * Math.PI) / 4; cellAt(g, x + Math.cos(a2) * R, y + Math.sin(a2) * R * 0.6, '#ffffff'); } pdisc(g, x, y, R * 0.6 * k, 'rgba(255,255,255,.12)', 1); }
     else if (e.k === 'boom') drawBoom(g, e, k, wall);
     else if (e.k === 'aura' || e.k === 'ring') drawAura(g, e, k, wall);

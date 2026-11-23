@@ -8,7 +8,7 @@ import * as I from './icons.js';
 import { refreshWindow } from './panels.js';
 import { whisperTo } from './ui.js';
 
-const send = (m) => G.net.send(m);
+const send = (m) => G.net.send(m), netSend = send;
 const FAM = { blacksmith: 'Blacksmith', alchemist: 'Alchemist' };
 let sub = 'requests', draft = null, loaded = false;
 const priceTag = (id) => Math.max(10, Math.round((ITEMS[id]?.v ?? 20) * 1.4));
@@ -67,14 +67,15 @@ function draftView(me) {
   if (!d.itemId || !opts.some((r) => r.out === d.itemId)) { d.itemId = opts[0]?.out; d.price = priceTag(d.itemId); }
   const rec = opts.find((r) => r.out === d.itemId), tooHigh = d.cl != null && rec && rec.lvl > d.cl, gear = ITEMS[d.itemId]?.k === 'gear';
   const sel = h('select', { onchange: (e) => { d.itemId = e.target.value; d.price = priceTag(d.itemId); refreshWindow('character'); } }, opts.map((r) => h('option', { value: r.out, selected: r.out === d.itemId }, `${ITEMS[r.out].n}  (craft Lv ${r.lvl}${r.secret ? ', secret' : ''})`)));
-  const qty = h('input', { type: 'number', min: 1, max: 5, value: d.qty, style: { width: '56px' }, onchange: (e) => { d.qty = Math.max(1, Math.min(5, +e.target.value || 1)); } });
-  const mq = h('input', { type: 'number', min: 0, max: 99, value: Math.round(d.minQ * 100), style: { width: '60px' }, disabled: !gear, onchange: (e) => { d.minQ = Math.max(0, Math.min(99, +e.target.value || 0)) / 100; } });
-  const pr = h('input', { type: 'number', min: 1, value: d.price, style: { width: '96px' }, onchange: (e) => { d.price = Math.max(1, +e.target.value || 1); refreshWindow('character'); } });
+  const qty = h('input', { type: 'number', min: 1, max: 5, value: d.qty, style: { width: '56px' }, oninput: (e) => { d.qty = Math.max(1, Math.min(5, Math.round(+e.target.value) || 1)); } });
+  const mq = h('input', { type: 'number', min: 0, max: 99, value: Math.round(d.minQ * 100), style: { width: '60px' }, disabled: !gear, oninput: (e) => { d.minQ = Math.max(0, Math.min(99, +e.target.value || 0)) / 100; } });
+  const send = h('button', { class: 'btn primary' }, ''), upd = () => { send.textContent = `Send request (${fmt(d.price)}g in escrow)`; send.disabled = me.gilt < d.price; };
+  const pr = h('input', { type: 'number', min: 1, value: d.price, style: { width: '96px' }, oninput: (e) => { d.price = Math.max(1, Math.round(+e.target.value) || 1); upd(); } });   // no re-render here: it would swallow the click on the button
   return h('div', { class: 'card' }, h('h3', {}, `Request from ${d.to} (${FAM[fam]}${d.cl != null ? `, level ${d.cl}` : ''})`),
     h('div', { class: 'row', style: { margin: '6px 0' } }, 'Item', sel), h('div', { class: 'row', style: { margin: '6px 0' } }, 'Qty', qty, gear ? ['Min quality %', mq] : null, 'Payment', pr, 'g'),
     tooHigh ? h('p', { class: 'red', style: { fontSize: '12px' } }, `${d.to} is level ${d.cl}; this needs craft level ${rec.lvl}. They would only be able to reject it.`) : null,
     h('p', { class: 'dim', style: { fontSize: '12px' } }, `The payment is held in escrow until it is delivered, or returned if they reject it or you cancel. You can haggle in private chat and propose a new price afterwards. You have ${fmt(me.gilt)}g.`),
-    h('div', { class: 'row' }, h('button', { class: 'btn primary', disabled: me.gilt < d.price, onclick: () => { send({ t: 'req.new', to: d.to, itemId: d.itemId, qty: d.qty, minQ: d.minQ, price: d.price }); draft = null; sub = 'requests'; refreshWindow('character'); } }, `Send request (${fmt(d.price)}g in escrow)`), h('button', { class: 'btn ghost', onclick: () => { draft = null; refreshWindow('character'); } }, 'Back')));
+    h('div', { class: 'row' }, (upd(), send.onclick = () => { netSend({ t: 'req.new', to: d.to, itemId: d.itemId, qty: d.qty, minQ: d.minQ, price: d.price }); draft = null; sub = 'requests'; refreshWindow('character'); }, send), h('button', { class: 'btn ghost', onclick: () => { draft = null; refreshWindow('character'); } }, 'Back')));
 }
 
 // ── players nearby ───────────────────────────────────────────────────────────

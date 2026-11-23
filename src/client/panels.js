@@ -366,14 +366,15 @@ function exOrders(v, me) {
   // post form
   if (!draft.price) draft.price = Math.round(v.fair[draft.itemId] ?? 50);
   const isGear = ITEMS[draft.itemId]?.k === 'gear';
+  let postBtn = null; const updPost = () => { if (!postBtn) return; const t = draft.qty * draft.price; postBtn.textContent = `Post order (${fmt(t)}g escrow)`; postBtn.disabled = me.gilt < t; };
   const sel = h('select', { id: 'ord-item', onchange: (e) => { draft.itemId = e.target.value; draft.price = Math.round(v.fair[draft.itemId] ?? 50); refreshWindow('exchange'); } }, TRADE_ITEMS.map((id) => h('option', { value: id, selected: id === draft.itemId }, ITEMS[id].n)));
-  const qty = h('input', { id: 'ord-qty', type: 'number', min: 1, max: 50, value: draft.qty, style: { width: '58px' }, onchange: (e) => { draft.qty = Math.max(1, Math.min(50, +e.target.value || 1)); refreshWindow('exchange'); } });
-  const price = h('input', { id: 'ord-price', type: 'number', min: 1, value: draft.price, style: { width: '84px' }, onchange: (e) => { draft.price = Math.max(1, +e.target.value || 1); refreshWindow('exchange'); } });
-  const minq = h('input', { id: 'ord-minq', type: 'number', min: 0, max: 99, value: draft.minQ, style: { width: '58px' }, disabled: !isGear, onchange: (e) => { draft.minQ = Math.max(0, Math.min(99, +e.target.value || 0)); } });
-  const tgt = h('input', { id: 'ord-target', placeholder: 'any crafter', value: draft.target, style: { width: '110px' }, disabled: merchant, onchange: (e) => { draft.target = e.target.value; } });
+  const qty = h('input', { id: 'ord-qty', type: 'number', min: 1, max: 50, value: draft.qty, style: { width: '58px' }, oninput: (e) => { draft.qty = Math.max(1, Math.min(50, Math.round(+e.target.value) || 1)); updPost(); } });
+  const price = h('input', { id: 'ord-price', type: 'number', min: 1, value: draft.price, style: { width: '84px' }, oninput: (e) => { draft.price = Math.max(1, Math.round(+e.target.value) || 1); updPost(); } });
+  const minq = h('input', { id: 'ord-minq', type: 'number', min: 0, max: 99, value: draft.minQ, style: { width: '58px' }, disabled: !isGear, oninput: (e) => { draft.minQ = Math.max(0, Math.min(99, +e.target.value || 0)); } });
+  const tgt = h('input', { id: 'ord-target', placeholder: 'any crafter', value: draft.target, style: { width: '110px' }, disabled: merchant, oninput: (e) => { draft.target = e.target.value; } });
   const total = draft.qty * draft.price;
   const form = h('div', { class: 'card' }, h('h3', {}, merchant ? 'Post a wholesale order' : 'Post a commission'), h('div', { class: 'row' }, sel, 'Qty', qty, 'Pay each', price, isGear ? ['Min quality %', minq] : null, merchant ? null : ['Crafter', tgt]),
-    h('div', { class: 'row', style: { marginTop: '8px' } }, h('button', { class: 'btn primary', disabled: me.gilt < total, onclick: () => send({ t: 'order.post', itemId: draft.itemId, qty: draft.qty, price: draft.price, minQ: draft.minQ / 100, target: draft.target }) }, `Post order (${fmt(total)}g escrow)`), h('span', { class: 'dim', style: { fontSize: '12px' } }, `Fair value ${Math.round(v.fair[draft.itemId] ?? 0)}g. ${merchant ? 'Bots pay crafters about 60% of fair value; beat that to win their goods.' : 'Offer a fair price - crafters choose which orders to fill.'}`)));
+    h('div', { class: 'row', style: { marginTop: '8px' } }, (postBtn = h('button', { class: 'btn primary', disabled: me.gilt < total, onclick: () => send({ t: 'order.post', itemId: draft.itemId, qty: draft.qty, price: draft.price, minQ: draft.minQ / 100, target: draft.target }) }, `Post order (${fmt(total)}g escrow)`)), h('span', { class: 'dim', style: { fontSize: '12px' } }, `Fair value ${Math.round(v.fair[draft.itemId] ?? 0)}g. ${merchant ? 'Bots pay crafters about 60% of fair value; beat that to win their goods.' : 'Offer a fair price - crafters choose which orders to fill.'}`)));
   return h('div', {}, h('p', { class: crafter || merchant ? 'gold' : 'dim', style: { fontSize: '13px' } }, rules), h('div', { class: 'grid exgrid' }, h('div', { class: 'card', style: { maxHeight: '48vh', overflow: 'auto' } }, h('h2', {}, 'Open orders'), table), form));
 }
 

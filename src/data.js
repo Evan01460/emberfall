@@ -12,6 +12,9 @@ export { PATHS, MYTHICS, COMBOS };
 
 export const TYPE_ICON = { slash: '', pierce: '', blunt: '', arcane: '', guard: '', evade: '', counter: '⟲' };
 export const MAX_LEVEL = 30;
+// Player health is HP_SCALE times the old numbers and every enemy hit on a player is HP_SCALE times as large, so fights feel exactly as before —
+// but flat healing (lifesteal, regeneration per hit) is HP_SCALE times smaller in comparison. Potions and shields are scaled up with it.
+export const HP_SCALE = 10;
 
 // ── Real-time skills ────────────────────────────────────────────────────────
 // kinds: melee (arc) · proj (projectiles) · aoe (circle at cursor/self) · dash · guard · heal · taunt · mark
@@ -441,6 +444,8 @@ export const NODE_TYPES = {
   echo: { name: 'Echo Crystal', icon: '', item: 'echo_shard', qty: [1, 2], ms: 2400, respawn: 90 },
 };
 buildGearSets(ITEMS, RECIPES, NODE_TYPES);   // the full gear grid (every class, seven metal tiers), new ores, recipes and honest prices
+// Healing potions restore HP_SCALE times the old amount (their text must say so).
+for (const it of Object.values(ITEMS)) if (typeof it.desc === 'string') it.desc = it.desc.replace(/Restore (\d+) HP/, (_, n) => `Restore ${+n * HP_SCALE} HP`);
 
 
 // ── Hidden-content journal hints (progressive, cryptic) ─────────────────────

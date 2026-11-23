@@ -5,6 +5,7 @@ import { dedicatedServer } from './config.js';
 import { answered } from './ask.js';
 import { startTutorial } from './tutorial.js';
 import { playCinematic, afterCinematic } from './cinematic.js';
+import { HP_SCALE } from '../data.js';
 import { connectWs, connectLocal, soloCharacters, wipeSolo } from './net.js';
 import { WorldView } from './worldview.js';
 import { buildHud, updateHud, updateHotbar, showDeath, hideDeath, setPrompt, minimapCanvas, addChat, showAnnounce, showInvite, setPvp, setWar, playerMenu, showWho, openTrade, updateTrade, endTrade, dismissMenu } from './ui.js';
@@ -162,7 +163,7 @@ function wire(net) {
   net.on('haggle.round', (m) => hagCtl?.round(m));
   net.on('haggle.done', (m) => { if (hagCtl) hagCtl.done(m); else toast(m.msg); hagCtl = null; });
   net.on('dash', (m) => view.startDash(m.x, m.y, m.ms));
-  net.on('hurt', (m) => { view.shake = Math.min(0.35, 0.1 + m.v / 150); view.hurtFlash = 0.35; });
+  net.on('hurt', (m) => { view.shake = Math.min(0.35, 0.1 + m.v / (150 * HP_SCALE)); view.hurtFlash = 0.35; });
   net.on('nomana', () => { G.flashMana = performance.now(); toast('Not enough mana.', 'bad'); });
   net.on('cd', (m) => { G.cd[m.k] = performance.now() + m.ms; G.cdMax[m.k] = m.ms; });
   net.on('died', (m) => { sfx('death'); showDeath(m); closeAll(); view.shake = 0.5; });

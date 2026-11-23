@@ -7,6 +7,7 @@ import { clamp } from '../rng.js';
 import { ENEMIES, CLASSES, SKILLS, BASICS, MOVES, ZONES } from '../data.js';
 import { getMap, blockedAt, inSafeZone, realmOf, dist, TS } from '../world.js';
 import { rtStats, enemyStats, shadeStats, enemyLevel, computeRewards, calcDamage } from '../units.js';
+import { HP_SCALE } from '../data.js';
 import { loadoutOf, basicOf, comboOf, perkOf } from '../loadout.js';
 import { DRAUGHT_FX, FLASK_FX } from '../custom.js';
 import * as R from '../rules.js';
@@ -111,7 +112,7 @@ export const combatMethods = {
     const u = R.ITEM_USE[id];
     if (u.hp && S.hp >= S.rt.maxHp) return; if (u.mp && S.mp >= S.rt.maxMp) return;
     R.removeItem(S.P, id); S.cds[ck] = now + 5000;
-    if (u.hp) this.healPlayer(S, u.hp * (R.potionPotency?.(S.P, id) ?? 1));
+    if (u.hp) this.healPlayer(S, u.hp * HP_SCALE * (R.potionPotency?.(S.P, id) ?? 1));
     if (u.mp) { S.mp = Math.min(S.rt.maxMp, S.mp + u.mp); this.emit(S.map, { t: 'dmg', x: S.x, y: S.y - 0.8, v: u.mp, k: 'mana' }); }
     S.conn.send({ t: 'cd', k: ck, ms: 5000 }); this.touch(S);
   },
@@ -172,7 +173,7 @@ export const combatMethods = {
       case 'heal': {
         const targets = [S, ...(sk.party ? this.allies(S, sk.party) : [])];
         for (const T of targets) {
-          if (sk.shield) { T.shield = sk.shield + S.P.level * 4; T.shieldUntil = now + (sk.dur ?? 4000); }
+          if (sk.shield) { T.shield = (sk.shield + S.P.level * 4) * HP_SCALE; T.shieldUntil = now + (sk.dur ?? 4000); }
           if (sk.heal) this.healPlayer(T, T.rt.maxHp * sk.heal, S);
           if (!sk.quiet) this.emit(S.map, { t: 'aura', x: T.x, y: T.y, r: 1, c: sk.shield ? 'ward' : 'heal' });
         }
@@ -207,7 +208,7 @@ export const combatMethods = {
   postEffects(S, sk) {
     const now = this.now();
     if (sk.kind !== 'buff' && sk.buff) { S.buff = { id: sk.id, until: now + (sk.dur ?? 6000), ...sk.buff }; S.conn.send({ t: 'buff', id: sk.id, ms: sk.dur ?? 6000 }); }
-    if (sk.kind !== 'heal' && sk.shield) { S.shield = sk.shield + S.P.level * 4; S.shieldUntil = now + (sk.dur ?? 5000); }
+    if (sk.kind !== 'heal' && sk.shield) { S.shield = (sk.shield + S.P.level * 4) * HP_SCALE; S.shieldUntil = now + (sk.dur ?? 5000); }
     if ((sk.kind === 'guard' || sk.kind === 'aoe') && sk.heal) { this.healPlayer(S, S.rt.maxHp * sk.heal); if (sk.party) for (const o of this.allies(S, sk.party)) this.healPlayer(o, o.rt.maxHp * sk.heal * 0.8, S); }
   },
 
@@ -317,11 +318,13 @@ export const combatMethods = {
     if (now < S.iframeUntil) return 0;
     const st = S.rt.status;
     if (st?.phase && this.rng.chance(st.phase)) { this.emit(S.map, { t: 'dmg', x: S.x, y: S.y - 0.9, v: 'PHASE', k: 'phase' }); return 0; }
-    let dmg = raw;
-    if (now < S.guardUntil) { dmg *= 1 - S.guardRed; if (o.mob && S.guardReflect) this.reflect(S, o.mob, raw * S.guardReflect); }
+    // `raw` is the old-scale hit (what the attacker computed); the player's health pool is HP_SCALE times bigger, so the hit is too. Reflection
+    // and thorns work on the old scale: they hurt monsters, whose health did not change. `hpUnits` = the caller already speaks in HP (a % of max health).
+    const rawMob = o.hpUnits ? raw / HP_SCALE : raw; let dmg = o.hpUnits ? raw : raw * HP_SCALE;
+    if (now < S.guardUntil) { dmg *= 1 - S.guardRed; if (o.mob && S.guardReflect) this.reflect(S, o.mob, rawMob * S.guardReflect); }
     if (now < S.tauntUntil) dmg *= 1 - S.tauntRed;
     const bf = this.buffOf(S); if (bf?.red) dmg *= 1 - bf.red;
-    const th = (st?.thorns ?? 0) + (S.rt.thorns ?? 0); if (th && o.mob) this.reflect(S, o.mob, raw * th);
+    const th = (st?.thorns ?? 0) + (S.rt.thorns ?? 0); if (th && o.mob) this.reflect(S, o.mob, rawMob * th);
     if (S.shield > 0 && now < S.shieldUntil) { const ab = Math.min(S.shield, dmg); S.shield -= ab; dmg -= ab; }
     dmg = Math.round(dmg); S.lastHurt = now;
     if (dmg > 0 && st?.revive && S.hp - dmg <= 0 && now >= S.reviveAt) {

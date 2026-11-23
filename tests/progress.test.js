@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GameServer } from '../src/server/gameserver.js';
-import { SKILLS, PATHS, MYTHICS, CLASSES, ITEMS, TOMES } from '../src/data.js';
+import { SKILLS, PATHS, MYTHICS, CLASSES, ITEMS, TOMES, HP_SCALE } from '../src/data.js';
 import * as L from '../src/loadout.js';
 import * as R from '../src/rules.js';
 import { QUESTS } from '../src/quests.js';
@@ -390,4 +390,15 @@ test('titles are granted retroactively from saved progress (quests, raids, curre
   const conn = { msgs: [], send(m) { this.msgs.push(m); }, session: null }; assert.ok(srv.join(conn, { name: 'Veteran1', pass: undefined }).ok || conn.session, 'rejoin');
   const P = conn.session?.P ?? a.P; const have = P.titles;
   for (const t of ['Vault Delver', 'Tyrant-Slayer', 'Slayer', 'Veteran', 'The Archivist']) assert.ok(have.includes(t), `missing ${t}`);
+});
+
+test('health scale: player HP is 10x, hits on players are 10x, potions heal 10x, lifesteal does not', () => {
+  const { srv } = world(); const a = client(srv, 'Tanky'); const S = a.S, P = a.P;
+  assert.equal(HP_SCALE, 10); assert.ok(S.rt.maxHp >= CLASSES.warrior.hp * HP_SCALE && S.rt.maxHp < CLASSES.warrior.hp * HP_SCALE * 1.5, `level-1 warrior has ten times the old health (${S.rt.maxHp})`);
+  S.immuneUntil = 0; S.iframeUntil = 0; S.hp = S.rt.maxHp; const took = srv.hurtPlayer(S, 20); assert.equal(took, 200); assert.equal(S.hp, S.rt.maxHp - 200);
+  const before = S.hp; srv.hurtPlayer(S, 300, { hpUnits: true }); assert.equal(S.hp, before - 300, 'hazards already in HP units are not scaled again');
+  P.items.heal_potion = 3; S.hp = 100; S.cds = {}; a.send('use', { kind: 'hp' }); assert.equal(Math.round(S.hp), 100 + 450, 'Marrow Tonic: 45 x 10');
+  S.hp = 100; const mob = { id: 999, map: S.map, x: S.x + 1, y: S.y, hp: 1e9, maxHp: 1e9, def: 0, level: 1, key: 'rock_hound', threat: {}, res: {}, boss: false }; srv.mobs.push(mob);
+  srv.hit(S, mob, 40, 'slash', { fx: { lifesteal: 0.2 } }, 0); const dealt = 1e9 - mob.hp; assert.ok(dealt > 0); assert.ok(Math.abs((S.hp - 100) - dealt * 0.2) < 1.01, `lifesteal heals ${dealt * 0.2}, got ${S.hp - 100}`);
+  assert.match(ITEMS.heal_potion.desc, /450 HP/);
 });

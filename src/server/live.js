@@ -3,7 +3,7 @@
 // the daily bounty board, guilds and leaderboards. Mixed into GameServer.
 // ─────────────────────────────────────────────────────────────────────────────
 import { Rng } from '../rng.js';
-import { ENEMIES, ZONES, ITEMS, AFFIXES, TOMES, SKILLS, NODE_TYPES, CLASSES, BASE_CLASSES, PATHS } from '../data.js';
+import { ENEMIES, ZONES, ITEMS, AFFIXES, TOMES, SKILLS, NODE_TYPES, CLASSES, BASE_CLASSES, PATHS, HP_SCALE } from '../data.js';
 import { rtStats } from '../units.js';
 import { valueOf } from '../economy.js';
 import { getMap, dist } from '../world.js';
@@ -233,7 +233,7 @@ export const liveMethods = {
     if (ph >= 2 && nw - r.lastAdd > (ph === 4 ? 9000 : 15000)) { r.lastAdd = nw; const live = this.mobs.filter((m) => m.map === 'guild_raid' && m.temp && !m.deadUntil).length; for (let i = 0; i < 3 && live + i < 9; i++) { const a = Math.random() * 6.28, add = this.newMob('guild_raid', ZONES.guild_raid, boss.x + Math.cos(a) * 3, boss.y + Math.sin(a) * 3, false, false, { forceKey: 'tyrant_spawn', forceLevel: 23, temp: true }); add.target = alive[i % alive.length]?.id ?? null; this.mobs.push(add); } }
     // meteors: a red warning ring appears where a raider stands; 1.5 s later it detonates
     if (ph >= 3 && nw - r.lastMeteor > (ph === 4 ? 3200 : 5500) && alive.length) { r.lastMeteor = nw; const tgt = alive[Math.floor(Math.random() * alive.length)]; r.pending.push({ at: nw + 1500, x: tgt.x, y: tgt.y }); this.emit('guild_raid', { t: 'aura', x: tgt.x, y: tgt.y, r: 2.2, c: 'rage' }); }
-    r.pending = r.pending.filter((mt) => { if (nw < mt.at) return true; this.emit('guild_raid', { t: 'boom', x: mt.x, y: mt.y, r: 2.2, ty: 'blunt', who: 'm0', g: 'flame' }); for (const o of alive) if (!o.dead && dist(o.x, o.y, mt.x, mt.y) < 2.4) this.hurtPlayer(o, Math.round(o.rt.maxHp * 0.3), { noPhase: false }); return false; });
+    r.pending = r.pending.filter((mt) => { if (nw < mt.at) return true; this.emit('guild_raid', { t: 'boom', x: mt.x, y: mt.y, r: 2.2, ty: 'blunt', who: 'm0', g: 'flame' }); for (const o of alive) if (!o.dead && dist(o.x, o.y, mt.x, mt.y) < 2.4) this.hurtPlayer(o, Math.round(o.rt.maxHp * 0.3), { noPhase: false, hpUnits: true }); return false; });
   },
   graidLoot(S, g) {
     const P = S.P, got = []; P.stats.graids = (P.stats.graids ?? 0) + 1;
@@ -248,7 +248,7 @@ export const liveMethods = {
 
   // ═══ leaderboards ════════════════════════════════════════════════════════
   // Combat power folds the stats that decide a fight into one number (gear and Ascension included).
-  combatPower(P) { const r = rtStats(P); return Math.round(r.atk * 6 + r.def * 4 + r.maxHp / 4 + r.maxMp / 10 + (r.dmgMult - 1) * 100); },
+  combatPower(P) { const r = rtStats(P); return Math.round(r.atk * 6 + r.def * 4 + r.maxHp / (4 * HP_SCALE) + r.maxMp / 10 + (r.dmgMult - 1) * 100); },
   // Every coin a player owns: purse + gilt tied up in their own open orders.
   totalMoney(P) { let n = P.gilt ?? 0; for (const o of this.orders) if (o.by === P.id) n += o.escrow ?? 0; return Math.round(n); },
   // The single most valuable thing in a player's possession (market value; crafted effects add to gear).

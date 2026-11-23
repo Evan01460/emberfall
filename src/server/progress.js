@@ -120,7 +120,7 @@ export const progressMethods = {
       case 'potions': if (!cd(900000)) return; item('heal_potion', 0.4, 1, 1); item('calm_tonic', 0.25, 1, 1); break;
       case 'cart': if (!cd(600000)) return; gold(4, 14); item('iron_ore', 0.5, 1, 3); item('hide', 0.4, 1, 2); break;
       case 'rack': if (!cd(900000)) return; item('iron_ingot', 0.25, 1, 1); item('leather', 0.35, 1, 1); break;
-      case 'grave': { if (!cd(900000)) return; gold(8, 28); item('ink', 0.2, 1, 1); if (rng.chance(0.06)) { this.hurtPlayer(S, Math.round(S.rt.maxHp * 0.06), { noPhase: true }); this.toast(S, 'Something cold grabs your wrist.', 'bad'); } break; }
+      case 'grave': { if (!cd(900000)) return; gold(8, 28); item('ink', 0.2, 1, 1); if (rng.chance(0.06)) { this.hurtPlayer(S, Math.round(S.rt.maxHp * 0.06), { noPhase: true, hpUnits: true }); this.toast(S, 'Something cold grabs your wrist.', 'bad'); } break; }
       default: return;
     }
     this.emit(S.map, { t: 'chest', id, x: cx, y: cy });
@@ -160,7 +160,7 @@ export const progressMethods = {
       qs.seq = []; return this.completeStep(S, p.q, i, st);
     }
     qs.seq = []; this.toast(S, st.wrong ?? 'Wrong.', 'bad'); this.emit(S.map, { t: 'boom', x: p.x, y: p.y, r: 1.6, ty: 'pierce', who: 'm0' });
-    this.hurtPlayer(S, Math.round(S.rt.maxHp * 0.18), { noPhase: true });
+    this.hurtPlayer(S, Math.round(S.rt.maxHp * 0.18), { noPhase: true, hpUnits: true });
   },
   // The quest step attached to a pre-existing point (e.g. the Cold Forge). Only acts when fully satisfied.
   questTouchPoint(S, p) {

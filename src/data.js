@@ -78,12 +78,16 @@ export const BASICS = {
   blacksmith: { kind: 'melee', icon: '', name: 'Hammer Swing', power: 12, cd: 700, range: 1.5, arc: 120, type: 'blunt', combo: 'heavy' },
   alchemist: { kind: 'proj', icon: '', name: 'Flask Toss', power: 9, cd: 640, speed: 8, range: 7, radius: 0.3, count: 1, type: 'arcane', aoe: 0.9 },
   merchant: { kind: 'proj', icon: '', name: 'Coin Toss', power: 8, cd: 440, speed: 12, range: 8, radius: 0.22, count: 1, type: 'pierce' },
-  desperado: { kind: 'proj', icon: '', name: 'Twin Revolvers', power: 7, cd: 400, speed: 20, range: 11, radius: 0.22, count: 2, spread: 8, type: 'pierce', fx: { critChance: 0.5 } },
+  desperado: { kind: 'proj', icon: '', name: 'Card Flick', power: 7, cd: 400, speed: 20, range: 11, radius: 0.22, count: 2, spread: 8, type: 'pierce', fx: { critChance: 0.5 } },
   archivist: { kind: 'proj', icon: '', name: 'Quill Storm', power: 7, cd: 380, speed: 15, range: 9, radius: 0.24, count: 3, spread: 22, type: 'arcane' },
   soulsmith: { kind: 'melee', icon: '', name: 'Coldforge Hammer', power: 19, cd: 640, range: 1.9, arc: 130, type: 'arcane', combo: 'heavy' },
   broker: { kind: 'proj', icon: '', name: 'Silver Salvo', power: 7, cd: 400, speed: 17, range: 10, radius: 0.22, count: 2, spread: 10, type: 'pierce', fx: { crit: 0 } },
   transmuter: { kind: 'proj', icon: '', name: 'Quicksilver Flask', power: 13, cd: 620, speed: 9, range: 8, radius: 0.3, count: 1, type: 'arcane', aoe: 1.3 },
 };
+
+// Signature artwork for the hidden classes' basic attacks (drawn by client/skillfx.js): no hidden class borrows another's look.
+Object.assign(BASICS.desperado, { vi: 'card', vfxEnd: 'card_hit', quiet: true }); Object.assign(BASICS.archivist, { vi: 'quill', vfxEnd: 'ink_pop', quiet: true });
+Object.assign(BASICS.soulsmith, { vfx: 'soulsmith_basic', quiet: true }); Object.assign(BASICS.broker, { vi: 'cheque', vfxEnd: 'cash_pop', quiet: true }); Object.assign(BASICS.transmuter, { vi: 'prism', vfxEnd: 'prism_pop', quiet: true });
 
 // ── Enemy moves (telegraphed; the red shape on the ground is what will hit) ──
 // melee: arc in front · aoe: circle (at self or at target) · proj: projectile fan · dash: charge
@@ -135,7 +139,7 @@ export const CLASSES = {
     role: 'Moves goods — including between the two worlds, where prices differ wildly.', skills: [['fistful', 1], ['hard_bargain', 2], ['silver_tongue', 4], ['audit', 6]] },
   // ── Hidden classes ──
   desperado: { id: 'desperado', group: 'combat', hidden: true, name: 'Desperado', icon: '', color: '#b04080', tie: '#b04080', hp: 86, hpPer: 13, atk: 6, def: 2, move: 1.04, passives: ['cornered'],
-    desc: 'HIDDEN. Cornered: damage rises as your health falls. Wager skills have a flat 50% crit chance — you thrive on the edge of death.', skills: [['loaded_dice', 1], ['bluff_step', 2], ['dead_mans_draw', 4], ['all_in', 6]] },
+    desc: 'HIDDEN. Before every attack (except All In) you roll a die per shot: damage = base x the roll, so it averages out but a 6 hits huge and a 1 barely scratches. Cornered: damage rises as your health falls. Wager skills have a flat 50% crit chance.', skills: [['loaded_dice', 1], ['bluff_step', 2], ['dead_mans_draw', 4], ['all_in', 6]] },
   archivist: { id: 'archivist', group: 'combat', hidden: true, name: 'Archivist', icon: '', color: '#8ad8d0', tie: '#8ad8d0', hp: 76, hpPer: 11, atk: 5, def: 2, move: 1.02, taintImmune: true, mpRegen: 1.8,
     desc: 'HIDDEN. Faster mana regeneration, and the Shadowfell cannot drain you.', skills: [['inkblade_flurry', 1], ['margin_note', 2], ['living_lexicon', 4], ['epilogue', 6]] },
   soulsmith: { id: 'soulsmith', group: 'trade', hidden: true, from: ['blacksmith'], name: 'Soulsmith', icon: '', color: '#ff9f6b', tie: '#ff9f6b', hp: 98, hpPer: 13, atk: 5, def: 4, move: 0.96, gather: { ore: 1.5, coal: 1.5 },

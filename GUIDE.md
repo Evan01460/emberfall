@@ -237,3 +237,7 @@ Bounties are now **accepted** at the board and **never expire once accepted** (u
 ## 18. Cinematics
 
 Ascending, mastery, every hidden class and each of the five mythic classes play their own full-screen pixel-art sequence (click or Esc to skip after a moment).
+
+## 19. Desperado dice
+
+Before every attack except **All In** the Desperado rolls dice (one per projectile; one for the basic attack). Each die's face multiplies that shot's base damage (face x 0.28-0.3 of the old base, so the average is about the same, a 6 is roughly twice and a 1 roughly a third). The dice hover above the Desperado so you can read the roll; a 6 glows gold. Loaded Dice are thrown slower and fanned wider so each one is easy to follow.

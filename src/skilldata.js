@@ -75,7 +75,7 @@ HC('margin_note', 'Margin Note', 'dash', { dist: 4.6, cd: 5200, iframes: 520, la
 HC('living_lexicon', 'Living Lexicon', 'proj', { power: 19, count: 9, spread: 360, speed: 12, range: 7.5, radius: 0.3, pierce: 2, cd: 8500, cast: 260, type: 'arcane', g: 'star', col: '#c8fff0', mp: 20, desc: 'The book opens and its words fly out in every direction, piercing everything they cross.' });
 HC('epilogue', 'Epilogue', 'aoe', { power: 125, cd: 16000, cast: 950, radius: 3.5, range: 9, at: 'cursor', stun: 1600, slow: 3500, type: 'arcane', mag: 1, g: 'void', col: '#8ad8d0', mp: 34, desc: 'Write the last line: a column of black ink collapses on the target, crushing, slowing and stunning all inside.' });
 // Desperado — luck, bluff and one last bullet
-HC('loaded_dice', 'Loaded Dice', 'proj', { power: 17, count: 6, spread: 34, speed: 21, range: 10, radius: 0.26, pierce: 1, cd: 3200, cast: 70, type: 'pierce', fx: { critChance: 0.5 }, g: 'star', col: '#ff9ad0', mp: 11, desc: 'Roll six explosive dice downrange. Each has a flat 50% chance to crit.' });
+HC('loaded_dice', 'Loaded Dice', 'proj', { power: 17, count: 6, spread: 66, speed: 13, range: 9.5, radius: 0.26, pierce: 1, cd: 3200, cast: 70, type: 'pierce', fx: { critChance: 0.5 }, g: 'star', col: '#ff9ad0', mp: 11, desc: 'Roll six explosive dice downrange. Each has a flat 50% chance to crit.' });
 HC('bluff_step', 'Bluff Step', 'dash', { dist: 4.8, cd: 4800, iframes: 650, land: { power: 30, radius: 1.9, stun: 900 }, stealth: 1600, type: 'blunt', g: 'wind', col: '#ff9ad0', mp: 8, desc: 'A card-sharp sidestep: invulnerable and unseen for a moment, then a stunning slap where you land.' });
 HC('dead_mans_draw', "Dead Man's Draw", 'proj', { power: 15, count: 12, spread: 360, speed: 17, range: 8, radius: 0.25, cd: 9500, cast: 240, type: 'slash', fx: { critChance: 0.5 }, g: 'skull', col: '#ff6aa8', mp: 22, desc: 'Spin and empty every chamber: twelve cards fly in a full circle, each 50% to crit.' });
 HC('all_in', 'All In', 'proj', { power: 160, count: 1, speed: 30, range: 17, radius: 0.4, pierce: 6, cd: 13000, cast: 750, type: 'blunt', fx: { crit: 1 }, vulnHit: { v: 0.3, ms: 5000 }, g: 'star', col: '#ffd36a', mp: 30, desc: 'Bet it all on one shot: a huge, always-critical round that tears through six enemies and leaves them exposed.' });
@@ -97,7 +97,7 @@ HC('grand_transmutation', 'Grand Transmutation', 'aoe', { power: 105, cd: 17000,
 // Signature visuals: each hidden skill names its own projectile artwork (`vi`) and timed effects (`vfx*`, drawn by client/skillfx.js).
 // `quiet` switches off the generic slash/boom/aura so the signature effect is the whole show.
 const SIG = {
-  loaded_dice: { vi: 'dice', vfx: 'dice_cast', vfxEnd: 'dice_pop' }, bluff_step: { vfx: 'bluff', vfxLand: 'slap' }, dead_mans_draw: { vi: 'card', vfxCast: 'deadman_cast', vfx: 'deadman' },
+  loaded_dice: { vi: 'dice', vfxEnd: 'dice_pop' }, bluff_step: { vfx: 'bluff', vfxLand: 'slap' }, dead_mans_draw: { vi: 'card', vfxCast: 'deadman_cast', vfx: 'deadman' },
   all_in: { vi: 'ace', vfxCast: 'allin_cast', vfx: 'allin_fire', vfxEnd: 'jackpot' },
   inkblade_flurry: { vfx: 'ink_flurry' }, margin_note: { vfx: 'margin_note', vfxLand: 'margin_land' }, living_lexicon: { vi: 'word', vfx: 'lexicon' }, epilogue: { vfxCast: 'epilogue_cast', vfx: 'epilogue' },
   resonant_hammer: { vfx: 'hammer_smash' }, forged_soul: { vfx: 'forged_soul' }, ember_chains: { vi: 'chain', vfxEnd: 'chain_end' }, coldstar_nova: { vfx: 'coldstar' },
@@ -383,3 +383,6 @@ const SIGM = {
 for (const [id, o] of Object.entries(SIGM)) Object.assign(EXTRA_SKILLS[id], o, { quiet: true });
 // Hidden and mythic classes are the strongest in the game: every one of their skills hits 30% harder than first designed.
 for (const id of new Set([...Object.keys(SIG), ...Object.keys(SIGM)])) { const k = EXTRA_SKILLS[id]; if (k.power) k.power = Math.round(k.power * 1.3); if (k.land?.power) k.land = { ...k.land, power: Math.round(k.land.power * 1.3) }; if (k.field?.dmg) k.field = { ...k.field, dmg: Math.round(k.field.dmg * 1.3) }; }
+// Mythic basic attacks get their own signature art too.
+Object.assign(MYTHICS.apostle.basic, { vfx: 'thorn_basic', quiet: true }); Object.assign(MYTHICS.void_sovereign.basic, { vfx: 'null_edge', quiet: true }); Object.assign(MYTHICS.titan_forgemaster.basic, { vfx: 'titan_basic', quiet: true });
+Object.assign(MYTHICS.philosopher.basic, { vi: 'stone', vfxEnd: 'gold_flash', quiet: true }); Object.assign(MYTHICS.gilded.basic, { vi: 'gilt', vfxEnd: 'gold_flash', quiet: true });

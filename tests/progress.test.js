@@ -363,3 +363,13 @@ test('guild progression and the guild raid: XP levels, bank, perks; a guild-only
   assert.ok(a.P.gilt >= g0 + 1500 && srv.guildOf(a.P).bank >= bank0 + 3000, 'members and the bank are paid'); assert.ok(a.P.gear.some((g) => g.cname?.startsWith('Titan-forged') && g.by?.includes('Titan Slayers')), 'guild-made gear is labelled'); assert.ok(a.P.titles.includes('Titan-Breaker'));
   clock.t += 100000; advance(100); assert.equal(a.S.map, 'town'); a.teleport('town', gm.x, gm.y + 1.5); a.send('graid.enter'); assert.equal(a.S.map, 'town', 'locked out for 20 hours');
 });
+
+test('Desperado rolls dice before attacks: each die multiplies that shot, All In is exempt', () => {
+  const { srv, advance } = world(); const a = client(srv, 'Gambler'); a.P.classId = 'desperado'; a.P.level = 20; a.P.learned = ['loaded_dice', 'all_in']; a.P.loadout = ['loaded_dice', 'all_in', null, null]; srv.recalc(a.S);
+  a.S.mp = a.S.rt.maxMp; a.conn.msgs.length = 0; a.send('skill', { i: 0, a: 0, tx: a.S.x + 5, ty: a.S.y }); advance(100);
+  const roll = a.conn.msgs.flatMap((m) => m.ev ?? []).find((e) => e.id === 'dice_roll'); assert.ok(roll, 'dice roll event is sent first'); assert.equal(roll.rolls.length, 6);
+  advance(300); const dice = srv.projs.filter((p) => p.face); assert.equal(dice.length, 6);
+  const sk = SKILLS.loaded_dice; for (const p of dice) assert.equal(p.power, Math.max(1, Math.round(sk.power * p.face * 0.28)));
+  srv.projs.length = 0; a.S.cds = {}; a.S.mp = a.S.rt.maxMp; a.conn.msgs.length = 0; a.send('skill', { i: 1, a: 0, tx: a.S.x + 5, ty: a.S.y }); advance(1400);
+  assert.ok(!a.conn.msgs.flatMap((m) => m.ev ?? []).some((e) => e.id === 'dice_roll'), 'All In does not roll');
+});

@@ -145,22 +145,29 @@ export const combatMethods = {
     S.aim = a; S.lastAct = this.now(); S.stealthUntil = Math.min(S.stealthUntil, this.now());
     this.emit(S.map, { t: 'cast', who: S.id, sk: sk.id, a, ms: sk.cast ?? 0, kind: sk.kind, ty: sk.type, step: sk.step ?? 0, dir: sk.dir ?? 1, q: sk.quiet ? 1 : 0 });
     if (sk.vfxCast) { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.emit(S.map, { t: 'vfx', id: sk.vfxCast, who: S.id, x: S.x, y: S.y, a, cx, cy, r: sk.radius ?? 0, col: sk.col ?? null }); }
-    this.later(sk.cast ?? 0, () => { if (!S.dead && this.sessions.get(S.id) === S) { this.resolveSkill(S, sk, a, tx, ty); this.postEffects(S, sk); } });
+    // Desperado: before every attack except All In he rolls the dice; each die's face multiplies that shot's base damage.
+    let rolls = null, wait = 0;
+    if (S.P.classId === 'desperado' && sk.id !== 'all_in' && sk.kind !== 'buff') {
+      const n = sk.id === 'basic' ? 1 : sk.kind === 'proj' ? sk.count ?? 1 : 1; rolls = Array.from({ length: n }, () => this.rng.int(1, 6)); wait = sk.id === 'basic' ? 0 : 300;
+      this.emit(S.map, { t: 'vfx', id: 'dice_roll', who: S.id, x: S.x, y: S.y, a, rolls, basic: sk.id === 'basic' ? 1 : 0 });
+    }
+    this.later((sk.cast ?? 0) + wait, () => { if (!S.dead && this.sessions.get(S.id) === S) { this.resolveSkill(S, sk, a, tx, ty, rolls); this.postEffects(S, sk); } });
   },
+  diceMult(sk, rolls, i = 0) { return rolls ? rolls[i % rolls.length] * (sk.id === 'basic' ? 0.3 : 0.28) : 1; },
   // Aim point for ground-targeted skills, clamped to range.
   aimPoint(S, sk, tx, ty) {
     if (sk.at === 'cursor' && Number.isFinite(tx) && Number.isFinite(ty)) { const d = dist(S.x, S.y, tx, ty), k = sk.range && d > sk.range ? sk.range / d : 1; return [S.x + (tx - S.x) * k, S.y + (ty - S.y) * k]; }
     return [S.x, S.y];
   },
-  resolveSkill(S, sk, a, tx, ty) {
+  resolveSkill(S, sk, a, tx, ty, rolls = null) {
     const now = this.now();
     if (sk.stealth && sk.kind !== 'dash') S.stealthUntil = now + sk.stealth;
-    if (sk.vfx && sk.kind !== 'dash') { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.emit(S.map, { t: 'vfx', id: sk.vfx, who: S.id, x: S.x, y: S.y, a, cx, cy, r: sk.radius ?? 0, range: sk.range ?? 0, col: sk.col ?? null }); }
+    if (sk.vfx && sk.kind !== 'dash') { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.emit(S.map, { t: 'vfx', id: sk.vfx, who: S.id, x: S.x, y: S.y, a, cx, cy, r: sk.radius ?? 0, range: sk.range ?? 0, arc: sk.arc ?? 0, step: sk.step ?? 0, dir: sk.dir ?? 1, big: sk.hit ? 1 : 0, col: sk.col ?? null }); }
     switch (sk.kind) {
       case 'melee': { const n = sk.hits ?? 1; for (let i = 0; i < n; i++) this.later(i * (sk.interval ?? 0), () => { if (!S.dead) this.meleeHit(S, sk, a); }); break; }
-      case 'proj': this.fireProjectiles(S, sk, a); break;
+      case 'proj': this.fireProjectiles(S, sk, a, rolls); break;
       case 'aoe': { const [cx, cy] = this.aimPoint(S, sk, tx, ty); this.playerAoe(S, sk, cx, cy); break; }
-      case 'dash': this.dash(S, sk.back ? a + Math.PI : a, sk.dist, 260, sk.iframes ?? 300, sk); break;
+      case 'dash': this.dash(S, sk.back ? a + Math.PI : a, sk.dist, 260, sk.iframes ?? 300, sk, rolls); break;
       case 'guard': S.guardUntil = now + sk.dur; S.guardRed = sk.red; S.guardReflect = sk.reflect ?? 0; S.conn.send({ t: 'cd', k: 'guard', ms: sk.dur }); break;
       case 'heal': {
         const targets = [S, ...(sk.party ? this.allies(S, sk.party) : [])];
@@ -214,11 +221,11 @@ export const combatMethods = {
     }
     if (n && (sk.hit || (sk.power ?? 0) > 40)) this.emit(S.map, { t: 'shake', who: S.id, m: sk.hit ? 1 : 0.6 });
   },
-  fireProjectiles(S, sk, a) {
+  fireProjectiles(S, sk, a, rolls = null) {
     const n = sk.count ?? 1, sp = sk.spread ?? 0;
     for (let i = 0; i < n; i++) {
       const off = sp >= 360 ? (i / n) * Math.PI * 2 : n === 1 ? 0 : rad(sp) * (i / (n - 1) - 0.5);
-      this.spawnProj({ map: S.map, x: S.x + Math.cos(a) * 0.4, y: S.y + Math.sin(a) * 0.4, a: a + off, speed: sk.speed, r: sk.radius ?? 0.25, power: sk.power, type: sk.type, range: sk.range, pierce: sk.pierce ?? 0, aoe: sk.aoe ?? 0, sk, col: sk.col, vi: this.projVis(S, sk), owner: { k: 'p', id: S.id } });
+      this.spawnProj({ map: S.map, x: S.x + Math.cos(a) * 0.4, y: S.y + Math.sin(a) * 0.4, a: a + off, speed: sk.speed, r: sk.radius ?? 0.25, power: rolls ? Math.max(1, Math.round(sk.power * this.diceMult(sk, rolls, i))) : sk.power, face: rolls ? rolls[i % rolls.length] : null, type: sk.type, range: sk.range, pierce: sk.pierce ?? 0, aoe: sk.aoe ?? 0, sk, col: sk.col, vi: this.projVis(S, sk), owner: { k: 'p', id: S.id } });
     }
   },
   // Which artwork a player's projectile uses.
@@ -227,7 +234,7 @@ export const combatMethods = {
     const c = S.P.classId, path = S.P.asc?.path;
     if (sk.id === 'basic') {
       if (['archer'].includes(c) || ['ranger', 'sniper', 'windrunner'].includes(path)) return 'arrow';
-      if (['merchant', 'broker', 'gilded'].includes(c)) return 'coin'; if (['alchemist', 'transmuter', 'philosopher'].includes(c)) return 'flask'; if (c === 'desperado') return 'bullet'; if (c === 'archivist') return 'quill';
+      if (['merchant', 'broker', 'gilded'].includes(c)) return 'coin'; if (['alchemist', 'transmuter', 'philosopher'].includes(c)) return 'flask'; if (c === 'desperado') return 'card'; if (c === 'archivist') return 'quill';
       if (path === 'pyromancer') return 'fire'; if (c === 'void_sovereign') return 'void'; return 'orb';
     }
     const g = sk.g; if (g === 'flame') return 'fire'; if (g === 'frost') return 'ice'; if (g === 'bolt') return 'bolt'; if (g === 'leaf') return 'thorn'; if (g === 'void') return 'void'; if (g === 'coin') return 'coin'; if (g === 'drop') return 'flask'; if (g === 'star') return 'star';
@@ -243,14 +250,14 @@ export const combatMethods = {
     for (const t of this.targetsFor(S)) { if (dist(cx, cy, t.x, t.y) <= sk.radius + t.radius) { this.hit(S, t, sk.power, sk.type, sk, ang(cx, cy, t.x, t.y)); if (sk.stun && !t.isPlayer) t.stunUntil = this.now() + sk.stun * (t.boss ? 0.5 : 1); } }
     if (sk.power >= 60) this.emit(S.map, { t: 'shake', who: S.id, m: 1 });
   },
-  dash(S, a, d, ms, iframes, sk = null) {
+  dash(S, a, d, ms, iframes, sk = null, rolls = null) {
     const map = getMap(S.map); let x = S.x, y = S.y; const fromX = S.x, fromY = S.y;
     for (let k = 0; k < d / 0.2; k++) { const nx = x + Math.cos(a) * 0.2, ny = y + Math.sin(a) * 0.2; if (blockedAt(map, nx, ny)) break; x = nx; y = ny; }
     const now = this.now(); S.x = x; S.y = y; S.dashLock = now + ms * 0.9; S.iframeUntil = Math.max(S.iframeUntil, now + iframes);
     if (sk?.stealth) S.stealthUntil = now + sk.stealth;
     S.conn.send({ t: 'dash', x, y, ms }); if (sk?.vfx) this.emit(S.map, { t: 'vfx', id: sk.vfx, x, y, sx: fromX, sy: fromY, a, r: sk.land?.radius ?? 0, col: sk.col ?? null }); else this.emit(S.map, { t: 'dashfx', who: S.id, x, y });
     if (sk?.vfxLand) this.later(ms * 0.85, () => { if (!S.dead) this.emit(S.map, { t: 'vfx', id: sk.vfxLand, x: S.x, y: S.y, a, r: sk.land?.radius ?? 2, col: sk.col ?? null }); });
-    if (sk?.land) this.later(ms * 0.85, () => { if (!S.dead) this.playerAoe(S, { radius: sk.land.radius, power: sk.land.power, type: sk.type ?? 'blunt', stun: sk.land.stun, mag: sk.mag }, S.x, S.y); });
+    if (sk?.land) this.later(ms * 0.85, () => { if (!S.dead) this.playerAoe(S, { radius: sk.land.radius, power: rolls ? Math.max(1, Math.round(sk.land.power * this.diceMult(sk, rolls))) : sk.land.power, type: sk.type ?? 'blunt', stun: sk.land.stun, mag: sk.mag }, S.x, S.y); });
   },
 
   // ── damage ────────────────────────────────────────────────────────────────

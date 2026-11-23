@@ -253,7 +253,7 @@ export const AFFIXES = [
   { id: 'echoing', name: 'Echoing', text: '+12 max Mana', mp: 12 },
   { id: 'hungering', name: 'Hungering', text: '+8% skill power', power: 1 },
   { id: 'warded', name: 'Warded', text: '+3 defense', def: 3 },
-  { id: 'lively', name: 'Lively', text: '+15 max HP', hp: 15 },
+  { id: 'lively', name: 'Lively', text: '+150 max HP', hp: 15 },
 ];
 
 // ── Recipes ─────────────────────────────────────────────────────────────────

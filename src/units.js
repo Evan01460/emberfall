@@ -3,6 +3,7 @@ import { CLASSES, ENEMIES, ITEMS, AFFIXES, qualityStatMult, MAX_LEVEL, FIT_BONUS
 import { clamp } from './rng.js';
 import { modsOf, statusOf } from './loadout.js';
 import { sumGearFx } from './custom.js';
+import { flatScale } from './gearscale.js';
 
 export { MAX_LEVEL, HP_SCALE };
 // Beyond level 30 each level takes progressively longer, so the road to 100 is a real journey.
@@ -17,9 +18,9 @@ export function gearBonuses(gearList, classId = null) {
     b.atk += (it.atk ?? 0) * m * f; b.def += (it.def ?? 0) * m * f; b.hp += (it.hp ?? 0) * m * f; b.crit += it.crit ?? 0;
     b.mp += (it.mp ?? 0) * m * f; b.spd += Math.floor((it.spd ?? 0) * m);
     if (it.wtype) b.wtype = it.wtype;
-    sumGearFx(g.fx, b); sumGearFx(g.ench, b);
+    const fk = flatScale(g.id); sumGearFx(g.fx, b, fk); sumGearFx(g.ench, b, fk);
     const af = g.affix && AFFIXES.find((a) => a.id === g.affix);
-    if (af) { b.dmg += af.dmg ?? 0; b.mp += af.mp ?? 0; b.power += af.power ?? 0; b.def += af.def ?? 0; b.hp += af.hp ?? 0; }
+    if (af) { b.dmg += af.dmg ?? 0; b.mp += (af.mp ?? 0) * fk; b.power += af.power ?? 0; b.def += (af.def ?? 0) * fk; b.hp += (af.hp ?? 0) * fk; }
   }
   return b;
 }
@@ -42,6 +43,15 @@ export function rtStats(P) {
 
 export function calcDamage(power, atk, def, res = 1, mult = 1) {
   return Math.max(1, Math.round(power * clamp(1 + (atk - def) * 0.03, 0.4, 2.2) * res * mult));
+}
+
+// What a monster's hit does to a player. Identical to calcDamage up to attack 70 (everything in the original continent); above that
+// the effect of each point of (attack - defence) shrinks in proportion, because stats are three times bigger at level 100 than at 30. Without
+// this every armoured player sits on the damage floor from level 35 on and defence is wasted, while a robe-wearer's defence is worth far less.
+export const MOB_ATK_REF = 70;
+export function mobHit(power, atk, def) {
+  const slope = 0.03 * Math.min(1, MOB_ATK_REF / Math.max(1, atk)), floor = 0.4 + 0.15 * clamp((atk - MOB_ATK_REF) / MOB_ATK_REF, 0, 1);   // the best armour still stops 60% at first, 45% against late-game monsters
+  return Math.max(1, Math.round(power * clamp(1 + (atk - def) * slope, floor, 2.2)));
 }
 
 // Stats for an enemy of a given level. Shades (mirror enemies) copy the target player's class strength.

@@ -1,6 +1,7 @@
 // Custom crafting windows: effect pickers for the forge and the cauldron, plus the enchanting bench.
 import { G } from './state.js';
 import { ITEMS, RECIPES } from '../data.js';
+import { scaledText } from '../gearscale.js';
 import { GEAR_FX, DRAUGHT_FX, FLASK_FX, FORMS, FX_BY_FORM, craftSlots, craftTier, enchantSlots, effectUnlocked, canCustomise } from '../custom.js';
 import { gearName, REAGENTS } from '../rules.js';
 import { h } from '../ui-lib.js';
@@ -83,8 +84,8 @@ export function enchantPanel(me) {
 // Effect lines for a piece of gear (used by the bag and tooltips).
 export function gearFxLines(g) {
   const out = []; if (g.by) out.push(`Forged by ${g.by}`);
-  for (const e of g.fx ?? []) out.push(`${GEAR_FX[e.id]?.name ?? e.id}: ${GEAR_FX[e.id]?.text ?? ''}`);
-  for (const e of g.ench ?? []) out.push(`Enchanted · ${GEAR_FX[e.id]?.name ?? e.id}: ${GEAR_FX[e.id]?.text ?? ''}`);
+  for (const e of g.fx ?? []) out.push(`${GEAR_FX[e.id]?.name ?? e.id}: ${scaledText(GEAR_FX[e.id]?.text ?? '', g.id)}`);
+  for (const e of g.ench ?? []) out.push(`Enchanted · ${GEAR_FX[e.id]?.name ?? e.id}: ${scaledText(GEAR_FX[e.id]?.text ?? '', g.id)}`);
   return out;
 }
 export function flaskText(f) { const t = FX_BY_FORM[f.form === 'essence' ? 'essence' : f.form]; return f.fx.map((e) => `${t[e.id]?.name ?? e.id} (${t[e.id]?.text ?? ''})`).join('; '); }

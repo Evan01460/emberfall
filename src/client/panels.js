@@ -2,6 +2,7 @@
 // panels simply render the latest state the server sent. All icons are pixel sprites.
 import { G, blockInput } from './state.js';
 import { ITEMS, CLASSES, SKILLS, BASICS, RECIPES, HINTS, gradeOf, AFFIXES, qualityStatMult, TYPE_ICON, fitsOf, classGear, FIT_BONUS, HP_SCALE } from '../data.js';
+import { scaledText } from '../gearscale.js';
 import { vendorBuyPrice, vendorSellPrice, TRADE_ITEMS } from '../economy.js';
 import { heatStart, heatStep, heatBand, markerPos, strikeScore, isCrafter, lockedStack, freeStack, QUENCH, REAGENTS } from '../rules.js';
 import { h, sleep, spark, fmt, toast } from '../ui-lib.js';
@@ -54,7 +55,7 @@ export function gearStatText(g) {
   const it = ITEMS[g.id], m = qualityStatMult(g.q), out = [];
   if (it.atk) out.push(`ATK +${(it.atk * m).toFixed(1)}`); if (it.def) out.push(`DEF +${(it.def * m).toFixed(1)}`); if (it.hp) out.push(`HP +${Math.round(it.hp * m * HP_SCALE)}`);
   if (it.mp) out.push(`MP +${Math.round(it.mp * m)}`); if (it.spd) out.push(`Speed +${Math.floor(it.spd * m)}`); if (it.wtype) out.push(`${it.wtype} (+10% dmg)`);
-  const af = g.affix && AFFIXES.find((a) => a.id === g.affix); if (af) out.push(`${af.name}: ${af.text}`);
+  const af = g.affix && AFFIXES.find((a) => a.id === g.affix); if (af) out.push(`${af.name}: ${scaledText(af.text, g.id)}`);
   out.push(...gearFxLines(g));
   const fl = fitsOf(g.id); if (fl.length) out.push(`Made for: ${fl.map((c) => CLASSES[c]?.name ?? c).join(', ')}${G.me && fl.includes(G.me.classId) ? ` — SUITS YOUR CLASS (+${Math.round(FIT_BONUS * 100)}% stats)` : ''}`);
   return out.join(' / ');

@@ -14,7 +14,7 @@ export const GEAR_FX = {
   keen: { name: 'Keen', tier: 1, slots: ['weapon', 'charm'], cost: { coal: 2 }, mods: { dmg: 0.06 }, text: '+6% damage' },
   honed: { name: 'Honed', tier: 1, slots: ['weapon'], cost: { iron_ingot: 1 }, mods: { atk: 2.5 }, text: '+2.5 attack' },
   sturdy: { name: 'Sturdy', tier: 1, slots: ['armor', 'charm'], cost: { iron_ingot: 1 }, mods: { def: 2.5 }, text: '+2.5 defence' },
-  vital: { name: 'Vital', tier: 1, slots: ['weapon', 'armor', 'charm'], cost: { herb: 3 }, mods: { hp: 16 }, text: '+16 max HP' },
+  vital: { name: 'Vital', tier: 1, slots: ['weapon', 'armor', 'charm'], cost: { herb: 3 }, mods: { hp: 16 }, text: '+160 max HP' },
   wellspring: { name: 'Wellspring', tier: 1, slots: ['weapon', 'armor', 'charm'], cost: { ink: 2 }, mods: { mp: 14 }, text: '+14 max mana' },
   fleet: { name: 'Fleet', tier: 1, slots: ['armor', 'charm'], cost: { hide: 3 }, mods: { spd: 1 }, text: '+1 speed' },
   // tier 2 — level 12+
@@ -29,12 +29,12 @@ export const GEAR_FX = {
   // tier 3 — level 20+
   soulthirst: { name: 'Soulthirst', tier: 3, slots: ['weapon'], cost: { hollow_ingot: 1, echo_shard: 1 }, mods: { ls: 0.06 }, text: '6% lifesteal' },
   vorpal: { name: 'Vorpal', tier: 3, slots: ['weapon'], cost: { sunsteel_ingot: 1 }, mods: { crit: 0.1, dmg: 0.08 }, text: '+10% crit, +8% damage' },
-  dragonhide: { name: 'Dragonhide', tier: 3, slots: ['armor'], cost: { sunsteel_ingot: 2 }, mods: { def: 9, hp: 50 }, text: '+9 defence, +50 HP' },
+  dragonhide: { name: 'Dragonhide', tier: 3, slots: ['armor'], cost: { sunsteel_ingot: 2 }, mods: { def: 9, hp: 50 }, text: '+9 defence, +500 HP' },
   titanic: { name: 'Titanic', tier: 3, slots: ['weapon'], cost: { hollow_ingot: 2 }, mods: { atk: 8 }, text: '+8 attack' },
   archmage: { name: 'Archmage', tier: 3, slots: ['weapon', 'charm'], cost: { echo_shard: 3 }, mods: { mp: 50, mpOnHit: 2 }, text: '+50 mana, +2 mana per hit' },
   evergreen: { name: 'Evergreen', tier: 3, slots: ['armor', 'charm'], cost: { ghostbloom: 3 }, mods: { regen: 0.012 }, text: 'regenerate 1.2% HP per second' },
   // tier 4 — only with a Mastery (or a mythic class), level 20+
-  starforged: { name: 'Starforged', tier: 4, slots: ['weapon', 'armor', 'charm'], cost: { starmetal: 1, sunsteel_ingot: 2 }, mods: { atk: 8, def: 6, hp: 40, dmg: 0.08 }, text: '+8 ATK, +6 DEF, +40 HP, +8% damage' },
+  starforged: { name: 'Starforged', tier: 4, slots: ['weapon', 'armor', 'charm'], cost: { starmetal: 1, sunsteel_ingot: 2 }, mods: { atk: 8, def: 6, hp: 40, dmg: 0.08 }, text: '+8 ATK, +6 DEF, +400 HP, +8% damage' },
   oathkeeper: { name: 'Oathkeeper', tier: 4, slots: ['armor'], cost: { starmetal: 1, hollow_ingot: 2 }, mods: { thorns: 0.15, ls: 0.05 }, text: 'reflect 15%, 5% lifesteal' },
   worldbreaker: { name: 'Worldbreaker', tier: 4, slots: ['weapon'], cost: { starmetal: 2 }, mods: { dmg: 0.18, stun: 0.08 }, text: '+18% damage, 8% stun chance' },
 };
@@ -86,10 +86,10 @@ export const customDiff = (ids, table) => ids.reduce((d, id) => d + 0.035 + 0.03
 export function effectText(id, table = GEAR_FX) { return table[id]?.text ?? ''; }
 
 // Sum an effect list into stat bonuses (used for gear).
-export function sumGearFx(list, into) {
+export function sumGearFx(list, into, flat = 1) {
   for (const e of list ?? []) {
     const d = GEAR_FX[e.id]; if (!d) continue;
-    for (const [k, v] of Object.entries(d.mods)) into[k] = (into[k] ?? 0) + v * (k === 'spd' || k === 'slowOnHit' ? 1 : e.k ?? 1);
+    for (const [k, v] of Object.entries(d.mods)) into[k] = (into[k] ?? 0) + v * (k === 'spd' || k === 'slowOnHit' ? 1 : e.k ?? 1) * (k === 'atk' || k === 'def' || k === 'hp' || k === 'mp' ? flat : 1);
   }
 }
 export function customName(base, fx, cname) {

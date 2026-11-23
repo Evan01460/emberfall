@@ -86,7 +86,7 @@ export function consumeInputs(P, r) { for (const [id, n] of Object.entries(r.in)
 // Everything is re-simulated on the server from the times the client reports.
 export const tri = (p) => Math.abs((((p % 2) + 2) % 2) - 1);
 export const forgeHalfWidth = (P, r) => clamp(0.17 - r.diff * 0.2 + P.level * 0.006 + (perkOf(P).sweet ?? 0), 0.06, 0.3);
-export const QUENCH = { water: { name: 'Water', affix: 'keen', half: 0.8, note: 'Fast and hard: +10% damage temper. Narrow window.' }, oil: { name: 'Oil', affix: 'warded', half: 1.15, note: 'Slow and forgiving: +3 defence temper.' }, brine: { name: 'Brine', affix: 'lively', half: 1.0, note: 'Salty: +15 max HP temper.' } };
+export const QUENCH = { water: { name: 'Water', affix: 'keen', half: 0.8, note: 'Fast and hard: +10% damage temper. Narrow window.' }, oil: { name: 'Oil', affix: 'warded', half: 1.15, note: 'Slow and forgiving: +3 defence temper (more on late-game metals).' }, brine: { name: 'Brine', affix: 'lively', half: 1.0, note: 'Salty: +150 max HP temper (more on late-game metals).' } };
 export function forgeSpec(P, r, rng) {
   const strikes = r.diff > 0.3 ? 4 : 3, half = forgeHalfWidth(P, r);
   return {

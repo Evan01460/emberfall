@@ -41,3 +41,14 @@ test('server: players can enter far regions and the Spire, mobs exist there, and
   }
   assert.ok(srv.mobs.length > 5000, 'a big world');
 });
+
+test('gear balance: late-game flat bonuses scale with the metal, old tiers do not change, and defence keeps mattering at high levels', async () => {
+  const { flatScale, scaledText } = await import('../src/gearscale.js'); const { mobHit } = await import('../src/units.js'); const { calcDamage, gearBonuses } = await import('../src/units.js');
+  assert.equal(flatScale('iron_sword'), 1); assert.equal(flatScale('aether_plate'), 1); assert.ok(flatScale('voidglass_plate') > 1 && flatScale('worldsteel_plate') > flatScale('celestine_plate'));
+  assert.equal(scaledText('+160 max HP', 'iron_sword'), '+160 max HP'); assert.ok(/\+\d+ max HP/.test(scaledText('+160 max HP', 'worldsteel_plate')) && parseInt(scaledText('+160 max HP', 'worldsteel_plate').slice(1)) > 500);
+  const old = gearBonuses([{ id: 'sun_aegis', q: 1, affix: 'lively' }]), expH = 110 * 1.5 + 15; assert.ok(Math.abs(old.hp - expH) < 1, 'old tier: affix unscaled');
+  const nw = gearBonuses([{ id: 'worldsteel_plate', q: 1, affix: 'lively' }]); assert.ok(Math.abs(nw.hp - (1069 * 1.5 + 15 * flatScale('worldsteel_plate'))) < 1 && flatScale('worldsteel_plate') > 4, 'late tier: affix scales');
+  for (const [p, a, d] of [[10, 6, 3], [10, 40, 10], [20, 68, 100], [5, 70, 0]]) assert.equal(mobHit(p, a, d), calcDamage(p, a, d), 'identical to the original formula up to attack 70');
+  assert.ok(mobHit(30, 230, 300) > calcDamage(30, 230, 300) * 0.99 - 1 && mobHit(30, 230, 150) < calcDamage(30, 230, 150), 'late game: gentler slope');
+  assert.ok(mobHit(30, 230, 600) >= Math.round(30 * 0.55) - 1, 'the damage floor rises to 55% against late-game monsters');
+});

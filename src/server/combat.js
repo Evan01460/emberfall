@@ -6,7 +6,7 @@
 import { clamp } from '../rng.js';
 import { ENEMIES, CLASSES, SKILLS, BASICS, MOVES, ZONES } from '../data.js';
 import { getMap, blockedAt, inSafeZone, realmOf, dist, TS } from '../world.js';
-import { rtStats, enemyStats, shadeStats, enemyLevel, computeRewards, calcDamage } from '../units.js';
+import { rtStats, enemyStats, shadeStats, enemyLevel, computeRewards, calcDamage, mobHit } from '../units.js';
 import { HP_SCALE } from '../data.js';
 import { loadoutOf, basicOf, comboOf, perkOf } from '../loadout.js';
 import { DRAUGHT_FX, FLASK_FX } from '../custom.js';
@@ -433,7 +433,7 @@ export const combatMethods = {
       if (mob.dash) {
         const d = mob.dash; const step = d.speed * dt;
         const nx = mob.x + Math.cos(d.a) * step, ny = mob.y + Math.sin(d.a) * step;
-        if (nw >= d.until || blockedAt(map, nx, ny, 0.3)) mob.dash = null; else { mob.x = nx; mob.y = ny; for (const S of this.sessions.values()) if (S.map === mob.map && !S.dead && !d.hit.has(S.id) && dist(S.x, S.y, mob.x, mob.y) < 0.85) { d.hit.add(S.id); this.hurtPlayer(S, Math.round(calcDamage(d.power, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S)), { mob }); } }
+        if (nw >= d.until || blockedAt(map, nx, ny, 0.3)) mob.dash = null; else { mob.x = nx; mob.y = ny; for (const S of this.sessions.values()) if (S.map === mob.map && !S.dead && !d.hit.has(S.id) && dist(S.x, S.y, mob.x, mob.y) < 0.85) { d.hit.add(S.id); this.hurtPlayer(S, Math.round(mobHit(d.power, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S)), { mob }); } }
         continue;
       }
       // winding up an attack?
@@ -487,7 +487,7 @@ export const combatMethods = {
   resolveMobMove(mob, nw) {
     const { mv, a, tx, ty } = mob.wind; mob.wind = null;
     const players = [...this.sessions.values()].filter((S) => S.map === mob.map && !S.dead);
-    const pw = mv.power * (ENEMIES[mob.key]?.pwr ?? 1), dmgFor = (S) => Math.round(calcDamage(pw, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S));
+    const pw = mv.power * (ENEMIES[mob.key]?.pwr ?? 1), dmgFor = (S) => Math.round(mobHit(pw, mob.atk, S.rt.def) * MOB_DMG * this.gapMult(mob, S));
     if (mv.kind === 'melee') {
       this.emit(mob.map, { t: 'slash', x: mob.x, y: mob.y, a, range: mv.range, arc: mv.arc, ty: mv.type, who: `m${mob.id}` });
       for (const S of players) { const d = dist(S.x, S.y, mob.x, mob.y); if (d <= mv.range + 0.35 && (angDiff(ang(mob.x, mob.y, S.x, S.y), a) <= rad(mv.arc) / 2 || d < 0.6)) this.hurtPlayer(S, dmgFor(S), { mob }); }
@@ -523,7 +523,7 @@ export const combatMethods = {
         for (const S of this.sessions.values()) {
           if (S.map !== p.map || S.dead || dist(p.x, p.y, S.x, S.y) > p.r + 0.3 || nw < S.iframeUntil) continue;
           const mob = this.mobs.find((m) => m.id === p.owner.id);
-          this.hurtPlayer(S, Math.round(calcDamage(p.power, p.owner.atk, S.rt.def) * MOB_DMG * 0.9 * this.gapMult(mob, S)), { mob }); dead = true; break;
+          this.hurtPlayer(S, Math.round(mobHit(p.power, p.owner.atk, S.rt.def) * MOB_DMG * 0.9 * this.gapMult(mob, S)), { mob }); dead = true; break;
         }
       }
       if (!dead) keep.push(p);

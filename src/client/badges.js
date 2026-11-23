@@ -26,7 +26,7 @@ function plate(g, x, yBottom, w, h, border, bg, border2) { const X = q(x - w / 2
 
 // Draws the plate with its bottom edge at yBottom. Returns the y of its top so the title can sit above it.
 export function drawBadge(g, p, X, yBottom, t) {
-  const c = CLASSES[p.c]; if (!c) return yBottom; const tier = tierOf(p), text = labelOf(p), col = c.color ?? '#c8c8d8', em = emblem(tier, col), tw = textWidth(text, 1), ew = em.width * C, w = ew + tw + 4 * C, h = 5 * C + 2 * C;
+  const c = CLASSES[p.c]; if (!c) return yBottom; const tier = tierOf(p), text = labelOf(p), col = c.color ?? '#c8c8d8', em = emblem(tier, col), tw = textWidth(text, 1), ew = em.width * C, w = ew + tw + 3 * C, h = 5 * C;
   const wave = (Math.sin(t / 260) + 1) / 2;
   let border = '#4a3a5a', bg = '#1a1424', b2 = null, txt = '#d8cdbd';
   if (tier === 'ascended') { border = '#8aa8d0'; bg = '#141c30'; b2 = '#3a5280'; txt = '#d8ecff'; }
@@ -35,7 +35,7 @@ export function drawBadge(g, p, X, yBottom, t) {
   if (tier === 'mythic') { for (let i = 0; i < 3; i++) { const a = (t / 900 + i * 2.1) % 6.28; g.globalAlpha = 0.35 + 0.25 * wave; g.fillStyle = '#ffd36a'; g.fillRect(q(X - w / 2 - C - 3 * C + (Math.cos(a) + 1) * (w / 2 + 3 * C)), q(yBottom - h - 2 * C - (Math.sin(a * 1.3) + 1) * 3 * C), C, C); } g.globalAlpha = 1; }
   const [px, py] = plate(g, X, yBottom, w, h, border, bg, b2);
   g.imageSmoothingEnabled = false; g.drawImage(em, px + C, q(py + (h - em.height * C) / 2), ew, em.height * C);
-  if (tier === 'mythic') { const sh = Math.floor(t / 140) % (text.length + 4); for (let i = 0; i < text.length; i++) drawText(g, text[i], px + ew + 2 * C + i * 4 * C, py + (h - 5 * C) / 2, Math.abs(i - sh) < 2 ? '#ffffff' : '#ffd36a', { outline: null }); }
+  if (tier === 'mythic') { const sh = Math.floor(t / 140) % (text.length + 4); for (let i = 0; i < text.length; i++) drawText(g, text[i], px + ew + C + C + i * 4 * C, py + (h - 5 * C) / 2, Math.abs(i - sh) < 2 ? '#ffffff' : '#ffd36a', { outline: null }); }
   else drawText(g, text, px + ew + 2 * C, py + (h - 5 * C) / 2, txt, { outline: null });
   if (tier === 'hidden') { for (let i = 0; i < 3; i++) { const ph = ((t / 700 + i / 3) % 1), sx = px + ph * w, sy = py - ph * 6 - C; g.globalAlpha = 1 - ph; cellAt(g, sx, sy, i % 2 ? '#ffffff' : '#e0a0ff'); g.globalAlpha = 1; } const k = Math.floor((t / 90) % (2 * (w / C + 2))); const edge = k < w / C ? px + k * C : px + w - (k - w / C) * C; cellAt(g, edge, py - C, '#ffffff'); }
   if (tier === 'ascended') { cellAt(g, px - C * 2, py + h / 2, '#c8d8f0'); cellAt(g, px + w + C, py + h / 2, '#c8d8f0'); }

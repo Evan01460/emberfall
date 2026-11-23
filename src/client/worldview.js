@@ -218,7 +218,7 @@ export class WorldView {
     for (const p of G.players.values()) { const self = p.id === G.id, X = (self ? G.pos.x : (p.rx ?? p.x)) * TS, Y = (self ? G.pos.y : (p.ry ?? p.y)) * TS; list.push({ y: Y + 8, fn: () => this.drawPlayer(g, p, self, X, Y, t) }); }
     list.sort((a, b) => a.y - b.y); for (const it of list) it.fn();
     drawWork(g, t); drawAir(g);
-    for (const [id, b] of G.bubbles) { if (b.until < Date.now()) { G.bubbles.delete(id); continue; } const p = G.players.get(id); if (!p) continue; const self = id === G.id; drawTag(g, b.text.length > 30 ? b.text.slice(0, 29) + '.' : b.text, (self ? G.pos.x : p.rx ?? p.x) * TS, (self ? G.pos.y : p.ry ?? p.y) * TS - 54 - 22 - (p.tt ? 12 : 0), '#ffffff', { bg: '#101830', border: '#3a4a7a' }); }
+    for (const [id, b] of G.bubbles) { if (b.until < Date.now()) { G.bubbles.delete(id); continue; } const p = G.players.get(id); if (!p) continue; const self = id === G.id; drawTag(g, b.text.length > 30 ? b.text.slice(0, 29) + '.' : b.text, (self ? G.pos.x : p.rx ?? p.x) * TS, (self ? G.pos.y : p.ry ?? p.y) * TS - 54 - 28 - (p.tt ? 12 : 0), '#ffffff', { bg: '#101830', border: '#3a4a7a' }); }
     for (const p of m.portals) if (Math.abs(p.x - G.pos.x) < 30) drawTag(g, p.label, (p.x + p.w / 2) * TS, (p.y + p.h / 2) * TS - (p.h > p.w ? 0 : 14), '#ffe9a8');
     drawNumbers(g);
     if (!this.locked && !G.dead && this.mouseSeen) { const c = this.cursor, x = c.x * TS, y = c.y * TS; for (const [dx, dy] of [[-8, 0], [-6, 0], [6, 0], [8, 0], [0, -8], [0, -6], [0, 6], [0, 8]]) cellAt(g, x + dx - 1, y + dy - 1, 'rgba(255,255,255,.8)'); cellAt(g, x - 1, y - 1, 'rgba(255,255,255,.9)'); }
@@ -280,9 +280,10 @@ export class WorldView {
     if (p.gd) { pring(g, X, foot - 14, 22, C, '#7fb8ff'); pring(g, X, foot - 14, 18, C, 'rgba(127,184,255,.5)'); }
     if (p.sh) { for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28 + t / 600; cellAt(g, X + Math.cos(a) * 24, foot - 14 + Math.sin(a) * 24, '#a0dcff'); } }
     if (p.sn) for (let i = 0; i < 3; i++) { const a = t / 200 + i * 2.1; cellAt(g, X + Math.cos(a) * 10, foot - 48 + Math.sin(a) * 3, '#ffe36b'); }
-    drawTag(g, `${p.gl ? `[${p.gl.slice(0, 5)}] ` : ''}${p.n} LV${p.l}`, X, foot - 41, self ? '#ffe9a8' : partyMate ? '#a8ffc2' : hostile || p.dl ? '#ff6a5a' : '#ffffff', { padX: 1, padY: 1 });
-    { const top = drawBadge(g, p, X, foot - 58, t); if (p.tt) drawTitle(g, p.tt, X, top - C, TITLE_COL[titleInfo(p.tt).rar] ?? '#d8cdbd'); }
-    if (!self || p.h < p.mh) { const w = 30; g.fillStyle = '#0c0814'; g.fillRect(q(X - w / 2) - C, foot - 38 - C, w + 2 * C, 6 + 2 * C); g.fillStyle = self ? '#6fd08a' : '#4fb870'; g.fillRect(q(X - w / 2), foot - 38, Math.round((w * Math.max(0, p.h / p.mh)) / C) * C, 6); }
+    // Everything sits ABOVE the head (the sprite is ~46 world px tall): health bar, name, class plate, title.
+    if (!self || p.h < p.mh) { const w = 26, hx = q(X - w / 2), hy = foot - 50; g.fillStyle = '#0c0814'; g.fillRect(hx - C, hy - C, w + 2 * C, 4 + 2 * C); g.fillStyle = self ? '#6fd08a' : '#4fb870'; g.fillRect(hx, hy, Math.round((w * Math.max(0, p.h / p.mh)) / C) * C, 4); }
+    drawTag(g, `${p.gl ? `[${p.gl.slice(0, 5)}] ` : ''}${p.n} LV${p.l}`, X, foot - 53, self ? '#ffe9a8' : partyMate ? '#a8ffc2' : hostile || p.dl ? '#ff6a5a' : '#ffffff', { padX: 1, padY: 0, border: null, bg: 'rgba(12,8,20,.78)' });
+    { const top = drawBadge(g, p, X, foot - 66, t); if (p.tt) drawTitle(g, p.tt, X, top - C, TITLE_COL[titleInfo(p.tt).rar] ?? '#d8cdbd'); }
     if (self && G.gather) { const k = Math.min(1, (performance.now() - G.gather.start) / G.gather.ms); g.fillStyle = '#0c0814'; g.fillRect(q(X - 16) - C, foot - 66, 32 + 2 * C, 8); g.fillStyle = '#e3b552'; g.fillRect(q(X - 16), foot - 64, Math.round(32 * k / C) * C, 4); }
   }
   drawAtmosphere(g, W, H, t, m) {

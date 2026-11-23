@@ -257,7 +257,7 @@ export class WorldView {
     if (p.lines?.length && p.role !== 'hidden' && dist(G.pos.x, G.pos.y, p.x, p.y) < 7) { const slot = Math.floor(t / 8000 + (p.x * 7 + p.y * 13)), within = (t % 8000) < 3200; if (within && (slot % 3) !== 0) { const line = p.lines[slot % p.lines.length].replace(/\s+/g, ' '); drawTag(g, line.length > 38 ? line.slice(0, 36) + '...' : line, X, foot - 60, '#fff0c0'); } }
   }
   drawMob(g, mb, t) {
-    const d = ENEMIES[mb.k], X = mb.rx * TS, Y = mb.ry * TS, boss = mb.bo, moving = Math.abs(mb.vx ?? 0) + Math.abs(mb.vy ?? 0) > 0.004, fr = Math.floor(t / (moving ? 150 : 400)) % 2;
+    const d = ENEMIES[mb.k], X = q(mb.rx * TS), Y = q(mb.ry * TS), boss = mb.bo, moving = Math.abs(mb.vx ?? 0) + Math.abs(mb.vy ?? 0) > 0.004, fr = Math.floor(t / (moving ? 150 : 400)) % 2;
     let spr, hgt;
     if (mb.k === 'reflection') { spr = personSprite('warrior', 'd', moving ? Math.floor(t / 120) % 4 : 0, mb.id, '#aab4ff'); hgt = 46; blit(g, shadowSprite(12), X, Y + 8); blit(g, spr, X, Y + 8); if (mb.fl) { g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(q(X - 12), q(Y - 40), 24, 46); } }
     else { spr = monsterSprite(d.shape, d.color, fr, !!mb.fl); if ((mb.face ?? 1) < 0) spr = flip(spr); hgt = spr.height * C; blit(g, shadowSprite(Math.round(spr.width * 0.7)), X, Y + 8); blit(g, spr, X, Y + 8 - (d.shape === 'wisp' ? 6 + fr * 2 : 0)); }
@@ -268,6 +268,7 @@ export class WorldView {
     if (mb.sn) for (let i = 0; i < 3; i++) { const a = t / 200 + i * 2.1; cellAt(g, X + Math.cos(a) * 10, top + 8 + Math.sin(a) * 3, '#ffe36b'); }
   }
   drawPlayer(g, p, self, X, Y, t) {
+    X = q(X); Y = q(Y);            // snap the anchor once: the sprite and every label step together, so nothing jitters against anything else while moving
     const c = CLASSES[p.c] ?? CLASSES.warrior, moving = self ? G.moving || this.dash : p.mv, dir = self ? G.dir : p.d, partyMate = G.party?.members?.some((m) => m.id === p.id);
     const seed = (p.n.length + p.n.charCodeAt(0)) | 0, frame = moving ? Math.floor(t / 110) % 4 : 0, foot = Y + 8;
     if (p.dd) { blit(g, prop('grave'), X, foot); drawTag(g, p.n, X, foot - 40, '#9a8f86'); return; }

@@ -165,6 +165,76 @@ for (const [cx, cy] of order) {
 }
 
 
+// ── FIVE NEW REALMS ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Beyond the ring lie five realms that were never on the old maps. Each hangs off a region of the ring, has its own landscape palette, its own
+// trees, and creatures drawn from scratch (src/client/sprites2.js) - nothing here is an old monster recoloured. Region ids are `rlm_<realm>_NN`
+// so the ids of the ring above are untouched (saved characters keep their places).
+//   cells: [x, y, parentX, parentY] on the same grid as the ring; each cell touches its parent.
+export const REALM_POS = {}, REALM_EDGES = [], REALMS = [
+  { key: 'reef', name: 'The Sunken Archipelago', blurb: 'Drowned islands of coral and tide-worn ruins. The sea here has teeth.', theme: 'coral', ground: 'sand', patch: [0.5, 'grass'], edge: 'rock', trees: 0.84, thin: 0.5, water: 0.62, rocks: 0.78, from: [-3, -8],
+    cells: [[-4, -8, -3, -8], [-5, -8, -4, -8], [-6, -8, -5, -8], [-7, -8, -6, -8], [-8, -8, -7, -8], [-5, -9, -5, -8], [-6, -7, -6, -8], [-7, -9, -7, -8], [-7, -7, -7, -8]],
+    adj: ['Drowned', 'Tidewrack', 'Coral', 'Brine', 'Pearl', 'Siren', 'Barnacled', 'Stormtide'], noun: ['Atoll', 'Shoals', 'Lagoon', 'Reefs', 'Isles', 'Cays', 'Straits', 'Shallows'],
+    kit: [['Reef Crab', 'crab', '#e8704a', 'tank'], ['Moon Jelly', 'jelly', '#a8e0ff', 'caster'], ['Brine Serpent', 'serpent', '#2aa890', 'fast'], ['Shellback', 'tortoise', '#4a8a6a', 'tank']],
+    elite: ['Siren Matriarch', 'harpy', '#e8a8d8'], bosses: ['The Leviathan', 'Abyssal Maw', 'Queen Thalassa'], bossShape: 'kraken', bossColor: '#e8a050' },
+  { key: 'gear', name: 'The Clockwork Dominion', blurb: 'A kingdom of brass, steam and tireless machines that no longer remember their makers.', theme: 'brass', ground: 'sand', patch: [0.55, 'cobble'], edge: 'rock', trees: 0.8, thin: 0.55, water: 0.74, rocks: 0.66, clear: 'cobble', from: [6, -6],
+    cells: [[7, -6, 6, -6], [8, -6, 7, -6], [9, -6, 8, -6], [10, -6, 9, -6], [11, -6, 10, -6], [8, -7, 8, -6], [10, -7, 10, -6], [9, -5, 9, -6], [11, -5, 11, -6]],
+    adj: ['Brasswork', 'Cogwheel', 'Steamwrought', 'Tickering', 'Gilded', 'Rivet', 'Pistoned', 'Verdigris'], noun: ['Foundry', 'Works', 'Gearyard', 'Mainspring', 'Workshops', 'Boilers', 'Colonnade', 'Engines'],
+    kit: [['Cog Beetle', 'beetle', '#c8883a', 'tank'], ['Tick Bat', 'bat', '#b0b8c8', 'fast'], ['Brass Automaton', 'automaton', '#d0a050', 'grunt'], ['Tesla Lantern', 'lantern', '#8affff', 'caster']],
+    elite: ['Gear Warden', 'automaton', '#e0b868'], bosses: ['The Grand Clockwork', 'Overseer Tik-Tok', 'The Unwinding'], bossShape: 'titan', bossColor: '#c8a060' },
+  { key: 'spore', name: 'The Sporewilds', blurb: 'A forest that is one living thing. Everything in it is a part of the mushroom.', theme: 'fungal', ground: 'grass', patch: [0.58, 'sand'], edge: 'rock', trees: 0.62, thin: 0.3, water: 0.72, rocks: 0.8, from: [5, -4],
+    cells: [[6, -4, 5, -4], [7, -4, 6, -4], [8, -4, 7, -4], [9, -4, 8, -4], [10, -4, 9, -4], [7, -3, 7, -4], [9, -3, 9, -4], [8, -5, 8, -4], [10, -3, 10, -4]],
+    adj: ['Spore-laden', 'Mycelial', 'Glimmering', 'Rotcap', 'Puffball', 'Lichen', 'Fruiting', 'Bioluminescent'], noun: ['Wilds', 'Hollows', 'Canopy', 'Warren', 'Thicket', 'Gills', 'Bloom', 'Understory'],
+    kit: [['Sporecap', 'mushroom', '#c85a8a', 'grunt'], ['Glowmoth', 'moth', '#d0ff9a', 'caster'], ['Razor Mantis', 'mantis', '#7a9a4a', 'fast'], ['Bog Toad', 'toad', '#6a9a4a', 'tank']],
+    elite: ['Capped Mycelord', 'mushroom', '#e0609e'], bosses: ['The Mycelium King', 'Mother Spore', 'Rotcap Prime'], bossShape: 'myconid', bossColor: '#d070a0' },
+  { key: 'wyrm', name: 'The Dragonbone Wastes', blurb: 'The graveyard of the great wyrms. Their ribs are the hills and some of them still breathe.', theme: 'bonewaste', ground: 'sand', patch: [0.52, 'grass'], edge: 'rock', trees: 0.86, thin: 0.6, water: 0.76, rocks: 0.58, from: [6, -10],
+    cells: [[7, -10, 6, -10], [8, -10, 7, -10], [9, -10, 8, -10], [10, -10, 9, -10], [11, -10, 10, -10], [7, -11, 7, -10], [9, -11, 9, -10], [8, -9, 8, -10], [11, -11, 11, -10]],
+    adj: ['Wyrmbone', 'Cinderfang', 'Ashen', 'Charred', 'Ossified', 'Scaled', 'Drakeblood', 'Smoldering'], noun: ['Ribs', 'Gullet', 'Barrens', 'Spine', 'Crater', 'Roost', 'Hoard', 'Talons'],
+    kit: [['Dragonbone Wyvern', 'wyvern', '#8a4a3a', 'fast'], ['Ember Phoenix', 'phoenix', '#ff6a2a', 'caster'], ['Ash Salamander', 'salamander', '#ff8a2a', 'grunt'], ['Bonehorn Minotaur', 'minotaur', '#b87a3a', 'tank']],
+    elite: ['Drakeguard', 'minotaur', '#c8403a'], bosses: ['Vermithrax', 'The Last Wyrm', 'Skaldragor'], bossShape: 'wyrmlord', bossColor: '#4aa890' },
+  { key: 'star', name: 'The Starfall Reaches', blurb: 'The place the sky keeps what it drops. The ground is night and the weather is made of light.', theme: 'astral', ground: 'grass', patch: [0.56, 'cobble'], edge: 'rock', trees: 0.74, thin: 0.42, water: 0.7, rocks: 0.68, clear: 'cobble', from: [2, -12],
+    cells: [[2, -13, 2, -12], [2, -14, 2, -13], [2, -15, 2, -14], [2, -16, 2, -15], [2, -17, 2, -16], [1, -14, 2, -14], [3, -14, 2, -14], [1, -16, 2, -16], [3, -16, 2, -16]],
+    adj: ['Starfallen', 'Astral', 'Lunar', 'Nebular', 'Comet-scarred', 'Auroral', 'Zenith', 'Cosmic'], noun: ['Meadows', 'Observatory', 'Terraces', 'Drift', 'Garden', 'Firmament', 'Causeway', 'Hollow'],
+    kit: [['Shardling', 'shardling', '#a8e8ff', 'tank'], ['Storm Cloud', 'stormcloud', '#7a8ac8', 'caster'], ['Star Owl', 'owl', '#9a8ae8', 'fast'], ['Comet', 'comet', '#6a8aff', 'fast']],
+    elite: ['Starforged Sentinel', 'shardling', '#ffe8a8'], bosses: ['The Seraph Eternal', 'Archon Auriel', 'Halo-Breaker Ixh'], bossShape: 'seraph', bossColor: '#ffe8a8' },
+];
+for (const R of REALMS) {
+  const pid = idOf.get(key(...R.from)); if (!pid) throw new Error(`realm ${R.key}: ${R.from} is not a region`);
+  const local = new Map([[key(...R.from), { id: pid, depth: depth.get(key(...R.from)) }]]), ids = [];
+  R.cells.forEach(([x, y, px, py], n) => {
+    const par = local.get(key(px, py)); if (!par) throw new Error(`realm ${R.key}: ${x},${y} has no parent ${px},${py}`);
+    if (Math.abs(px - x) + Math.abs(py - y) !== 1) throw new Error(`realm ${R.key}: ${x},${y} does not touch its parent`);
+    const id = `rlm_${R.key}_${String(n).padStart(2, '0')}`; local.set(key(x, y), { id, depth: par.depth + 1, gx: x, gy: y, parent: par.id, px, py }); ids.push([x, y]); REALM_POS[id] = [x, y];
+    const d = Object.entries(DIRS).find(([, v]) => v[0] === x - px && v[1] === y - py)[0]; REALM_EDGES.push([par.id, id, d]);
+  });
+  const kids = new Set(R.cells.map((c) => key(c[2], c[3])));
+  R.cells.forEach(([x, y], n) => {
+    const c = local.get(key(x, y)), id = c.id, dpt = c.depth, i = zi++, r = mulberry(8000 + i * 97), leaf = !kids.has(key(x, y)), L = Math.min(100, Math.round(34 + dpt * 4.125)), tier = tierForLevel(L);
+    const pre = PREFIX[Math.min(PREFIX.length - 1, Math.floor(dpt / 2.2))], name = zoneName(R, r), pi = dpt, kitStart = i % R.kit.length, picks = [0, 1, 2, 3].map((k) => R.kit[(kitStart + k) % R.kit.length]);
+    const enemyIds = picks.map(([nm, sh, col, role], k) => { const eid = `${id}_m${k}`; EXP_ENEMIES[eid] = mobDef(`${pre}${nm}`, sh, col, L + (k % 2), role, tier, k === 1 ? { blunt: 0.85 } : k === 2 ? { arcane: 0.7 } : {}); return eid; });
+    const eliteId = `${id}_e`, bossId = `${id}_b`, bn = R.bosses[(n + (leaf ? 1 : 0)) % R.bosses.length];
+    EXP_ENEMIES[eliteId] = eliteDef(`${pre}${R.elite[0]}`, R.elite[1], R.elite[2], L + 2, tier);
+    EXP_ENEMIES[bossId] = bossDef(leaf ? `${bn} the Lesser` : bn, R.bossShape, R.bossColor, L + 3, tier, BOSS_MOVES[(i + pi) % BOSS_MOVES.length]);
+    const village = n === 0 || (!leaf && n % 4 === 0), dk = `rlm_d_${R.key}_${String(n).padStart(2, '0')}`, dun = leaf;
+    const exitsAt = []; const back = { n: 's', s: 'n', e: 'w', w: 'e' }; for (const [a, bb, dd] of REALM_EDGES) { if (a === id) exitsAt.push(dd); if (bb === id) exitsAt.push(back[dd]); }
+    const edgePt = (dd) => (dd === 'n' ? [0.5, 0] : dd === 's' ? [0.5, 1] : dd === 'w' ? [0, 0.5] : [1, 0.5]);
+    const LAIRS = [[0.2, 0.2], [0.8, 0.2], [0.2, 0.78], [0.8, 0.74], [0.5, 0.5]], lairAt = LAIRS.map((q) => ({ q, d: Math.min(9, ...exitsAt.map((e) => { const t = edgePt(e); return Math.hypot((q[0] - t[0]) * 1.4, q[1] - t[1]); })) })).sort((u, v) => v.d - u.d)[i % 2].q;
+    const lm = [], jit = () => (r() - 0.5) * 0.12, first = name.split(' ')[0];
+    if (village) lm.push({ t: 'village', at: [0.5, 0.78], vendor: pick(r, VENDORS), inn: pick(r, INNS), elder: pick(r, ELDERS), lines: [pick(r, LORE)(name), pick(r, LORE)(name)] });
+    if (dun) lm.push({ t: 'dungeon', at: [0.82 - r() * 0.1, 0.3 + r() * 0.15], to: `${dk}_1`, label: `${first} Depths (Lv ${L + 1}-${L + 5})`, signName: `${first} Depths`, lines: [`THE ${name.toUpperCase()} DEPTHS. Something old keeps house down there. (Lv ${L + 1}-${L + 5})`] });
+    lm.push({ t: 'camp', at: [0.2 + jit(), 0.4 + jit()], chest: `${pick(r, R.noun)} Camp` }, { t: 'camp', at: [0.78 + jit(), 0.35 + jit()] }, { t: 'ruin', at: [0.4 + jit(), 0.62 + jit()], chest: `${pick(r, R.adj)} Ruin` }, { t: 'ruin', at: [0.7 + jit(), 0.66 + jit()], chest: `Lost ${pick(r, ['Cache', 'Vault', 'Reliquary', 'Strongbox'])}` },
+      { t: 'tower', at: [0.3 + jit(), 0.28 + jit()], name: `${pick(r, ['Watch', 'Signal', 'Memorial', 'Old'])} Stone`, lines: [`Scratched into the stone: ${pick(r, ['THE ROAD GOES ON AND SO MUST YOU.', 'TURN BACK OR CARRY MORE POTIONS.', 'IT LOOKS NOTHING LIKE THE MAPS.', 'WE WERE HERE. THEN WE WERE NOT.', 'DO NOT FOLLOW THE LIGHTS.'])}`] }, { t: 'shrine', at: [0.85 + jit(), 0.8 + jit()] }, { t: 'lair', at: lairAt });
+    const nodes = { [tier.id]: 16 + (pi % 5), herb: 8, hide: 6, ore: 4 + (pi % 3) * 2, coal: 4 + (pi % 2) * 3 }; if (R.key === 'star' || R.key === 'reef') nodes.frostbloom = 6; if (R.key === 'spore' || R.key === 'star') nodes.ghostbloom = 5; if (R.key === 'gear' || R.key === 'star') nodes.echo = 5;
+    EXP_ZONES.push({ id, name, lvl: L, kind: 'out', theme: R.theme, biome: R.key, w: leaf ? 144 : 176, h: leaf ? 104 : 128, seed: 6100 + i * 31, ground: R.ground, patch: R.patch, edge: R.edge, trees: R.trees, thin: R.thin, water: R.water, rocks: R.rocks, clear: R.clear, fs: 12 + (i % 7) * 2,
+      landmarks: lm, nodes, mobs: 60 + (pi % 4) * 2, chests: 9, deco: [['bones', 12, { solid: false }], ['stump', 6]], waystones: 1, enemies: enemyIds, elite: eliteId, boss: bossId, tier: tier.id, parent: c.parent, depth: dpt, role: leaf ? 'spur' : 'ring', biomeId: R.key, gx: x, gy: y, village, dungeon: dun ? dk : null, realm: R.key, realmName: R.name });
+    if (dun) {
+      const dl = L + 1, dBoss = `${dk}_b`; EXP_ENEMIES[dBoss] = bossDef(`${bn}, Warden of the Depths`, 'warden', picks[2][2], dl + 4, tier, BOSS_MOVES[(i + 2) % BOSS_MOVES.length]);
+      const de = [0, 1, 2, 3].map((k) => { const eid = `${dk}_m${k}`, q = R.kit[(kitStart + k + 1) % R.kit.length]; EXP_ENEMIES[eid] = mobDef(`${pre}${q[0]}`, q[1], q[2], dl + (k % 3), q[3], tier); return eid; });
+      EXP_ZONES.push({ id: `${dk}_1`, name: `${first} Depths — Upper`, lvl: dl, dungeon: true, biome: R.key, theme: R.theme, enemies: de, elite: eliteId, tier: tier.id, floor: 1, dk, seed: 7100 + i * 13, parentZone: id });
+      EXP_ZONES.push({ id: `${dk}_2`, name: `${first} Depths — Heart`, lvl: dl + 2, dungeon: true, biome: R.key, theme: R.theme, enemies: de, elite: eliteId, boss: dBoss, tier: tier.id, floor: 2, dk, seed: 7101 + i * 13, parentZone: id });
+    }
+  });
+}
+
 // raid gates: the first is a hub spur (an early raid), the second is the front door of the Crown
 FAR_GATES.void_citadel = idOf.get(key(3, -4)); FAR_GATES.wyrmcrown = idOf.get(key(2, -9));
 

@@ -65,7 +65,7 @@ export function trackFor(map, night, boss) {
   if (boss) return 'boss'; if (!map) return 'title';
   const id = map.id, th = map.theme;
   if (th === 'hollow') return 'hollow'; if (th === 'cave' || /crypt|warren|catacomb|depth|dungeon|vault|cellar/.test(id)) return th === 'cave' ? 'cave' : 'dungeon';
-  if (th === 'desert') return 'desert'; if (th === 'snow') return 'snow'; if (th === 'swamp') return 'swamp'; if (th === 'volcano') return 'volcano';
+  if (th === 'desert') return 'desert'; if (th === 'snow' || th === 'astral') return 'snow'; if (th === 'swamp' || th === 'fungal') return 'swamp'; if (th === 'brass') return 'dungeon'; if (th === 'coral') return 'forest'; if (th === 'volcano' || th === 'bonewaste') return 'volcano';
   if (id === 'town' || /^(greenmeadow|saltmere)$/.test(id)) return night ? 'night' : 'town';
   return night ? 'night' : id === 'gloomwood' || id === 'world_tree' ? 'forest' : 'wild';
 }

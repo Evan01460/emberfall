@@ -119,7 +119,7 @@ export function createRevealScene(itemId, res) {
     if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); g.drawImage(glow, Math.round(W / 2 - base.width / 2), 8); g.globalAlpha = 1; }
     g.drawImage(settle > 0 && !res.ok ? glow : base, Math.round(W / 2 - base.width / 2), 8);
     g.restore();
-    if (settle >= 1 && !burst) { burst = true; for (let i = 0; i < (res.ok ? 60 : 24); i++) sparks.push({ x: W / 2, y: 50, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3; i++) rings.push({ r: 4, a: 1, d: i * 120 }); }
+    if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 60 + (SX - 1) * 45 : 24); i++) sparks.push({ x: W / 2, y: 50, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, a: 1, d: i * 120 }); }
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 90 * dt; r.a -= dt * 1.1; if (r.a <= 0) { rings.splice(i, 1); continue; } g.strokeStyle = `rgba(255,230,150,${r.a})`; g.lineWidth = 2; g.beginPath(); g.arc(W / 2, 50, r.r, 0, 6.3); g.stroke(); }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; px(g, s.x, s.y, s.c, 2, 2); }
     // the chance bar and the roll marker
@@ -128,6 +128,7 @@ export function createRevealScene(itemId, res) {
     const mxp = bx + bw * marker; g.fillStyle = '#ffffff'; g.fillRect(Math.round(mxp) - 1, by - 5, 3, 22); g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(mxp - 4, by - 7); g.lineTo(mxp + 4, by - 7); g.lineTo(mxp, by - 1); g.fill();
     label(g, `SUCCESS ${(res.chance * 100).toFixed(res.chance < 0.1 ? 1 : 0)}%`, bx, by - 8, { size: 8 }); label(g, `ROLL ${(marker * 100).toFixed(0)}`, bx + bw, by - 8, { size: 8, align: 'right', color: '#c8bcd8' });
     if (settle >= 1) { g.textAlign = 'center'; g.font = 'bold 18px monospace'; g.fillStyle = '#14101c'; g.fillText(res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED', W / 2 + 1, 99); g.fillStyle = col; g.fillText(res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED', W / 2, 98); g.textAlign = 'left'; }
+    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) { const w = res.steps === 2 ? 'CRITICAL FORGE  x2' : 'CRITICAL FORGE  x3'; label(g, w, W / 2, 30 + Math.round(Math.sin(t / 120) * 2), { align: 'center', color: res.steps === 3 ? '#ff9aff' : '#ffe36b', size: 9 }); }
     // cracks for a failure
     if (!res.ok && settle > 0) { g.strokeStyle = `rgba(0,0,0,${0.7 * settle})`; g.lineWidth = 2; g.beginPath(); g.moveTo(W / 2 - 14, 22); g.lineTo(W / 2 - 4, 40); g.lineTo(W / 2 - 12, 58); g.moveTo(W / 2 - 4, 40); g.lineTo(W / 2 + 12, 52); g.stroke(); }
   }

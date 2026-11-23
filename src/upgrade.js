@@ -56,3 +56,18 @@ export function upgradeSpec(L, smithLevel, rng) {
     polish: { need: 8 + Math.floor(hard * 6), lo: 330, hi: 720 },
   };
 }
+
+// ── critical forging: a (nearly) perfect performance can lift the piece by more than one level ──────────────────────────────────────────────
+// A smith's reach: +2 from smith level 40, +3 with a Mastery (level 20 path choice), a mythic class or smith level 85. The chance needs a near-perfect
+// score, grows with how perfect it was and with the smith's level, and a double is far likelier than a triple.
+export const PERFECT = 0.86;
+export const maxJump = (smithLevel, mastered) => 1 + (smithLevel >= 40 ? 1 : 0) + (mastered || smithLevel >= 85 ? 1 : 0);
+export function critChances(score, smithLevel, mastered, L) {
+  const j = maxJump(smithLevel, mastered); if (score < PERFECT || j < 2) return { two: 0, three: 0, max: j };
+  const k = clamp((score - PERFECT) / (1 - PERFECT), 0, 1), two = clamp(0.14 + 0.24 * k + smithLevel * 0.001, 0, 0.5) * (L >= 80 ? 0.8 : 1);
+  return { two, three: j >= 3 ? two * (0.28 + 0.12 * k) : 0, max: j };
+}
+export function critSteps(rng, score, smithLevel, mastered, L) {
+  const c = critChances(score, smithLevel, mastered, L); let n = 1; if (rng.chance(c.two)) { n = 2; if (c.three && rng.chance(c.three / Math.max(c.two, 1e-9))) n = 3; }
+  return Math.min(n, MAX_UP - L);
+}

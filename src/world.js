@@ -3,7 +3,7 @@
 // Coordinates are in tile units (floats). A tile (tx,ty) spans [tx,tx+1) × [ty,ty+1).
 // Two realms: "main" (Lanternfall and its wilds) and "hollow" (the mirror realm).
 // ─────────────────────────────────────────────────────────────────────────────
-import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS, FAR_EDGES, FAR_POS } from './expansion.js';
+import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS, FAR_EDGES, FAR_POS, REALM_EDGES, REALM_POS } from './expansion.js';
 import { RAIDS } from './raids.js';
 import { Rng } from './rng.js';
 
@@ -651,13 +651,14 @@ link('ruined_citadel', 'n', 0.5, 'aether_reach', 's', 0.5, 'To Aether Reach ^', 
   const lab = (to, d) => { const e = E.get(to), nm = e ? `${e.name} (Lv ${e.lvl})` : to; return d === 'w' ? `< To ${nm}` : d === 'e' ? `To ${nm} >` : `To ${nm} ${ARROW[d]}`; };
   link('aether_reach', 'n', 0.5, FAR_EDGES[0][0], 's', 0.5, `To ${E.get(FAR_EDGES[0][0]).name} (Lv ${E.get(FAR_EDGES[0][0]).lvl}) ^`, 'To Aether Reach v');
   for (const [a, b, d] of FAR_EDGES) link(a, d, 0.5, b, BACK[d], 0.5, lab(b, d), lab(a, BACK[d]));
+  for (const [a, b, d] of REALM_EDGES) link(a, d, 0.5, b, BACK[d], 0.5, lab(b, d), lab(a, BACK[d]));   // the five new realms
   // a dangerous shortcut: from Moonspire Heights over the mountains straight into the western ring
   const wm = [...E.values()].find((e) => e.gx === 0 && e.gy === -5);
   link('moonspire', 'n', 0.5, wm.id, 's', 0.5, `Moonlit Pass: ${wm.name} (Lv ${wm.lvl}) ^`, 'To Moonspire Heights v');
 }
 // ── the world as a graph (for the world map, route finding and "where do I go next?") ───────────────────────────────────────────────────────
 export const WORLD_POS = { town: [0, 0], quarry: [1, 0], ironhold: [2, 0], gloomwood: [-1, 0], mistfen: [-2, 0], archive: [0, 1], greenmeadow: [0, -1], saltmere: [-1, -1], sunscorch: [1, -1], emberwaste: [2, -1], cinder_foundry: [3, -1],
-  frostpeak: [0, -2], crystal_caverns: [0, -3], moonspire: [0, -4], ruined_citadel: [2, -2], aether_reach: [2, -3], ...FAR_POS };
+  frostpeak: [0, -2], crystal_caverns: [0, -3], moonspire: [0, -4], ruined_citadel: [2, -2], aether_reach: [2, -3], ...FAR_POS, ...REALM_POS };
 let _graph = null;
 export function worldGraph() {
   if (_graph) return _graph; const g = {}, add = (a, b) => { (g[a] ??= new Set()).add(b); (g[b] ??= new Set()).add(a); };

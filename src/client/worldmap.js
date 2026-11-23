@@ -8,7 +8,7 @@ import { h } from '../ui-lib.js';
 import { openWindow, closeWindow } from './panels.js';
 
 const TRACK_KEY = 'emberfall.track';
-const THEME = { main: '#4f8a3e', desert: '#c4a65a', snow: '#c9dae8', volcano: '#8a4a38', swamp: '#4a7a62', cave: '#6a5f86', hollow: '#5a3a8a' };
+const THEME = { main: '#4f8a3e', desert: '#c4a65a', snow: '#c9dae8', volcano: '#8a4a38', swamp: '#4a7a62', cave: '#6a5f86', hollow: '#5a3a8a', coral: '#3aa8a0', brass: '#a8843c', fungal: '#7a4a98', bonewaste: '#c8bc9c', astral: '#3a3a8a' };
 export { regionOf };
 export function getTrack() { if (G.track === undefined) { try { G.track = localStorage.getItem(TRACK_KEY) || null; } catch { G.track = null; } } return G.track; }
 export function setTrack(id) { G.track = id || null; try { id ? localStorage.setItem(TRACK_KEY, id) : localStorage.removeItem(TRACK_KEY); } catch { /* private mode */ } G.nav = null; }
@@ -47,10 +47,11 @@ export function openWorldMap() {
   const detail = h('div', { class: 'wm-detail' });
   function paintDetail() {
     const id = sel, { known, fog } = knownRegions(), z = ZONES[id], f = regionFeatures(id), L = G.me?.level ?? 1;
-    if (!known.has(id)) { detail.replaceChildren(h('h3', {}, 'Unexplored'), h('p', { class: 'dim' }, 'You have not been here yet. Walk to an exit of a neighbouring region to discover it.'), fog.has(id) ? h('p', {}, `Expected level: about ${z?.lvl ?? '?'}.`) : null, fog.has(id) ? h('div', { class: 'row' }, h('button', { class: 'btn small gold', onclick: () => { setTrack(id); draw(); paintDetail(); } }, 'Track route here')) : null); return; }
+    const setDetail = (...kids) => detail.replaceChildren(...kids.filter(Boolean));   // a null child would be printed as the word "null"
+    if (!known.has(id)) { setDetail(h('h3', {}, 'Unexplored'), h('p', { class: 'dim' }, 'You have not been here yet. Walk to an exit of a neighbouring region to discover it.'), fog.has(id) ? h('p', {}, `Expected level: about ${z?.lvl ?? '?'}.`) : null, fog.has(id) ? h('div', { class: 'row' }, h('button', { class: 'btn small gold', onclick: () => { setTrack(id); draw(); paintDetail(); } }, 'Track route here')) : null); return; }
     const foes = [...new Set((z?.enemies ?? []).map((k) => ENEMIES[k]?.name).filter(Boolean))].slice(0, 4), boss = z?.boss ? ENEMIES[z.boss]?.name : null, tracked = getTrack() === id, here = regionOf(G.map) === id;
     const danger = z?.lvl ? (z.lvl > L + 6 ? 'r' : z.lvl > L + 2 ? '' : 'g') : 'g';
-    detail.replaceChildren(
+    setDetail(
       h('h3', {}, nm(id)), h('div', { class: 'row', style: { flexWrap: 'wrap', gap: '4px' } }, h('span', { class: `tag ${danger}` }, z?.lvl ? `Lv ${z.lvl}-${z.lvl + 2}` : 'Safe hub'), here ? h('span', { class: 'tag g' }, 'you are here') : null, tracked ? h('span', { class: 'tag v' }, 'tracked') : null),
       foes.length ? h('p', { style: { fontSize: '12px' } }, h('b', {}, 'Monsters: '), foes.join(', ')) : null, boss ? h('p', { style: { fontSize: '12px' } }, h('b', {}, 'Lair boss: '), boss) : null,
       h('p', { style: { fontSize: '12px' } }, h('b', {}, 'Here: '), [f.village ? 'village (shop + inn)' : null, ...f.dungeons.map((d) => `dungeon: ${d}`), f.camps ? `${f.camps} camp${f.camps > 1 ? 's' : ''}` : null, f.ruins ? `${f.ruins} ruin${f.ruins > 1 ? 's' : ''}` : null, f.shrines ? 'a shrine' : null, f.waystones ? 'a waystone' : null].filter(Boolean).join(' · ') || 'roads and wilderness'),

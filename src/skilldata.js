@@ -386,3 +386,7 @@ for (const id of new Set([...Object.keys(SIG), ...Object.keys(SIGM)])) { const k
 // Mythic basic attacks get their own signature art too.
 Object.assign(MYTHICS.apostle.basic, { vfx: 'thorn_basic', quiet: true }); Object.assign(MYTHICS.void_sovereign.basic, { vfx: 'null_edge', quiet: true }); Object.assign(MYTHICS.titan_forgemaster.basic, { vfx: 'titan_basic', quiet: true });
 Object.assign(MYTHICS.philosopher.basic, { vi: 'stone', vfxEnd: 'gold_flash', quiet: true }); Object.assign(MYTHICS.gilded.basic, { vi: 'gilt', vfxEnd: 'gold_flash', quiet: true });
+
+// ── Advancements (levels 35 / 55 / 80): a new skill per path, see advskills.js ──
+import { registerAdvanced } from './advskills.js';
+registerAdvanced(add, sk, PATHS);

@@ -71,7 +71,7 @@ export const SKILLS = {
 Object.assign(SKILLS, EXTRA_SKILLS);
 
 // Mana cost per skill (by kind unless overridden). Mana regenerates; the Shadowfell drains it.
-const MANA = { melee: 8, proj: 10, aoe: 14, dash: 6, guard: 8, heal: 14, taunt: 10, mark: 10, buff: 12, trap: 10, field: 16 };
+const MANA = { script: 28, melee: 8, proj: 10, aoe: 14, dash: 6, guard: 8, heal: 14, taunt: 10, mark: 10, buff: 12, trap: 10, field: 16 };
 for (const k of Object.values(SKILLS)) k.mp = k.mp ?? MANA[k.kind] ?? 8;
 SKILLS.footnote.mp = 4; SKILLS.final_chapter.mp = 26; SKILLS.double_down.mp = 22; SKILLS.cascade.mp = 24;
 

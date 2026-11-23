@@ -4,6 +4,7 @@ import { shrink, sprite, flashed, flipped, hash, shade, tint } from './px.js';
 import { T } from '../world.js';
 import { CLASSES } from '../data.js';
 import { EXP_TIERS } from '../expansion.js';
+import { MON2 } from './sprites2.js';
 
 const cache = new Map();
 const memo = (key, fn) => { let v = cache.get(key); if (!v) { v = fn(); cache.set(key, v); } return v; };
@@ -21,6 +22,12 @@ PAL.snow = mkPal({ grass: ['#e4eef8', '#d8e6f4', '#bccee0', '#ffffff'], path: ['
 PAL.swamp = mkPal({ grass: ['#3f5a2f', '#486634', '#2f4624', '#5f7f42'], path: ['#6a5a3a', '#5c4e32', '#403622', '#85734c'], sand: ['#5a4a32', '#4e4028', '#382c1c', '#6e5c3e'], water: ['#3a5a40', '#486a4c', '#2c4630', '#7aa070'], cobble: ['#6a6a58', '#5c5c4a', '#3c3c30', '#848470'], leaf: ['#4a6a30', '#5a7e3a', '#2e4620', '#8aa850'], trunk: ['#3a2e22', '#2a2018'], rock: ['#6a705c', '#5a604c', '#3a4030', '#838a74'] });
 PAL.volcano = mkPal({ grass: ['#4a4440', '#433d39', '#322e2b', '#615b55'], path: ['#6a4a3a', '#5c4032', '#3e2a20', '#8a6450'], sand: ['#3a3230', '#322a28', '#221c1a', '#524846'], water: ['#d8501e', '#f07a2a', '#a83410', '#ffd070'], cobble: ['#585050', '#4a4242', '#2e2828', '#706868'], leaf: ['#2a2220', '#362c28', '#16100e', '#5a4a40'], trunk: ['#1a1412', '#100c0a'], rock: ['#38303a', '#2e2830', '#1a161c', '#524a58'], wall: ['#4a4046', '#3c343a', '#221c20', '#625860'] });
 PAL.cave = mkPal({ grass: ['#4a4650', '#423e48', '#32303a', '#5e5a68'], path: ['#6a6470', '#5e5864', '#403c48', '#86808e'], sand: ['#56525c', '#4a4650', '#34323c', '#6e6a78'], water: ['#1f3f66', '#2a5084', '#162c4a', '#6a9ad0'], cobble: ['#5a5662', '#4c4854', '#322e3a', '#726e7e'], leaf: ['#2a6a6a', '#3a8a8a', '#1a4a4a', '#6ad0d0'], trunk: ['#3a3040', '#2a2230'], rock: ['#5a5666', '#4a4656', '#2c2838', '#7a7688'], wall: ['#5a5666', '#4a4656', '#2c2838', '#7a7688'] });
+// the five new realms (see src/expansion.js)
+PAL.coral = mkPal({ grass: ['#58b49a', '#62c0a4', '#46987e', '#8adcc0'], path: ['#c8a878', '#b89868', '#947848', '#e0c494'], sand: ['#f0e0b8', '#e6d4a4', '#ccb888', '#fff0cc'], water: ['#18a8c8', '#28c0e0', '#1088a8', '#b8f4ff'], cobble: ['#c0b8b0', '#aea69e', '#7e7870', '#dad2ca'], floor: ['#b88a6a', '#a87a5a', '#6e4a34', '#cc9c7c'], stone: ['#a8bcc4', '#96aab2', '#627880', '#c4d8e0'], wall: ['#d89a8a', '#c4857a', '#8a5048', '#f0b8a8'], leaf: ['#2a9a5a', '#38b46a', '#1a6a3c', '#8af0a8'], trunk: ['#a07a4a', '#7a5a32'], rock: ['#a8c0c8', '#90a8b0', '#607880', '#c8e0e8'] });
+PAL.brass = mkPal({ grass: ['#7a6a4a', '#6e5f42', '#554a32', '#9a8a62'], path: ['#a8824a', '#98743e', '#745428', '#c8a468'], sand: ['#a88a5a', '#9a7e50', '#7a6240', '#c4a470'], water: ['#2a7a7a', '#38908c', '#1c5c5c', '#8ae0d0'], cobble: ['#8a8478', '#7a7468', '#524e44', '#aaa498'], floor: ['#6a5a42', '#5c4e38', '#3a3022', '#827254'], stone: ['#74747c', '#666670', '#3c3c44', '#92929c'], wall: ['#b08a48', '#9a7838', '#5e4820', '#d8b068'], leaf: ['#6a9a6a', '#7ab07a', '#3e6a3e', '#a8e0a8'], trunk: ['#8a6a3a', '#6a4e28'], rock: ['#8a8a92', '#76767e', '#4e4e56', '#b0b0ba'] });
+PAL.fungal = mkPal({ grass: ['#4a3a6a', '#54447a', '#382a52', '#7a64a8'], path: ['#6a5a50', '#5c4e44', '#40362e', '#867468'], sand: ['#6a5a58', '#5c4e4c', '#403634', '#827070'], water: ['#3a8a6a', '#4aa07c', '#2a6a50', '#9af0c0'], cobble: ['#5a5068', '#4c4458', '#30283c', '#746a88'], floor: ['#5a4a58', '#4c3e4a', '#32262e', '#726070'], stone: ['#5a4a6a', '#4a3c5a', '#2c2438', '#7a68a0'], wall: ['#6a4a7a', '#5a3c6a', '#382448', '#8a68a0'], leaf: ['#c8508a', '#e0609e', '#8a2a5a', '#ff9ac8'], trunk: ['#d8c8a8', '#b8a888'], rock: ['#5a4a6a', '#4a3c5a', '#2c2438', '#7a68a0'] });
+PAL.bonewaste = mkPal({ grass: ['#8a7a68', '#7e6e5c', '#5e5042', '#a89884'], path: ['#a89878', '#988868', '#746848', '#c4b494'], sand: ['#d8ccb0', '#cabea2', '#a89c80', '#efe4cc'], water: ['#9a2a1a', '#c8421e', '#661408', '#ff8a3a'], cobble: ['#9a9080', '#8a8070', '#605848', '#b8aea0'], floor: ['#8a7a60', '#7a6a52', '#524632', '#a08e72'], stone: ['#b8ac90', '#a89c80', '#74684e', '#d4c8ac'], wall: ['#cfc4a8', '#b8ac90', '#7a7058', '#e8dcc0'], leaf: ['#5a4a3a', '#6a5a48', '#3a2e22', '#8a7860'], trunk: ['#e0d4b8', '#b8ac90'], rock: ['#d0c4a8', '#baae92', '#80765e', '#ece0c4'] });
+PAL.astral = mkPal({ grass: ['#1e2050', '#262a64', '#14163a', '#4a52a8'], path: ['#4a4a88', '#3e3e78', '#2a2a54', '#6a6aaa'], sand: ['#3a3a78', '#32326a', '#242450', '#5a5aa8'], water: ['#4a2a98', '#6a42c8', '#32187a', '#c8a8ff'], cobble: ['#48487a', '#3c3c6a', '#28284a', '#66669a'], floor: ['#3a3a6a', '#303060', '#202044', '#54548a'], stone: ['#5a5a9a', '#4a4a86', '#2c2c58', '#8a8ac8'], wall: ['#5a5aa8', '#4a4a94', '#2c2c5c', '#8a8ad8'], leaf: ['#6a8aff', '#8aa8ff', '#3a58c8', '#e0ecff'], trunk: ['#c8c8f0', '#9a9ad0'], rock: ['#5a5a9a', '#4a4a86', '#2c2c58', '#8a8ac8'] });
 
 // ── ground tiles (16×16, no outline) ────────────────────────────────────────
 function fillNoise(pen, pal, v, seed, dark = 0.16, light = 0.1) {
@@ -95,7 +102,26 @@ export function treeSprite(theme, v, t = 0) {
     if (theme === 'snow') {                                      // snowy pine
       pen.r(10, 22, 3, 6, tr[0]); for (let i = 0; i < 4; i++) { const y = 4 + i * 5, w = 6 + i * 3; pen.r(11 - Math.floor(w / 2), y, w, 5, L[0]); pen.r(11 - Math.floor(w / 2), y, w, 1, L[3]); pen.r(12 - Math.floor(w / 2) + 1, y + 1, Math.max(1, w - 4), 1, L[3]); pen.r(11 - Math.floor(w / 2), y + 4, w, 1, L[2]); } pen.p(11, 2, L[0]); pen.p(11, 3, L[3]); pen.r(10, 25, 3, 1, '#ffffff'); return;
     }
-    if (theme === 'cave') {                                      // giant glowing mushroom
+    if (theme === 'coral') {                                     // palm tree
+      const lean = v % 2 ? 1 : -1; for (let y = 0; y < 17; y++) { const x = 10 + Math.round(Math.sin(y * 0.22) * 2 * lean); pen.r(x, 27 - y, 3, 1, y % 3 ? tr[0] : tr[1]); } pen.r(8, 26, 7, 2, tr[1]);
+      const cx = 10 + Math.round(Math.sin(17 * 0.22) * 2 * lean), cy = 10; for (let k = 0; k < 7; k++) { const a = -2.9 + k * 0.5 + sway * 0.06; pen.line(cx + 1, cy, cx + 1 + Math.round(Math.cos(a) * 9), cy + Math.round(Math.sin(a) * 6) + 3, k % 2 ? L[0] : L[1]); pen.line(cx + 1, cy + 1, cx + 1 + Math.round(Math.cos(a) * 8), cy + Math.round(Math.sin(a) * 5) + 4, L[2]); }
+      pen.disc(cx + 1, cy + 1, 1.5, '#7a5a2a'); pen.p(cx, cy + 2, '#7a5a2a'); pen.p(cx + 2, cy + 3, '#7a5a2a'); return;
+    }
+    if (theme === 'brass') {                                     // steam pylon with a turning cog
+      pen.r(8, 12, 6, 16, '#8a6a32'); pen.r(8, 12, 2, 16, '#c8a050'); pen.r(13, 12, 1, 16, '#5a4220'); for (const y of [15, 20, 25]) pen.r(7, y, 8, 2, '#5a4220'); pen.r(6, 26, 10, 2, '#4a3a22');
+      const cx = 11, cy = 8; pen.disc(cx, cy, 5, '#5a4220'); pen.disc(cx, cy, 4, '#c8a050'); pen.disc(cx, cy, 1.6, '#3a2a16'); for (let k = 0; k < 8; k++) { const a = k * 0.785 + (t ? 0.39 : 0); pen.r(cx + Math.round(Math.cos(a) * 5.4) - 1, cy + Math.round(Math.sin(a) * 5.4) - 1, 2, 2, '#e8c878'); }
+      pen.p(15, 3 + sway, '#e8f4f4'); pen.p(16, 1 + sway, '#d0e4e4'); pen.p(14, 0, '#c0d4d4'); return;
+    }
+    if (theme === 'bonewaste') {                                 // a great rib arching out of the ground
+      pen.r(4, 24, 3, 4, tr[1]); pen.r(15, 24, 3, 4, tr[1]); for (let k = 0; k < 2; k++) { const ox = 5 + k * 11, dir = k ? -1 : 1; for (let y = 0; y < 22; y++) { const x = ox + dir * Math.round(Math.sin(y / 22 * 1.5) * 6 * (1 - y / 40)); pen.r(x, 26 - y, 3 - (y > 16 ? 1 : 0), 1, y % 5 ? tr[0] : tr[1]); } }
+      pen.r(9, 4, 4, 2, tr[0]); pen.p(10, 3, tr[0]); pen.p(8, 5, tr[1]); pen.p(13, 5, tr[1]); pen.r(10, 22, 2, 5, '#b8ac90'); return;
+    }
+    if (theme === 'astral') {                                    // a standing crystal spire
+      const shard = (cx, base, h, w, c) => { for (let y = 0; y < h; y++) { const ww = Math.max(1, Math.round(w * (1 - (y / h) * 0.85))); pen.r(cx - Math.floor(ww / 2), base - y, ww, 1, y % 5 === 4 ? c[3] : c[1]); pen.p(cx - Math.floor(ww / 2), base - y, c[2]); pen.p(cx + Math.floor((ww - 1) / 2), base - y, c[0]); } };
+      shard(6, 27, 14, 5, ['#4a52c8', '#6a7aff', '#a8b8ff', '#e0ecff']); shard(15, 27, 18, 6, ['#5a3ab0', '#8a5aff', '#c0a0ff', '#f0e0ff']); shard(11, 27, 23, 7, ['#3a62c8', '#6aa8ff', '#b8e0ff', '#ffffff']);
+      pen.p(11, 6, '#ffffff'); pen.p(11, 5, '#ffffff'); if (t) { pen.p(3, 8, '#ffffff'); pen.p(18, 10, '#ffffff'); } pen.r(3, 27, 17, 1, '#14163a'); return;
+    }
+    if (theme === 'cave' || theme === 'fungal') {                // giant glowing mushroom
       pen.r(10, 14, 3, 14, '#c8b8a8'); pen.r(10, 14, 1, 14, '#e8dcd0'); pen.ell(11, 10, 9, 6, L[2]); pen.ell(11, 9, 8, 5, L[0]); pen.ell(9, 7, 4, 2, L[1]); for (const [x, y] of [[6, 9], [11, 6], [15, 10], [9, 11]]) pen.p(x, y, L[3]); pen.r(3, 15, 16, 1, L[2]); return;
     }
     if (theme === 'hollow' || theme === 'swamp' || theme === 'volcano') {                                   // gnarled tree
@@ -362,6 +388,7 @@ const MON = {
     for (let i = 0; i < 8; i++) { const a = i * 0.8 + f * 0.25; let x = 28, y = 30; for (let k = 0; k < 14; k++) { x += Math.cos(a + k * 0.12) * 2.1; y += Math.sin(a * 1.2 + k * 0.1) * 1.7 + 1.1; p.r(Math.round(x), Math.round(y), 2 + (k < 4 ? 1 : 0), 2, k % 3 ? d : '#241c3a'); } }
     p.ell(28, 24, 20, 16, d); p.ell(28, 23, 19, 15, b); p.ell(26, 19, 13, 8, l); p.ell(28, 24, 11, 12, '#140a22'); p.ell(28, 24, 8, 9, '#2a1a48'); p.disc(28 + (f ? 2 : -2), 24, 5, '#c8a0ff'); p.disc(28 + (f ? 2 : -2), 24, 2, '#140a22'); p.p(26, 21, '#ffffff'); for (const [x, y] of [[8, 8], [48, 10], [6, 34], [50, 36]]) p.r(x + (f ? 1 : 0), y, 2, 2, '#e0d0ff'); }),
 };
+Object.assign(MON, MON2);   // the five new realms' creatures (src/client/sprites2.js)
 export function monsterSprite(shape, color, frame, flash = false) {
   const key = `m:${shape}:${color}:${frame}:${flash}`;
   return memo(key, () => { const base = memo(`m:${shape}:${color}:${frame}`, () => (MON[shape] ?? MON.hound)(color, frame)); return flash ? flashed(base) : base; });

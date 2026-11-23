@@ -1,5 +1,6 @@
 // Skills, loadouts, Ascension and mythic status — pure helpers shared by server and client.
 import { SKILLS, BASICS, CLASSES, BASE_CLASSES, PATHS, COMBOS, MAX_LEVEL } from './data.js';
+import { advMods } from './advskills.js';
 
 export const SLOTS = 4;
 export const ASCEND_LVL = 8, MASTERY_LVL = 20;
@@ -80,7 +81,7 @@ export const comboOf = (b) => (b.combo ? COMBOS[b.combo] : null);
 // Multiplicative stat mods from path and mastery.
 export function modsOf(P) {
   const m = { hp: 1, atk: 1, def: 1, move: 1, mp: 1, mpRegen: 1, dmg: 1 };
-  for (const src of [pathOf(P)?.mods, masteryOf(P)?.mods]) if (src) for (const [k, v] of Object.entries(src)) m[k] = (m[k] ?? 1) * v;
+  for (const src of [pathOf(P)?.mods, masteryOf(P)?.mods, advMods(P.level, P.classId)]) if (src) for (const [k, v] of Object.entries(src)) m[k] = (m[k] ?? 1) * v;   // advancements: stat tiers at 35, 55 and 80
   return m;
 }
 export function perkOf(P) {

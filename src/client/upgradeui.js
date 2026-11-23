@@ -34,6 +34,8 @@ export const chanceBar = (base, bonus, L) => {
     h('div', { class: 'upbar' }, h('i', { class: 'u1', style: { width: `${q * 100}%` } }), h('i', { class: 'u2', style: { width: `${(a - q) * 100}%` } }), h('i', { class: 'u3', style: { width: `${(p - a) * 100}%` } })),
     h('div', { class: 'dim', style: { fontSize: '11px' } }, `Quick forge ${pct(q)} · decent play ${pct(a)} · perfect play ${pct(p)}`));
 };
+// near-perfect work can lift the piece by 2 or 3 levels at once, depending on the smith
+const critNote = (c) => (c && c.max >= 2 ? h('div', { class: 'upcrit' }, h('b', {}, 'Critical forge'), h('span', {}, ` — near-perfect work can lift a step to +2${c.max >= 3 ? ' or +3' : ''} (perfect play: ${pct(c.two)}${c.max >= 3 ? ` / ${pct(c.three)}` : ''}). `), h('span', { class: 'dim' }, c.max >= 3 ? 'Your reach: triple.' : 'Reach +3 with a Mastery, a mythic class or smith level 85.')) : h('div', { class: 'dim', style: { fontSize: '11px' } }, 'At smith level 40 near-perfect work can lift a step by +2; a Mastery or smith level 85 allows +3.'));
 const failNote = (info) => (info.drop > 0 ? `If it fails the materials are lost and the piece may fall ${info.dropN} level${info.dropN > 1 ? 's' : ''} (${pct(info.drop)} chance).` : 'If it fails the materials are lost; the piece keeps its level.');
 
 // ── the anvil window ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -62,6 +64,7 @@ function detail(g, info, me) {
   return h('div', {}, head, statRow(g),
     h('div', { class: 'dim', style: { fontSize: '12px', margin: '8px 0 2px' } }, 'Materials for this step'), matRow(info.mats), chanceBar(info.chance, info.bonus, L),
     h('p', { class: 'dim', style: { fontSize: '12px', margin: '6px 0' } }, failNote(info)),
+    critNote(info.crit),
     h('div', { class: 'row', style: { gap: '6px', flexWrap: 'wrap' } }, h('span', { class: `tag ${lowLvl ? 'r' : 'g'}` }, `smith level ${info.needLvl}${lowLvl ? ` (you are ${info.myLvl})` : ' ✓'}`), h('span', { class: 'tag' }, 'stand at a forge')),
     !smith ? h('div', { class: 'card hl', style: { margin: '8px 0' } }, h('b', {}, 'Only a Blacksmith can upgrade gear.'), h('p', { class: 'dim', style: { fontSize: '12px', margin: '4px 0' } }, `Ask one: give them the piece, the materials above and a fee (suggested ${fmt(info.fee)}g). It is all held safely until the work is done.`), h('button', { class: 'btn small gold', onclick: () => { closeWindow('upstation'); G.openUpgradeReq?.(g.uid); } }, 'Ask a Blacksmith')) : null,
     smith ? h('div', { class: 'row', style: { marginTop: '10px', gap: '8px', flexWrap: 'wrap' } },
@@ -170,13 +173,13 @@ export function showUpgradeResult(m) {
   const g = { ...m.gear, up: m.to }, g0 = { ...m.gear, up: m.from };
   const body = h('div', {}, scene.el,
     h('div', { style: { height: '8px' } }),
-    h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', flexWrap: 'wrap' } }, h('b', { style: { color: upColor(m.to), fontSize: '18px' } }, gearName(g)), m.ok ? h('span', { class: 'tag g' }, `+${m.from} → +${m.to}`) : m.dropped ? h('span', { class: 'tag r' }, `fell to +${m.to}`) : h('span', { class: 'tag' }, 'kept +' + m.to)),
+    h('div', { class: 'row', style: { justifyContent: 'center', gap: '8px', flexWrap: 'wrap' } }, h('b', { style: { color: upColor(m.to), fontSize: '18px' } }, gearName(g)), m.ok ? h('span', { class: 'tag g' }, `+${m.from} → +${m.to}${m.steps > 1 ? (m.steps === 2 ? '  DOUBLE STEP!' : '  TRIPLE STEP!') : ''}`) : m.dropped ? h('span', { class: 'tag r' }, `fell to +${m.to}`) : h('span', { class: 'tag' }, 'kept +' + m.to)),
     m.ok ? h('div', { style: { margin: '6px 0' } }, h('div', { class: 'dim', style: { fontSize: '12px', textAlign: 'center' } }, 'Before → after'), h('div', { class: 'row', style: { justifyContent: 'center', gap: '14px' } }, gearStats(g0).map(([k, v, c], i) => h('span', {}, h('span', { style: { color: c } }, `${k} `), fmt(v), ' → ', h('b', { style: { color: '#8cffa0' } }, fmt(gearStats(g)[i][1])))))) : null,
     !m.quick ? h('div', { class: 'card', style: { margin: '8px 0', padding: '8px 12px' } }, h('div', { class: 'dim', style: { fontSize: '12px', marginBottom: '4px' } }, `Your work scored ${Math.round((parts.score ?? 0) * 100)}% — success chance ${pct(m.chance)}.`), bar('heat', 'Heat'), bar('fold', 'Folding'), bar('rune', 'Rune'), bar('quench', 'Quench'), bar('polish', 'Polish')) : h('p', { class: 'dim', style: { textAlign: 'center', fontSize: '12px' } }, `Quick forge: success chance ${pct(m.chance)}.`),
     m.fee ? h('p', { class: 'gold', style: { textAlign: 'center', margin: '4px 0' } }, `You earned ${fmt(m.fee)}g for the work on ${m.owner}'s piece.`) : null,
     h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '8px', gap: '8px' } }, m.self && m.to < MAX_UP ? h('button', { class: 'btn primary', onclick: () => { closeWindow('upgrade'); openUpgradeStation(m.gear.uid && G.me?.gear?.some((x) => x.uid === m.gear.uid) ? m.gear.uid : null); } }, 'Upgrade another step') : null, h('button', { class: 'btn ghost', onclick: () => closeWindow('upgrade') }, 'Close')));
   closeWindow('upgrade');
   openWindow('upgrade', m.ok ? `Success! ${gearName(g)}` : 'The metal would not take it', () => body, { icon: 'forge', onClose: () => scene.destroy() });
-  setTimeout(() => sfx(m.ok ? 'secret' : 'hiss', m.ok ? 500 : 200), 1750);
+  setTimeout(() => sfx(m.ok ? 'secret' : 'hiss', m.ok ? 500 : 200), 1750); if (m.steps > 1) setTimeout(() => sfx('boom', 300), 1900);
 }
 G.openUpgrade = openUpgradeStation;

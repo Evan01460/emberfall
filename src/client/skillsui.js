@@ -7,6 +7,7 @@ import { ask } from './ask.js';
 import * as I from './icons.js';
 import { TITLES, titleInfo } from '../rules.js';
 import { TITLE_COL } from './badges.js';
+import { ADV_LEVELS, ADV_NAMES, advMods } from '../advskills.js';
 
 const send = (m) => G.net.send(m);
 const pct = (v) => `${v >= 1 ? '+' : ''}${Math.round((v - 1) * 100)}%`;
@@ -43,10 +44,20 @@ export function skillsTab(me, refresh) {
     hidden ? h('p', { class: 'clue', style: { marginTop: '8px' } }, `There ${hidden === 1 ? 'is' : 'are'} ${hidden} hidden technique${hidden === 1 ? '' : 's'} for your class. They are not for sale and nobody will say where they are.`) : null);
 }
 
+// Advancements (levels 35 / 55 / 80): a named rank, a stat tier and one new skill per path.
+function advancementCard(me, cur) {
+  const tiers = ADV_LEVELS.map((lv, i) => { const skill = cur ? Object.values(SKILLS).find((s) => s.path === cur.id && s.lvl === lv) : null, got = me.level >= lv;
+    return h('div', { class: 'card', style: { flex: '1', minWidth: '200px', opacity: got ? 1 : 0.6, borderColor: got ? '#ffd36a' : undefined } },
+      h('div', { class: 'row sb' }, h('b', { class: got ? 'gold' : '' }, cur ? ADV_NAMES[cur.id][i] : `Tier ${i + 1}`), h('span', { class: `tag ${got ? 'g' : ''}` }, got ? 'reached' : `level ${lv}`)),
+      h('div', { class: 'tag', style: { margin: '4px 0' } }, modText(advMods(lv, me.classId) && (() => { const a = advMods(lv, me.classId), b = i ? advMods(ADV_LEVELS[i - 1], me.classId) : {}, d = {}; for (const k of Object.keys(a)) d[k] = a[k] / (b[k] ?? 1); return d; })())),
+      skill ? h('div', { class: 'row', style: { gap: '8px', alignItems: 'flex-start' } }, I.skill(skill.id, 32), h('div', {}, h('b', {}, skill.name), h('div', { class: 'dim', style: { fontSize: '12px' } }, skill.desc), h('div', { class: 'dim', style: { fontSize: '11px' } }, cdText(skill)))) : h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Your class grows stronger at this level.'));
+  });
+  return h('div', {}, h('h3', { style: { marginTop: '14px' } }, 'Advancements (levels 35, 55, 80)'), h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Each advancement raises your stats and teaches a skill built around a mechanic of its own — orbiting blades, shockwaves, vortices, familiars, totems, walls of force. Equip them in the Skills tab.'), h('div', { class: 'row', style: { alignItems: 'stretch' } }, tiers));
+}
 export function ascendTab(me) {
   const cls = CLASSES[me.classId], cur = L.pathOf(me), mas = L.masteryOf(me);
   if (cls.mythic) return h('div', {}, h('h2', { class: 'gold' }, cls.name), h('div', { class: 'card hl' }, h('b', {}, cls.status.name), h('p', {}, cls.status.desc)), h('p', { class: 'dim' }, cls.desc), h('p', { class: 'clue' }, 'There is no one else like you in this world. There never will be.'));
-  if (cls.hidden) return h('div', {}, h('p', { class: 'dim' }, `${cls.name} is a hidden class with its own path. It does not ascend.`));
+  if (cls.hidden) return h('div', {}, h('p', { class: 'dim' }, `${cls.name} is a hidden class with its own path. It does not ascend.`), advancementCard(me, null));
   const pathCard = (p) => h('div', { class: `card ${cur?.id === p.id ? 'hl' : ''}`, style: { flex: '1', minWidth: '230px' } },
     h('h3', { style: { color: p.color } }, p.name), h('p', { class: 'dim', style: { fontSize: '12px' } }, p.blurb), h('div', { class: 'tag' }, modText(p.mods) || 'no stat change'),
     p.basic ? h('p', { style: { fontSize: '12px' } }, h('b', {}, `Basic: ${p.basic.name}`), p.basic.range ? ` · reach ${p.basic.range}` : '', p.basic.cd ? ` · ${p.basic.cd}ms` : '') : null,
@@ -56,11 +67,11 @@ export function ascendTab(me) {
   const mastery = (m) => h('div', { class: `card ${mas?.id === m.id ? 'hl' : ''}`, style: { flex: '1', minWidth: '220px' } }, h('b', {}, m.name), h('p', { class: 'dim', style: { fontSize: '12px' } }, m.desc), h('div', { class: 'row', style: { fontSize: '12px' } }, I.skill(m.ult, 22), `Ultimate: ${SKILLS[m.ult].name}`),
     !mas && cur ? h('button', { class: 'btn gold', disabled: !L.canMaster(me), style: { marginTop: '6px' }, onclick: () => { if (confirm(`Take the ${m.name} mastery?`)) send({ t: 'master', id: m.id }); } }, me.level < L.MASTERY_LVL ? `Unlocks at level ${L.MASTERY_LVL}` : `Choose ${m.name}`) : null);
   return h('div', {},
-    h('p', { class: 'dim' }, `At level ${L.ASCEND_LVL} you may ASCEND: choose a path that reshapes your class — stats, basic attack and a new set of skills. At level ${L.MASTERY_LVL} a second choice, a Mastery, adds an ultimate. Hidden classes are separate and replace all of this.`),
+    h('p', { class: 'dim' }, `At level ${L.ASCEND_LVL} you may ASCEND: choose a path that reshapes your class — stats, basic attack and a new set of skills. At level ${L.MASTERY_LVL} a second choice, a Mastery, adds an ultimate. After that your path advances at levels 35, 55 and 80. Hidden classes are separate and replace all of this.`),
     cur ? h('h2', { style: { color: cur.color } }, `${cur.name}${mas ? ` · ${mas.name}` : ''}`) : h('h2', {}, `Choose a path — ${cls.name}`),
     h('div', { class: 'row', style: { alignItems: 'stretch' } }, L.pathsFor(me).map(pathCard)),
     cur ? h('div', {}, h('h3', { style: { marginTop: '14px' } }, 'Mastery (level 20)'), h('div', { class: 'row', style: { alignItems: 'stretch' } }, cur.masteries.map(mastery)),
-      h('div', { style: { marginTop: '12px' } }, h('button', { class: 'btn small ghost', onclick: () => { if (confirm(`Return to ${cls.name}? This costs ${L.respecCost(me)}g.`)) send({ t: 'respec' }); } }, `Un-ascend (${L.respecCost(me)}g)`))) : null);
+      advancementCard(me, cur), h('div', { style: { marginTop: '12px' } }, h('button', { class: 'btn small ghost', onclick: () => { if (confirm(`Return to ${cls.name}? This costs ${L.respecCost(me)}g.`)) send({ t: 'respec' }); } }, `Un-ascend (${L.respecCost(me)}g)`))) : null);
 }
 
 export function deedsLog(me) {

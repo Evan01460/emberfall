@@ -127,8 +127,15 @@ Each rewards a powerful **class-specific hidden skill** (e.g. Warrior: Phantom E
 ## 7. Classes, Ascension and skills
 
 * **Level 8: Ascend.** Pick a path (e.g. Warrior → Mana Sword / Brute / Bulwark; Mage → Pyromancer / Warlock / Sage; Archer → Ranger / Sniper / Windrunner; Blacksmith → Weaponsmith / Armorsmith; Alchemist → Apothecary / Bombardier; Merchant → Auctioneer / Caravan Master). **Level 20: Mastery** — a second choice that adds an ultimate. Un-ascending costs **150 gilt × your level**.
+* **Levels 35 / 55 / 80: Advancements.** Your path grows past level 20: a new rank name, a stat tier and a new skill each time (three per path, 45 in all). They are built from mechanics — orbiting blades, rune rings, rotating beams, meteor rain, piercing lanes, chain lightning, vortices, leaping quakes, blink strikes, summoned familiars, banners, totems, wind walls, delayed bombs, shield domes — so each plays differently. Character → Ascension lists them.
 * **4 skill slots.** You can only equip skills that fit your class. Sources: level-ups, **Skill Tomes**, your path, your mastery, **hidden quests**, mythic classes. Swapping is only possible out of combat.
 * **Fighting above your level is punished** (you deal much less, take more, and enemies sprint to catch you). Fight at or below your level.
+
+---
+
+## 7b. The five new realms (levels 51-100)
+
+Beyond the ring: **The Sporewilds** (Lv 51-71), **The Clockwork Dominion** (Lv 63-84), **The Sunken Archipelago** (Lv 75-92), **The Dragonbone Wastes** (Lv 79-100), **The Starfall Reaches** (Lv 96-100) - 45 regions in all, each with villages, camps, ruins, waystones, dungeons and a lair boss, and every creature in them is brand-new art. Open the World Map (the compass button) and track a route. The doors: **Hollowed Bastion** (Lv 46) -> Sporewilds; **Shattered Cathedral** (Lv 59) -> Clockwork Dominion; **Gloam Bog** (Lv 71) -> Sunken Archipelago; **Celestial Reaches** (Lv 75) -> Dragonbone Wastes; **Unwritten Fringe** (Lv 92) -> Starfall Reaches.
 
 ---
 
@@ -256,6 +263,7 @@ Before every attack except **All In** the Desperado rolls dice (one per projecti
 
 * **Route.** Aether Reach → the Crossing (Lv 34). West ring = Mirelands, east ring = Ember Sands, both climb to the Gate of the Crown. The Citadel gate is on the eastern spur next to the Crossing; the Wyrmcrown gate is at the Crown's front door. Moonspire Heights has a pass into the western ring (a big jump in difficulty).
 * **Bosses.** Read the red/orange shapes. *Wheel*: cross a beam with a dodge roll or keep moving. *Sanctuary*: run into a lit circle. *Grid*: stand on a tile that is not filling. *Walls*: use the green corridor. *Orbs*: they aim at you when released — move after they leave the boss. *Blink*: step out of each cut. *Closing circle*: stay inside. A boss below 66% and 33% health learns new patterns and overlaps them.
+* **Critical forging.** Score 86% or more on the upgrade minigame and a successful upgrade may jump +2 or +3 in one go. The higher the score, the better the odds; the smith's level sets the ceiling (level 40: +2; level 85 or Mastery: +3). The ticket shows your odds.
 * **Upgrades.** Success needs luck and skill: the minigame can lift a +40 step from 14% to about 18%, a smith's level and perks add a little more, and "Quick forge" skips the game. Do the early steps yourself and ask a stronger smith for the deep ones. Keep spare materials: echo shards from +20, starmetal from +50.
 * **Adventure log.** Mastering regions earns the titles Pathfinder (3), Cartographer (12) and World-Walker (30).
 

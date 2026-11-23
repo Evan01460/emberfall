@@ -202,3 +202,4 @@ body:not(.ingame) #app { position: relative; z-index: 1; }
 .adv-h { display: flex; justify-content: space-between; gap: 6px; cursor: pointer; color: #ffe9a8; border-bottom: 1px solid #3a3052; padding-bottom: 2px; margin-bottom: 2px; } .adv-g { display: flex; justify-content: space-between; gap: 6px; color: #e0d8f0; padding: 1px 0; } .adv-g b { color: #ffd36a; }
 .recall-bar { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); background: rgba(16,10,26,.9); border: 2px solid #7fe0ff; padding: 8px 18px; text-align: center; z-index: 60; color: #bfeaff; }
 .advregion.mastered { border-left: 3px solid #ffd36a; }
+.upcrit { font-size: 12px; margin: 4px 0; padding: 4px 8px; border-left: 3px solid #ffe36b; background: rgba(255,227,107,.07); color: #ffe9a8; }

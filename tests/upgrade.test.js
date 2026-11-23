@@ -94,3 +94,24 @@ test('a job for a piece beyond the smith is refused, a maxed piece cannot be tem
   for (let i = 0; i < 60; i++) { for (const [id, n] of Object.entries(upgradeMats('worldsteel_plate', g.up ?? 0))) R.addItem(Sm.P, id, n); srv.on_upgrade_start(Sm, { uid: g.uid, quick: true }); assert.ok((g.up ?? 0) >= 0 && (g.up ?? 0) <= 99); }
   assert.ok(Sm.P.gear.includes(g));
 });
+
+test('critical forging: only near-perfect work can lift more than one level, and the smith decides how far', async () => {
+  const { critChances, critSteps, maxJump, PERFECT } = await import('../src/upgrade.js');
+  assert.equal(maxJump(20, false), 1); assert.equal(maxJump(40, false), 2); assert.equal(maxJump(40, true), 3); assert.equal(maxJump(85, false), 3);
+  assert.deepEqual(critChances(0.8, 90, true, 10), { two: 0, three: 0, max: 3 }, 'not perfect, no crit'); assert.equal(critChances(1, 30, false, 10).two, 0, 'a low smith cannot');
+  const c = critChances(1, 60, true, 10); assert.ok(c.two > 0.2 && c.three > 0 && c.three < c.two); assert.ok(critChances(1, 60, false, 10).three === 0);
+  assert.ok(critChances(PERFECT + 0.001, 60, true, 10).two < critChances(1, 60, true, 10).two);
+  const rng = new Rng(3); let counts = [0, 0, 0, 0]; for (let i = 0; i < 4000; i++) counts[critSteps(rng, 1, 70, true, 10)]++;
+  assert.ok(counts[1] > 1500 && counts[2] > 300 && counts[3] > 20 && counts[0] === 0, JSON.stringify(counts)); assert.equal(critSteps(rng, 1, 70, true, 98), critSteps(new Rng(1), 1, 70, true, 98) >= 1 ? critSteps(new Rng(1), 1, 70, true, 98) : 1);
+  for (let i = 0; i < 300; i++) assert.ok(critSteps(rng, 1, 90, true, 98) <= 1, 'never past +99');
+  const { srv, mk } = world(), cs = mk('Master', 'blacksmith'), S = cs.session; S.P.level = 90; srv.recalc(S); toForge(srv, S);
+  const g = give(S.P, 'iron_sword'); let max = 0;
+  for (let i = 0; i < 60; i++) { R.addItem(S.P, 'iron_ingot', 40); R.addItem(S.P, 'coal', 40); const before = g.up ?? 0; if (before >= 20) break; srv.on_upgrade_start(S, { uid: g.uid }); S.upTicket.spec = S.upTicket.spec; // a perfect performance is injected below
+    const t = S.upTicket; const spec = t.spec, good = { heat: [], folds: [], rune: [], quench: 0, polish: [], medium: 'oil' };
+    { const h = spec.heat; let pos = h.center, v = 0, hold = false, from = 0; for (let tt = 0; tt < h.dur; tt += 20) { const want = pos < h.center - 0.01; if (want && !hold) { hold = true; from = tt; } else if (!want && hold) { hold = false; good.heat.push([from, tt]); } const k = 1 - Math.exp(-0.02 / h.tau), tg = hold ? h.up : -h.down, dr = h.drift * Math.sin((tt / 1000) * (6.2832 / h.dp) + h.dph); v += (tg - v) * k; pos += (v + dr) * 0.02; pos = Math.max(0, Math.min(1, pos)); } if (hold) good.heat.push([from, h.dur]); }
+    for (const f of spec.folds) { const times = []; let last = 0; for (let k = 0; k < f.strikes; k++) { let tt = last + 250; while (Math.abs(R.markerPos(f, tt) - f.centers[k]) > f.half * 0.25 && tt < 14000) tt += 5; times.push(tt); last = tt; } good.folds.push(times); }
+    { const pts = spec.rune.pts; for (let k = 1; k < pts.length; k++) for (let m = 0; m < 20; m++) good.rune.push([pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * m / 20, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * m / 20, 100]); }
+    { let tt = 0; while (Math.abs(R.markerPos(spec.quench, tt) - spec.quench.center) > spec.quench.half * 0.2) tt += 5; good.quench = tt; } for (let k = 0; k < spec.polish.need + 1; k++) good.polish.push(1000 + k * 500);
+    t.startAt = srv.now() - 30000; srv.on_upgrade_finish(S, { data: good }); max = Math.max(max, (g.up ?? 0) - before); }
+  assert.ok(max >= 2, `a perfect smith eventually lifts a piece by two or more at once (best ${max})`);
+});

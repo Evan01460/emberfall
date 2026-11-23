@@ -13,6 +13,7 @@ import { raidMethods } from './raids.js';
 import { bossMethods } from './bosses.js';
 import { upgradeMethods } from './upgrade.js';
 import { adventureMethods } from './adventure.js';
+import { scriptMethods } from './skillscripts.js';
 import { RAID_ARENA_IDS, RAIDS } from '../raids.js';
 import { pvpMethods } from './pvp.js';
 import { requestMethods } from './requests.js';
@@ -50,7 +51,7 @@ export class GameServer {
       this.markets = { main: createMarket(this.rng, 'main'), hollow: createMarket(this.rng, 'hollow') };
     }
     this.customers = [];            // customer entities currently in town
-    this.initProgress(state); this.initLive(state); this.initRaids(); this.initBosses(); this.initUpgrades(state); this.initPvp(state); this.initRequests(state);
+    this.initProgress(state); this.initLive(state); this.initRaids(); this.initBosses(); this.initUpgrades(state); this.initScripts(); this.initPvp(state); this.initRequests(state);
     this.initCombat();
     this.refillBotOrders();
     this.spawnCustomers();
@@ -460,7 +461,7 @@ export class GameServer {
       const g = P.gear.find((x) => x.uid === +m.uid);
       if (!g || g.id !== m.itemId || R.isEquipped(P, g.uid)) return this.toast(S, 'Unequip it first.', 'bad');
       if (R.gearLocked(P, g)) return this.toast(S, 'Crafters cannot list their own creations. Sell it to a Merchant, or fill a commission on the Orders tab.', 'bad');
-      q = g.q; affix = g.affix; x = { fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by, up: g.up }; P.gear.splice(P.gear.indexOf(g), 1); qty = 1;
+      q = g.q; affix = g.affix; x = { fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by }; P.gear.splice(P.gear.indexOf(g), 1); qty = 1;
     } else {
       if (qty > R.freeStack(P, m.itemId)) return this.toast(S, R.lockedStack(P, m.itemId) ? `Only ${R.freeStack(P, m.itemId)} of those are tradeable — your own creations can only go to Merchants or fill orders.` : 'Not enough items.', 'bad');
       if (!R.removeItem(P, m.itemId, qty)) return this.toast(S, 'Not enough items.', 'bad');
@@ -756,7 +757,7 @@ export class GameServer {
       const cust = mapId === 'town' ? this.customers.map((c) => ({ id: c.id, n: c.name, x: c.x, y: c.y, it: c.itemId })) : [];
       const cds = []; for (const p of getMap(mapId).points) if (p.kind === 'node' && (this.nodeCd[p.id] ?? 0) > nw) cds.push(p.id);
       const ev = this.fx[mapId] ? this.fx[mapId].splice(0) : [];
-      const snap = { t: 'snap', now: nw, players, mobs, projs, zones, cust, cds, ev, hz: this.hazardsView(mapId) };
+      const snap = { t: 'snap', now: nw, players, mobs, projs, zones, cust, cds, ev, hz: this.hazardsView(mapId), pz: this.pzView(mapId) };
       for (const S of list) S.conn.send(snap);
     }
     for (const k of Object.keys(this.fx)) if (!groups[k]) this.fx[k].length = 0;
@@ -767,4 +768,4 @@ export class GameServer {
   on_who(S) { S.conn.send({ t: 'who', players: [...this.sessions.values()].map((o) => ({ n: o.P.name, c: o.P.classId, l: o.P.level, map: getMap(o.map).name })) }); }
 }
 
-Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, raidMethods, bossMethods, upgradeMethods, adventureMethods, pvpMethods, requestMethods);
+Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, raidMethods, bossMethods, upgradeMethods, adventureMethods, scriptMethods, pvpMethods, requestMethods);

@@ -16,6 +16,7 @@ import { groundTile, wallSprite, doorSprite, treeSprite, rockSprite, crystalSpri
 import { uiIcon } from './icons.js';
 import { navTarget } from './worldmap.js';
 import { drawHazards } from './hazards.js';
+import { drawScriptFx } from './scriptfx.js';
 import { casts, drawGround, drawAir, drawNumbers, drawWork, drawSwing, hooks, ingest } from './fx.js';
 
 const NPC_COLORS = { vendor: '#8a5a2b', lore: '#3d5a8a', tavern: '#8a3d3d', hidden: '#6a3d8a' };
@@ -23,7 +24,7 @@ const NPC_CLS = (id) => (id.includes('vendor') ? 'merchant' : id.includes('warde
 const flipCache = new WeakMap();
 const SEARCHABLE = { barrel: 'Barrel (search)', crates: 'Crates (search)', bookshelf: 'Bookshelf (search)', coalbin: 'Coal bin (search)', herbs: 'Herb rack (gather)', potions: 'Potion shelf (search)', cart: 'Old cart (search)', rack: 'Weapon rack (search)', grave: 'Grave (search)', well: 'Well (drink)', bench: 'Bench (rest)', fountain: 'Fountain (toss a coin)' };
 const nightLevel = (p) => (p >= 0.5 && p < 0.95 ? 1 : p >= 0.4 && p < 0.5 ? (p - 0.4) * 10 : p >= 0.95 ? 1 - (p - 0.95) * 10 : Math.max(0, 0.5 - p * 10));
-export const weatherOf = (m, now) => { if (m.theme === 'snow') return 'snow'; if (m.theme === 'volcano') return 'ember'; if (m.theme === 'swamp') return 'rain'; if (m.theme !== 'main' || m.id === 'archive' || m.id === 'raid_bastion' || m.id === 'root_cellar' || m.id === 'sunken_vault') return null; const k = Math.sin(now / 140000 + (m.id.length * 1.7)) + Math.sin(now / 53000 + m.w) * 0.6; return k > 1.0 ? 'rain' : null; };
+export const weatherOf = (m, now) => { if (m.theme === 'snow') return 'snow'; if (m.theme === 'volcano' || m.theme === 'bonewaste') return 'ember'; if (m.theme === 'astral') return 'snow'; if (m.theme === 'swamp') return 'rain'; if (m.theme !== 'main' || m.id === 'archive' || m.id === 'raid_bastion' || m.id === 'root_cellar' || m.id === 'sunken_vault') return null; const k = Math.sin(now / 140000 + (m.id.length * 1.7)) + Math.sin(now / 53000 + m.w) * 0.6; return k > 1.0 ? 'rain' : null; };
 const flip = (spr) => { let f = flipCache.get(spr); if (!f) { f = flipped(spr); flipCache.set(spr, f); } return f; };
 const solidKinds = new Set(['forge', 'cauldron', 'exchange', 'camp', 'bazaar', 'gate', 'chest']);
 
@@ -218,7 +219,7 @@ export class WorldView {
     }
     for (const c of G.cust.values()) list.push({ y: c.y * TS + 8, fn: () => { blit(g, shadowSprite(12), c.x * TS, c.y * TS + 8); blit(g, personSprite('merchant', 'd', 0, 3, '#caa24a'), c.x * TS, c.y * TS + 8); blit(g, uiIcon('coin'), c.x * TS, c.y * TS - 36 + (Math.floor(t / 300) % 2) * C); drawTag(g, c.n, c.x * TS, c.y * TS - 52, '#ffe9a8'); } });
     const mobs = [...G.mobs.values()].filter((mb) => mb.rx !== undefined);
-    drawGround(g, mobs, G.zones, t); drawHazards(g, G.haz, (G.snapNow ?? 0) + (performance.now() - (G.snapAt ?? 0)), t);
+    drawGround(g, mobs, G.zones, t); { const sn = (G.snapNow ?? 0) + (performance.now() - (G.snapAt ?? 0)); drawHazards(g, G.haz, sn, t); drawScriptFx(g, G.pz, sn, t); }
     for (const mb of mobs) list.push({ y: mb.ry * TS + 6, fn: () => this.drawMob(g, mb, t) });
     for (const p of G.players.values()) { const self = p.id === G.id, X = (self ? G.pos.x : (p.rx ?? p.x)) * TS, Y = (self ? G.pos.y : (p.ry ?? p.y)) * TS; list.push({ y: Y + 8, fn: () => this.drawPlayer(g, p, self, X, Y, t) }); }
     list.sort((a, b) => a.y - b.y); for (const it of list) it.fn();

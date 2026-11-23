@@ -13,7 +13,7 @@ import { DRAUGHT_FX, FLASK_FX } from '../custom.js';
 import * as R from '../rules.js';
 
 const MOB_DMG = 1.3, DROP_DIST = 32, MOB_HEAL_DELAY = 10000, MOB_HEAL_RATE = 0.02, MOB_TICK = 0.05, DEAD_MS = 4000, REGEN_DELAY = 6000;   // enemies give up only when you are DROP_DIST tiles away; they heal 2%/s after 10 s unhurt
-const RADIUS = { brute: 0.6, warden: 0.95, unwritten: 1.05, husk: 0.55, stag: 0.55, hound: 0.4, worm: 0.55 };
+const RADIUS = { kraken: 1.2, titan: 1.1, myconid: 1.0, wyrmlord: 1.3, seraph: 1.0, minotaur: 0.65, tortoise: 0.55, wyvern: 0.6, automaton: 0.5, mushroom: 0.45, brute: 0.6, warden: 0.95, unwritten: 1.05, husk: 0.55, stag: 0.55, hound: 0.4, worm: 0.55 };
 const SHADE_MOVES = { warrior: ['smash', 'lunge'], blacksmith: ['smash', 'slam'], soulsmith: ['smash', 'slam'], mage: ['nova', 'flick'], archer: ['flick', 'lunge'], alchemist: ['spit', 'nova'], transmuter: ['spit', 'nova'], merchant: ['flick', 'claw'], broker: ['flick', 'claw'], desperado: ['flick', 'claw', 'lunge'], archivist: ['page_storm', 'spit'] };
 const ang = (ax, ay, bx, by) => Math.atan2(by - ay, bx - ax);
 const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return Math.abs(d); };
@@ -196,6 +196,7 @@ export const combatMethods = {
         this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: 'trap', trap: true, owner: S.id, power: sk.power, type: sk.type, stun: sk.stun, until: now + sk.dur, armedAt: now + 700, sk });
         break;
       }
+      case 'script': this.runScript(S, sk, a, tx, ty); break;
       case 'field': {
         const [cx, cy] = this.aimPoint(S, sk, tx, ty), f = sk.field;
         this.zones.push({ id: this.nextEnt++, map: S.map, x: cx, y: cy, r: sk.radius, k: sk.k ?? 'holy', field: f, owner: S.id, power: f.dmg ?? 0, type: sk.type, every: f.every, next: now + f.every, until: now + sk.dur, sk });
@@ -324,6 +325,7 @@ export const combatMethods = {
     const rawMob = o.hpUnits ? raw / HP_SCALE : raw; let dmg = o.hpUnits ? raw : raw * HP_SCALE;
     if (now < S.guardUntil) { dmg *= 1 - S.guardRed; if (o.mob && S.guardReflect) this.reflect(S, o.mob, rawMob * S.guardReflect); }
     if (now < S.tauntUntil) dmg *= 1 - S.tauntRed;
+    if (now < (S.aegisUntil ?? 0)) { dmg *= 1 - (S.aegisRed ?? 0); if (o.mob && S.aegisReflect) this.reflect(S, o.mob, rawMob * S.aegisReflect); }
     const bf = this.buffOf(S); if (bf?.red) dmg *= 1 - bf.red;
     const th = (st?.thorns ?? 0) + (S.rt.thorns ?? 0); if (th && o.mob) this.reflect(S, o.mob, rawMob * th);
     if (S.shield > 0 && now < S.shieldUntil) { const ab = Math.min(S.shield, dmg); S.shield -= ab; dmg -= ab; }
@@ -584,7 +586,7 @@ export const combatMethods = {
   },
   tickCombat(dt, nw) {
     for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= nw) { const t = this.timers.splice(i, 1)[0]; try { t.fn(); } catch (e) { console.error(e); } }
-    this.tickPlayers(dt, nw); this.tickMobs(dt, nw); this.tickProjectiles(dt, nw); this.tickZones(nw); this.tickHazards(nw);
+    this.tickPlayers(dt, nw); this.tickMobs(dt, nw); this.tickProjectiles(dt, nw); this.tickZones(nw); this.tickHazards(nw); this.tickScripts(nw, dt);
   },
 
   // ── duels (consensual PvP) ────────────────────────────────────────────────

@@ -118,7 +118,7 @@ function wire(net) {
     for (const p of m.mobs) { ms.add(p.id); const o = G.mobs.get(p.id); if (o) Object.assign(o, p); else G.mobs.set(p.id, { ...p }); }
     for (const id of [...G.mobs.keys()]) if (!ms.has(id)) G.mobs.delete(id);
     G.cust.clear(); for (const c of m.cust) G.cust.set(c.id, c);
-    G.cds = new Set(m.cds); G.zones = m.zones ?? []; G.haz = m.hz ?? []; G.snapNow = m.now; G.snapAt = performance.now(); syncProjectiles(m.projs ?? []); ingest(m.ev); G.guarding = !!G.players.get(G.id)?.gd;
+    G.cds = new Set(m.cds); G.zones = m.zones ?? []; G.haz = m.hz ?? []; G.pz = m.pz ?? []; G.snapNow = m.now; G.snapAt = performance.now(); syncProjectiles(m.projs ?? []); ingest(m.ev); G.guarding = !!G.players.get(G.id)?.gd;
   });
   net.on('me', (m) => {
     G.me = m.me; updateHud();
@@ -129,7 +129,7 @@ function wire(net) {
   net.on('correct', (m) => { G.pos.x = m.x; G.pos.y = m.y; });
   net.on('map', (m) => {
     closeAll(); G.map = m.id; G.pos = { x: m.x, y: m.y }; G.vis = new Set(m.vis); G.players.clear(); G.mobs.clear(); G.cust.clear(); G.gather = null;
-    G.haz = []; view.setMap(m.id); fadeIn(); const z = getMap(m.id); zoneBanner(z, ZONES[m.id]); toast(`${z.name}${ZONES[m.id]?.lvl ? ` — recommended Lv ${ZONES[m.id].lvl}+` : ''}`, z.theme === 'hollow' ? 'secret' : '');
+    G.haz = []; G.pz = []; view.setMap(m.id); fadeIn(); const z = getMap(m.id); zoneBanner(z, ZONES[m.id]); toast(`${z.name}${ZONES[m.id]?.lvl ? ` — recommended Lv ${ZONES[m.id].lvl}+` : ''}`, z.theme === 'hollow' ? 'secret' : '');
   });
   net.on('vis', (m) => { G.vis = new Set(m.vis); });
   net.on('toast', (m) => { toast(m.msg, m.kind); if (m.kind === 'secret') sfx('secret', 400); else if (m.kind === 'good') sfx('pickup', 200); });
@@ -191,7 +191,7 @@ function wire(net) {
   net.on('reqs', (m) => { G.reqs = m.list ?? []; if (isOpen('character')) refreshWindow('character'); });
   net.on('adv', onAdvList); net.on('adv.cur', onAdvCur); net.on('recall', onRecall);
   net.on('upgs', (m) => { G.upgs = m.list ?? []; if (isOpen('character')) refreshWindow('character'); });
-  net.on('upgrade.info', (m) => { G.upInfo = { ...m.info, smith: m.smith, myLvl: m.myLvl, bonus: m.bonus }; G.upInfoCb?.(G.upInfo); if (isOpen('character')) refreshWindow('character'); });
+  net.on('upgrade.info', (m) => { G.upInfo = { ...m.info, smith: m.smith, myLvl: m.myLvl, bonus: m.bonus, crit: m.crit }; G.upInfoCb?.(G.upInfo); if (isOpen('character')) refreshWindow('character'); });
   net.on('upgrade.ticket', (m) => startUpgrade(m));
   net.on('upgrade.result', (m) => { showUpgradeResult(m); updateHud(); });
   net.on('upgrade.cancelled', () => closeWindow('upgrade'));

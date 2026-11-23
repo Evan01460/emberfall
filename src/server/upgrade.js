@@ -9,9 +9,9 @@
 //     what it did, and the server re-scores that and rolls the dice. The score raises the odds; it can never guarantee success.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 import { ITEMS } from '../data.js';
-import { perkOf } from '../loadout.js';
+import { perkOf, masteryOf, isMythic } from '../loadout.js';
 import * as R from '../rules.js';
-import { MAX_UP, upLevel, upMult, baseChance, upgradeMats, suggestedFee, smithNeedLevel, dropChance, dropAmount, finalChance, upgradeSpec, QUICK_SCORE, tierOfGear } from '../upgrade.js';
+import { MAX_UP, upLevel, upMult, baseChance, upgradeMats, suggestedFee, smithNeedLevel, dropChance, dropAmount, finalChance, maxJump, upgradeSpec, QUICK_SCORE, tierOfGear, critSteps, critChances } from '../upgrade.js';
 
 export const UPG = { expireMs: 72 * 3600000, maxOut: 4, maxIn: 20, ticketMs: 10 * 60000 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -61,7 +61,7 @@ export const upgradeMethods = {
     const it = ITEMS[g.id];
     return { uid: g.uid ?? null, id: g.id, up: L, maxed: L >= MAX_UP, mats, chance: baseChance(L), needLvl: smithNeedLevel(g.id, L), fee: suggestedFee(g.id, L), multNow: upMult(L), multNext: upMult(L + 1), drop: dropChance(L), dropN: dropAmount(L), slot: it?.slot ?? null, tier: tierOfGear(g.id).name };
   },
-  on_upgrade_info(S, m) { const g = S.P.gear.find((x) => x.uid === +m.uid); if (!g) return; S.conn.send({ t: 'upgrade.info', info: this.stepInfo(S.P, g), smith: R.craftFamily(S.P) === 'blacksmith', myLvl: S.P.level, bonus: smithBonus(S.P, ITEMS[g.id]?.slot) }); },
+  on_upgrade_info(S, m) { const g = S.P.gear.find((x) => x.uid === +m.uid); if (!g) return; S.conn.send({ t: 'upgrade.info', info: this.stepInfo(S.P, g), smith: R.craftFamily(S.P) === 'blacksmith', myLvl: S.P.level, bonus: smithBonus(S.P, ITEMS[g.id]?.slot), crit: critChances(1, S.P.level, !!(masteryOf(S.P) || isMythic(S.P)), upLevel(g)) }); },
 
   // ── a smith upgrades their own gear ──
   on_upgrade_start(S, m) {
@@ -81,7 +81,7 @@ export const upgradeMethods = {
     { const st = this.stationFor(S, 'blacksmith'); if (st) this.emit(S.map, { t: 'work', k: 'blacksmith', x: st.x, y: st.y, ms: 6000 }); }
     S.upTicket = { job, spec, startAt: nw, expires: nw + UPG.ticketMs };
     if (quick) return this.finishUpgrade(S, null, true);
-    S.conn.send({ t: 'upgrade.ticket', spec, L: job.L, gear: gearView(job.gear), chance: baseChance(job.L), bonus: smithBonus(S.P, job.slot), mats: job.mats, self: !!job.self, jobId: job.jobId ?? null, owner: job.ownerName ?? null });
+    S.conn.send({ t: 'upgrade.ticket', spec, L: job.L, gear: gearView(job.gear), chance: baseChance(job.L), bonus: smithBonus(S.P, job.slot), reach: maxJump(S.P.level, !!(masteryOf(S.P) || isMythic(S.P))), crit: critChances(1, S.P.level, !!(masteryOf(S.P) || isMythic(S.P)), job.L), mats: job.mats, self: !!job.self, jobId: job.jobId ?? null, owner: job.ownerName ?? null });
   },
   on_upgrade_finish(S, m) { if (!S.upTicket) return; this.finishUpgrade(S, m?.data ?? null, !!m?.quick); },
   on_upgrade_cancel(S) { this.dropUpTicket(S, 'You stepped away from the anvil.'); },
@@ -90,20 +90,20 @@ export const upgradeMethods = {
     const t = S.upTicket; if (!t) return; S.upTicket = null; const { job, spec } = t, P = S.P, L = job.L, g = job.gear, slot = job.slot;
     const parts = quick ? { heat: 0, fold: 0, rune: 0, quench: 0, polish: 0, score: QUICK_SCORE } : scoreUpgrade(spec, data, this.now() - t.startAt);
     const bonus = smithBonus(P, slot), chance = finalChance(L, parts.score, bonus), roll = this.rng.range(0, 1), ok = roll < chance;
-    let to = L, dropped = 0;
-    if (ok) to = L + 1; else if (this.rng.chance(dropChance(L))) { dropped = Math.min(L, dropAmount(L)); to = L - dropped; }
+    let to = L, dropped = 0, steps = 0;
+    if (ok) { steps = quick ? 1 : critSteps(this.rng, parts.score, P.level, !!(masteryOf(P) || isMythic(P)), L); to = L + steps; } else if (this.rng.chance(dropChance(L))) { dropped = Math.min(L, dropAmount(L)); to = L - dropped; }
     if (to > 0) g.up = to; else delete g.up;
     P.stats.upgrades = (P.stats.upgrades ?? 0) + 1; if (ok) { P.stats.upgradeWins = (P.stats.upgradeWins ?? 0) + 1; P.stats.maxUp = Math.max(P.stats.maxUp ?? 0, to); }
     let fee = 0, owner = P;
     if (!job.self) {   // a job for someone else: the fee is the smith's, the piece goes home
       const J = this.upg.find((x) => x.id === job.jobId); owner = this.players.get(J.from) ?? P; fee = J.escrow; P.gilt += fee; P.stats.profit = (P.stats.profit ?? 0) + fee; J.escrow = 0;
-      J.status = 'done'; J.finished = this.now(); J.result = { ok, from: L, to, chance, dropped, score: parts.score }; J.gear = { ...g }; const back = R.addGear(owner, { ...g, crafted: g.crafted });
-      this.say(J.from, ok ? `${P.name} tempered your ${ITEMS[g.id].n} to +${to}!` : `${P.name}'s attempt on your ${ITEMS[g.id].n} failed${dropped ? ` and it fell back to +${to}` : ''}. It is back in your bag.`, ok ? 'secret' : 'bad');
+      J.status = 'done'; J.finished = this.now(); J.result = { ok, from: L, to, chance, dropped, score: parts.score, steps }; J.gear = { ...g }; const back = R.addGear(owner, { ...g, crafted: g.crafted });
+      this.say(J.from, ok ? `${P.name} tempered your ${ITEMS[g.id].n} to +${to}${steps > 1 ? ` — a ${steps === 2 ? 'double' : 'TRIPLE'} step!` : ''}!` : `${P.name}'s attempt on your ${ITEMS[g.id].n} failed${dropped ? ` and it fell back to +${to}` : ''}. It is back in your bag.`, ok ? 'secret' : 'bad');
       this.touch(this.sessions.get(J.from) ?? { dirtyMe: true }); const os = this.sessions.get(J.from); if (os) { this.recalc(os); this.afterChange(os); } void back; this.pushUpgsFor(J);
     } else { this.recalc(S); }
     const name = R.gearName({ ...g, up: to });
-    if (ok && (to % 10 === 0 || to >= 90)) this.systemChat(` ${P.name} tempered ${job.self ? 'their' : `${owner.name}'s`} ${ITEMS[g.id].n} to +${to}!`);
-    S.conn.send({ t: 'upgrade.result', ok, from: L, to, chance, roll, parts, dropped, quick: !!quick, name, gear: gearView({ ...g, up: to }), fee, self: !!job.self, owner: owner.name });
+    if (ok && (steps > 1 || to % 10 === 0 || to >= 90)) this.systemChat(` ${P.name} tempered ${job.self ? 'their' : `${owner.name}'s`} ${ITEMS[g.id].n} to +${to}!`);
+    S.conn.send({ t: 'upgrade.result', ok, from: L, to, steps, chance, roll, parts, dropped, quick: !!quick, name, gear: gearView({ ...g, up: to }), fee, self: !!job.self, owner: owner.name });
     this.afterChange(S); this.touch(S);
   },
   // give back what an unfinished attempt was holding (materials for a self-upgrade; for a job they stay in the job)
@@ -117,7 +117,7 @@ export const upgradeMethods = {
   upgView(j, P) {
     const mine = j.from === P.id ? 'from' : 'to', cr = this.players.get(j.to), L = upLevel(j.gear);
     const v = { id: j.id, mine, other: mine === 'from' ? j.toName : j.fromName, gear: gearView(j.gear), L, mats: Object.entries(j.mats).map(([id, n]) => ({ id, n })), price: j.price, status: j.status, left: Math.max(0, j.expires - this.now()), offer: j.offer ? { price: j.offer.price, byMe: j.offer.by === mine } : null, chance: baseChance(L), needLvl: smithNeedLevel(j.gear.id, L), result: j.result ?? null, created: j.created };
-    if (mine === 'to') { v.canDo = !!cr && R.craftFamily(cr) === 'blacksmith' && cr.level >= v.needLvl; v.bonus = cr ? smithBonus(cr, ITEMS[j.gear.id]?.slot) : 0; }
+    if (mine === 'to') { v.canDo = !!cr && R.craftFamily(cr) === 'blacksmith' && cr.level >= v.needLvl; v.bonus = cr ? smithBonus(cr, ITEMS[j.gear.id]?.slot) : 0; v.reach = cr ? maxJump(cr.level, !!(masteryOf(cr) || isMythic(cr))) : 1; }
     return v;
   },
   pushUpgs(S) { if (S) S.conn.send({ t: 'upgs', list: this.upg.filter((j) => (j.from === S.id || j.to === S.id) && (j.status === 'pending' || j.status === 'accepted' || (j.status === 'done' && this.now() - (j.finished ?? 0) < 6 * 3600000))).map((j) => this.upgView(j, S.P)) }); },

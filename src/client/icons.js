@@ -6,13 +6,20 @@ import { basicOf } from '../loadout.js';
 const cache = new Map();
 const memo = (k, fn) => { let v = cache.get(k); if (!v) { v = fn(); cache.set(k, v); } return v; };
 const TYPE = { slash: '#e8f0ff', pierce: '#ffe9a8', blunt: '#ffb870', arcane: '#b58cff' };
-const METAL = { iron: ['#9aa3ad', '#c8d0d8', '#6f7882'], steel: ['#b8cce8', '#e8f2ff', '#7a90b8'], shadow: ['#9a7ae0', '#d0baff', '#5a3ab0'] };
-const tier = (id) => (id.startsWith('hollow_') ? 'shadow' : id.startsWith('steel_') ? 'steel' : 'iron');
+const METAL = { iron: ['#9aa3ad', '#c8d0d8', '#6f7882'], steel: ['#b8cce8', '#e8f2ff', '#7a90b8'], shadow: ['#9a7ae0', '#d0baff', '#5a3ab0'], sun: ['#e0b24a', '#fff0a8', '#a07a1e'], moon: ['#cfe3f8', '#ffffff', '#7aa0d0'], cinder: ['#ff8a4a', '#ffd0a0', '#a04020'], aether: ['#6af0d0', '#d8fff0', '#2a9a88'] };
+const tier = (id) => (id.startsWith('hollow_') ? 'shadow' : id.startsWith('steel_') || id === 'steel_plate' ? 'steel' : id.startsWith('sun_') ? 'sun' : id.startsWith('moon_') ? 'moon' : id.startsWith('cinder_') ? 'cinder' : id.startsWith('aether_') ? 'aether' : 'iron');
 const wd = ['#8f633a', '#a67546', '#6a4528'];
 
 const sword = (p, m) => { p.line(3, 13, 12, 3, m[0]); p.line(4, 13, 13, 3, m[1]); p.line(2, 14, 4, 12, '#6a4528'); p.r(2, 10, 1, 1, '#e0b24a'); p.line(3, 11, 6, 14, '#e0b24a'); p.p(13, 2, '#ffffff'); };
 const spear = (p, m) => { p.line(2, 14, 12, 4, wd[0]); p.line(3, 14, 13, 4, wd[1]); p.r(11, 1, 3, 5, m[0]); p.r(12, 0, 1, 4, m[1]); p.p(12, 0, '#ffffff'); p.p(10, 4, m[2]); p.p(14, 5, m[2]); };
 const bow = (p, m) => { p.line(9, 1, 5, 4, wd[0]); p.line(5, 4, 4, 8, wd[0]); p.line(4, 8, 5, 12, wd[0]); p.line(5, 12, 9, 15, wd[0]); p.line(10, 1, 6, 4, wd[1]); p.line(6, 4, 5, 8, wd[1]); p.line(5, 8, 6, 12, wd[1]); p.line(6, 12, 10, 15, wd[1]); p.line(10, 1, 10, 15, '#e8e0d0'); p.line(3, 8, 14, 8, wd[2]); p.r(13, 7, 2, 3, m[0]); p.p(14, 8, '#ffffff'); p.r(2, 7, 2, 1, '#c8d0d8'); p.r(2, 9, 2, 1, '#c8d0d8'); p.p(9, 1, m[1]); p.p(9, 15, m[1]); };
+const hammer = (p, m) => { p.line(3, 14, 10, 7, wd[0]); p.line(4, 14, 11, 7, wd[1]); p.r(7, 2, 8, 5, m[0]); p.r(7, 2, 8, 1, m[1]); p.r(7, 6, 8, 1, m[2]); p.r(6, 3, 1, 3, m[2]); p.p(14, 3, '#ffffff'); };
+const wand = (p, m) => { p.line(3, 14, 11, 6, wd[0]); p.line(4, 14, 12, 6, wd[1]); p.r(10, 2, 4, 4, m[0]); p.r(11, 1, 2, 6, m[1]); p.r(9, 3, 6, 2, m[1]); p.p(12, 3, '#ffffff'); p.p(14, 6, m[2]); p.p(9, 5, m[2]); };
+const rapier = (p, m) => { p.line(4, 12, 14, 2, m[0]); p.line(5, 12, 15, 2, m[1]); p.line(2, 14, 5, 11, '#6a4528'); p.r(3, 9, 5, 1, m[2]); p.line(3, 10, 7, 12, m[2]); p.p(15, 1, '#ffffff'); };
+const pistol = (p, m) => { p.r(2, 5, 10, 3, m[0]); p.r(2, 5, 10, 1, m[1]); p.r(11, 4, 3, 5, m[2]); p.r(3, 8, 3, 6, wd[0]); p.r(3, 8, 1, 6, wd[1]); p.r(7, 8, 2, 3, m[2]); p.p(13, 4, '#ffffff'); p.r(6, 3, 2, 2, m[2]); };
+const robe = (p, c) => { const d = shade(c, 0.6), l = tint(c, '#ffffff', 0.35); p.r(4, 2, 8, 3, d); p.r(5, 2, 6, 1, l); p.r(3, 5, 10, 9, c); p.r(3, 5, 10, 1, l); p.r(1, 5, 3, 8, c); p.r(12, 5, 3, 8, c); p.r(7, 5, 2, 9, d); p.r(2, 13, 12, 1, d); p.r(6, 8, 4, 1, '#e0b24a'); p.p(8, 3, '#ffffff'); };
+const oreIcon = (p, a, b, g) => { p.ell(8, 9, 6.5, 5.5, a); p.ell(7, 8, 4.5, 3.5, b); for (const [x, y] of [[4, 7], [9, 5], [10, 10], [6, 11]]) { p.r(x, y, 2, 2, g); p.p(x, y, '#ffffff'); } };
+const ingotIcon = (p, a, l, d) => { p.r(2, 7, 12, 6, a); p.r(2, 7, 12, 2, l); p.r(2, 12, 12, 1, d); p.r(4, 5, 8, 2, a); p.p(5, 8, '#ffffff'); };
 const mace = (p, m) => { p.line(2, 14, 9, 7, wd[0]); p.line(3, 14, 10, 7, wd[1]); p.disc(11, 5, 3.5, m[0]); p.disc(10, 4, 2, m[1]); for (const [x, y] of [[11, 0], [15, 5], [11, 9], [7, 5]]) p.p(x, y, m[2]); p.p(10, 3, '#ffffff'); };
 const staff = (p, c) => { p.line(3, 14, 11, 6, wd[0]); p.line(4, 14, 12, 6, wd[1]); p.disc(12, 4, 3, c); p.disc(11, 3, 1.5, tint(c, '#ffffff', 0.6)); p.p(14, 1, '#ffffff'); p.p(15, 6, c); };
 const coat = (p, c, kind) => { const d = shade(c, 0.6), l = tint(c, '#ffffff', 0.3); p.r(3, 3, 10, 11, c); p.r(3, 3, 10, 1, l); p.r(1, 3, 3, 7, c); p.r(12, 3, 3, 7, c); p.r(1, 3, 3, 1, l); p.r(12, 3, 3, 1, l); p.r(6, 2, 4, 3, shade(c, 0.5)); p.r(7, 3, 2, 8, d); p.r(3, 11, 10, 1, '#3a2a20'); p.p(8, 11, '#e0b24a');
@@ -30,6 +37,9 @@ const ITEM = {
   ink: (p) => { bottle(p, '#1c1830'); p.p(7, 8, '#6a5aa0'); },
   parchment: (p) => { p.r(3, 3, 10, 11, '#e8dcc0'); p.r(2, 2, 12, 2, '#d0c098'); p.r(2, 13, 12, 2, '#d0c098'); for (let i = 0; i < 4; i++) p.r(4, 6 + i * 2, 8 - (i % 2) * 2, 1, '#8a7a5a'); },
   sunsteel_ore: (p) => { p.ell(8, 9, 6.5, 5.5, '#9a8250'); p.ell(7, 8, 4.5, 3.5, '#c0a468'); for (const [x, y] of [[4, 7], [9, 5], [10, 10], [6, 11]]) { p.r(x, y, 2, 2, '#ffd04a'); p.p(x, y, '#fff6c0'); } },
+  moonsilver_ore: (p) => oreIcon(p, '#7a90a8', '#b8d0e8', '#e8f6ff'), moonsilver_ingot: (p) => ingotIcon(p, '#b8d0e8', '#ffffff', '#5a7898'),
+  cinder_ore: (p) => oreIcon(p, '#6a3a2a', '#a05a38', '#ff8a2e'), cinder_ingot: (p) => ingotIcon(p, '#d8602a', '#ffc08a', '#7a2a10'),
+  aether_ore: (p) => oreIcon(p, '#2a6a60', '#4ab8a0', '#8affe8'), aether_ingot: (p) => ingotIcon(p, '#4ad8b8', '#d8fff0', '#1a6a58'),
   sunsteel_ingot: (p) => { p.r(2, 7, 12, 6, '#d8a040'); p.r(2, 7, 12, 2, '#ffe08a'); p.r(2, 12, 12, 1, '#8a5a1a'); p.r(4, 5, 8, 2, '#e8b858'); p.p(5, 8, '#ffffff'); },
   frostbloom: (p) => { p.r(7, 7, 2, 8, '#5a8aa0'); p.ell(4, 12, 3, 1.5, '#7ab0c8'); p.ell(12, 11, 3, 1.5, '#7ab0c8'); p.disc(8, 5, 3.6, '#a8d8ff'); p.disc(8, 5, 2.2, '#e8f8ff'); p.p(8, 5, '#ffffff'); },
   frost_elixir: (p) => bottle(p, '#7fd8ff', true),
@@ -53,9 +63,11 @@ const ITEM = {
 };
 function gearIcon(id) {
   const it = ITEMS[id], t = tier(id), m = METAL[t];
-  if (it.slot === 'weapon') return id.includes('bow') ? (p) => bow(p, m) : it.wtype === 'slash' ? (p) => sword(p, m) : it.wtype === 'pierce' ? (p) => spear(p, m) : it.wtype === 'blunt' ? (p) => mace(p, m) : (p) => staff(p, t === 'shadow' ? '#a984ff' : '#8ad8ff');
+  if (it.slot === 'weapon') return id.includes('bow') ? (p) => bow(p, m) : id.includes('hammer') ? (p) => hammer(p, m) : id.includes('wand') ? (p) => wand(p, m) : id.includes('rapier') ? (p) => rapier(p, m) : id.includes('pistol') ? (p) => pistol(p, m) : it.wtype === 'slash' ? (p) => sword(p, m) : it.wtype === 'pierce' ? (p) => spear(p, m) : it.wtype === 'blunt' ? (p) => mace(p, m) : (p) => staff(p, t === 'shadow' ? '#a984ff' : t === 'sun' ? '#ffd36a' : t === 'moon' ? '#bfe0ff' : t === 'cinder' ? '#ff8a4a' : t === 'aether' ? '#6af0d0' : '#8ad8ff');
+  if (it.slot === 'armor' && id.includes('robe')) return (p) => robe(p, { shadow: '#6a3ab0', steel: '#4a6ab8', sun: '#d8b040', moon: '#8ab0e0', cinder: '#c0502a', aether: '#3ac0a8' }[t] ?? '#5a4a9a');
   if (it.slot === 'armor') return (p) => coat(p, t === 'shadow' ? '#5a3a9a' : t === 'steel' ? '#8aa0c8' : id.includes('mail') ? '#7a8a98' : '#8a5a38', id.includes('plate') || id.includes('aegis') ? 'plate' : id.includes('mail') ? 'mail' : 'leather');
-  return id.includes('locket') ? (p) => locket(p, t === 'shadow' ? '#a984ff' : '#4a90e0') : (p) => band(p, '#6fc08b');
+  const cc = { shadow: '#a984ff', steel: '#6aa8f0', sun: '#ffd36a', moon: '#bfe0ff', cinder: '#ff8a4a', aether: '#6af0d0' }[t];
+  return id.includes('forgecharm') ? (p) => { p.r(3, 9, 10, 4, METAL[t][0]); p.r(3, 9, 10, 1, METAL[t][1]); p.r(5, 6, 6, 3, METAL[t][2]); p.r(4, 13, 8, 1, METAL[t][2]); p.p(8, 4, '#ffffff'); p.p(8, 5, cc ?? '#ff9f6b'); } : id.includes('locket') ? (p) => locket(p, cc ?? '#4a90e0') : (p) => band(p, cc ?? '#6fc08b');
 }
 const tomeIcon = (p, sid) => { const c = CLASSES[SKILLS[sid].cls[0]]?.color ?? '#8a7ab0'; p.r(2, 2, 12, 12, shade(c, 0.55)); p.r(3, 3, 10, 10, c); p.r(2, 2, 12, 1, tint(c, '#ffffff', 0.5)); p.r(2, 2, 1, 12, shade(c, 0.4)); p.r(11, 3, 2, 10, '#e8dcc0'); p.r(5, 5, 4, 1, '#e0b24a'); p.r(5, 7, 4, 1, '#e0b24a'); p.r(5, 9, 3, 1, '#e0b24a'); p.p(6, 11, '#e0b24a'); };
 export function itemIcon(id) {

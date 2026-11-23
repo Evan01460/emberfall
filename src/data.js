@@ -5,6 +5,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { EXTRA_SKILLS, PATHS, MYTHICS, COMBOS } from './skilldata.js';
+import { buildGearSets } from './gearsets.js';
+import { NEW_ENEMIES, NEW_ZONES } from './content2.js';
+export { FIT_BONUS, ARCH, TIERS, fits, fitsOf, archOf, tierOf, classGear, ALL_CLASSES } from './gearsets.js';
 export { PATHS, MYTHICS, COMBOS };
 
 export const TYPE_ICON = { slash: '', pierce: '', blunt: '', arcane: '', guard: '', evade: '', counter: '⟲' };
@@ -75,11 +78,11 @@ export const BASICS = {
   blacksmith: { kind: 'melee', icon: '', name: 'Hammer Swing', power: 12, cd: 700, range: 1.5, arc: 120, type: 'blunt', combo: 'heavy' },
   alchemist: { kind: 'proj', icon: '', name: 'Flask Toss', power: 9, cd: 640, speed: 8, range: 7, radius: 0.3, count: 1, type: 'arcane', aoe: 0.9 },
   merchant: { kind: 'proj', icon: '', name: 'Coin Toss', power: 8, cd: 440, speed: 12, range: 8, radius: 0.22, count: 1, type: 'pierce' },
-  desperado: { kind: 'proj', icon: '', name: 'Revolver', power: 9, cd: 430, speed: 18, range: 10, radius: 0.22, count: 1, type: 'pierce' },
-  archivist: { kind: 'proj', icon: '', name: 'Ink Lash', power: 8, cd: 420, speed: 13, range: 8, radius: 0.25, count: 1, type: 'arcane' },
-  soulsmith: { kind: 'melee', icon: '', name: 'Hammer Swing', power: 13, cd: 680, range: 1.5, arc: 120, type: 'blunt', combo: 'heavy' },
-  broker: { kind: 'proj', icon: '', name: 'Coin Toss', power: 8, cd: 430, speed: 12, range: 8, radius: 0.22, count: 1, type: 'pierce' },
-  transmuter: { kind: 'proj', icon: '', name: 'Flask Toss', power: 9, cd: 650, speed: 8, range: 7, radius: 0.3, count: 1, type: 'arcane', aoe: 0.9 },
+  desperado: { kind: 'proj', icon: '', name: 'Twin Revolvers', power: 7, cd: 400, speed: 20, range: 11, radius: 0.22, count: 2, spread: 8, type: 'pierce', fx: { critChance: 0.5 } },
+  archivist: { kind: 'proj', icon: '', name: 'Quill Storm', power: 7, cd: 380, speed: 15, range: 9, radius: 0.24, count: 3, spread: 22, type: 'arcane' },
+  soulsmith: { kind: 'melee', icon: '', name: 'Coldforge Hammer', power: 19, cd: 640, range: 1.9, arc: 130, type: 'arcane', combo: 'heavy' },
+  broker: { kind: 'proj', icon: '', name: 'Silver Salvo', power: 7, cd: 400, speed: 17, range: 10, radius: 0.22, count: 2, spread: 10, type: 'pierce', fx: { crit: 0 } },
+  transmuter: { kind: 'proj', icon: '', name: 'Quicksilver Flask', power: 13, cd: 620, speed: 9, range: 8, radius: 0.3, count: 1, type: 'arcane', aoe: 1.3 },
 };
 
 // ── Enemy moves (telegraphed; the red shape on the ground is what will hit) ──
@@ -132,15 +135,15 @@ export const CLASSES = {
     role: 'Moves goods — including between the two worlds, where prices differ wildly.', skills: [['fistful', 1], ['hard_bargain', 2], ['silver_tongue', 4], ['audit', 6]] },
   // ── Hidden classes ──
   desperado: { id: 'desperado', group: 'combat', hidden: true, name: 'Desperado', icon: '', color: '#b04080', tie: '#b04080', hp: 86, hpPer: 13, atk: 6, def: 2, move: 1.04, passives: ['cornered'],
-    desc: 'HIDDEN. Cornered: damage rises as your health falls. Wager skills have a flat 50% crit chance — you thrive on the edge of death.', skills: [['wager', 1], ['loaded_dodge', 2], ['dead_mans_hand', 4], ['double_down', 6]] },
+    desc: 'HIDDEN. Cornered: damage rises as your health falls. Wager skills have a flat 50% crit chance — you thrive on the edge of death.', skills: [['loaded_dice', 1], ['bluff_step', 2], ['dead_mans_draw', 4], ['all_in', 6]] },
   archivist: { id: 'archivist', group: 'combat', hidden: true, name: 'Archivist', icon: '', color: '#8ad8d0', tie: '#8ad8d0', hp: 76, hpPer: 11, atk: 5, def: 2, move: 1.02, taintImmune: true, mpRegen: 1.8,
-    desc: 'HIDDEN. Faster mana regeneration, and the Shadowfell cannot drain you.', skills: [['ink_slash', 1], ['footnote', 2], ['rewrite', 4], ['final_chapter', 6]] },
+    desc: 'HIDDEN. Faster mana regeneration, and the Shadowfell cannot drain you.', skills: [['inkblade_flurry', 1], ['margin_note', 2], ['living_lexicon', 4], ['epilogue', 6]] },
   soulsmith: { id: 'soulsmith', group: 'trade', hidden: true, from: ['blacksmith'], name: 'Soulsmith', icon: '', color: '#ff9f6b', tie: '#ff9f6b', hp: 98, hpPer: 13, atk: 5, def: 4, move: 0.96, gather: { ore: 1.5, coal: 1.5 },
-    desc: 'HIDDEN. Everything you forge gains a Resonance affix and never comes out Crude.', skills: [['hot_tongs', 1], ['anvil_guard', 2], ['resonant_strike', 4], ['molten_nova', 6]] },
+    desc: 'HIDDEN. Everything you forge gains a Resonance affix and never comes out Crude.', skills: [['resonant_hammer', 1], ['forged_soul', 2], ['ember_chains', 4], ['coldstar_nova', 6]] },
   broker: { id: 'broker', group: 'trade', hidden: true, from: ['merchant'], name: 'Broker', icon: '', color: '#e8e8ff', tie: '#e8e8ff', hp: 76, hpPer: 10, atk: 5, def: 2, move: 1,
-    desc: 'HIDDEN. Sees tomorrow\'s demand in both markets, rolls haggle dice twice and keeps the best, 2% fees.', skills: [['fistful', 1], ['hard_bargain', 2], ['insider_strike', 4], ['audit', 6]] },
+    desc: 'HIDDEN. Sees tomorrow\'s demand in both markets, rolls haggle dice twice and keeps the best, 2% fees.', skills: [['foresight_volley', 1], ['margin_call', 2], ['leveraged_buyout', 4], ['liquidation', 6]] },
   transmuter: { id: 'transmuter', group: 'trade', hidden: true, from: ['alchemist'], name: 'Transmuter', icon: '', color: '#d0a0ff', tie: '#d0a0ff', hp: 72, hpPer: 10, atk: 7, def: 1, move: 1, gather: { herb: 1.5, ghostbloom: 1.5 },
-    desc: 'HIDDEN. Cauldrons obey you: lower burst risk and a free extra bottle from every batch.', skills: [['acid_splash', 1], ['smoke_step', 2], ['transmute', 4], ['catalyze', 6]] },
+    desc: 'HIDDEN. Cauldrons obey you: lower burst risk and a free extra bottle from every batch.', skills: [['quicklime_flask', 1], ['lead_to_gold', 2], ['catalytic_surge', 4], ['grand_transmutation', 6]] },
 };
 export const BASE_CLASSES = ['warrior', 'mage', 'archer', 'blacksmith', 'alchemist', 'merchant'];
 export const COMBAT_CLASSES = ['warrior', 'mage', 'archer'];
@@ -417,6 +420,8 @@ export const ZONES = {
   raid_bastion: { id: 'raid_bastion', name: 'Cinderhold Bastion (Raid)', realm: 'main', lvl: 22, enemies: [], boss: 'ember_tyrant' },
   ruined_citadel: { id: 'ruined_citadel', name: 'The Ruined Citadel', realm: 'main', lvl: 20, enemies: ['fallen_knight', 'cursed_priest', 'gargoyle', 'dread_hound'], boss: 'citadel_lord', elite: 'death_knight' },
 };
+Object.assign(ENEMIES, NEW_ENEMIES); Object.assign(ZONES, NEW_ZONES);   // the endgame regions (src/content2.js)
+
 
 // Resource nodes by type
 export const NODE_TYPES = {
@@ -431,6 +436,8 @@ export const NODE_TYPES = {
   frostbloom: { name: 'Frostbloom', icon: '', item: 'frostbloom', qty: [1, 3], ms: 1600, respawn: 55 },
   echo: { name: 'Echo Crystal', icon: '', item: 'echo_shard', qty: [1, 2], ms: 2400, respawn: 90 },
 };
+buildGearSets(ITEMS, RECIPES, NODE_TYPES);   // the full gear grid (every class, seven metal tiers), new ores, recipes and honest prices
+
 
 // ── Hidden-content journal hints (progressive, cryptic) ─────────────────────
 export const HINTS = [

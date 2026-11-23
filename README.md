@@ -10,7 +10,7 @@ characters, monsters, icons, attack effects, text and UI are drawn in code as pi
 ```bash
 npm install
 npm start            # online server + game at http://localhost:8080
-npm test             # 85 tests
+npm test             # 89 tests
 npm run build        # → dist/emberfall.html : one self-contained file, solo mode, double-click to play
 ```
 
@@ -111,3 +111,9 @@ host/server.mjs             Node host: static files, WebSocket, accounts (scrypt
 * No account recovery, moderation tools or rate limiting beyond basic flood control and login throttling.
 * One server process = one world shard (a few hundred players is realistic).
 * All art, music and sound are generated in code. The public world depends on PeerJS's free public broker (not tested against it from the build sandbox — tested end-to-end against a local broker) and on a host being present; a published artifact page cannot open peer connections.
+
+## What's new (latest)
+* **Unique hidden and mythic skills**, stronger hidden-class basics, and **cinematics** for ascending, hidden classes and a different one for each mythic class.
+* **Seven gear tiers** (new: Moonsilver, Cinderforged, Aetherium) with gear **made for every class** (+10% when it fits, shown on every item and in Character → Overview); honest prices; no gear from chests.
+* **Three new regions and two new dungeons** with new enemies, bosses and ores.
+* **Accepted bounties never expire**; customer orders can be promised and kept for 3 days.

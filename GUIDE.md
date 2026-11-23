@@ -190,3 +190,50 @@ Each rewards a powerful **class-specific hidden skill** (e.g. Warrior: Phantom E
 * **Requests are the only direct sale for crafters:** open Character → Trading. Everything else a Blacksmith/Alchemist makes can only be sold through Merchants (wholesale orders / a direct trade with a Merchant).
 * **Keybinds:** press **K**. **Tutorial:** Help (H) → Replay the tutorial. **Public world:** one global room; your character is also saved in your own browser.
 * **Bows (for Archers):** Short Bow (Blacksmith lvl 2: 2 Iron Ingot + 2 Leather), Longbow (lvl 5: 2 Steel Ingot + 3 Leather), Shadowsteel Bow (lvl 7: 2 Shadowsteel Ingot + 2 Leather + 1 Echo Shard), Sunsteel Bow (lvl 11: 3 Sunsteel Ingot + 2 Leather). New Archers start with a Short Bow; ask a Blacksmith for the rest in Character → Trading.
+
+---
+
+## 14. Gear, classes and the new tiers
+
+**Seven metal tiers**, each a full set: Iron → Steel → Shadowsteel → Sunsteel → **Moonsilver** (lv 14+) → **Cinderforged** (lv 17+) → **Aetherium** (lv 20+). The three new metals come from new ores: *Moonsilver Ore* (Moonspire Heights, Frostpeak, Crystal Caverns), *Cinder Ore* (The Cinder Foundry, Emberwaste), *Aether Ore* (Aether Reach, Ruined Citadel). Smelt each into an ingot first (Blacksmith; Cinder needs 3 coal).
+
+**Gear is made for classes.** Every piece shows "Made for: …" and gives **+10% to its stats** when it suits your class. Anything can be equipped, but the bonus is the point. Character → Overview shows what suits *your* class.
+
+| Class | Weapons | Armour | Charms |
+|---|---|---|---|
+| Warrior | Blade, Spear, Maul | Hauberk, Aegis | Anvil Charm |
+| Mage | Staff | Robes | Locket |
+| Archer | Bow | Leathers | Band |
+| Blacksmith | Forgehammer | Hauberk, Aegis | Anvil Charm |
+| Alchemist | Alembic Wand | Robes | Locket |
+| Merchant | Rapier, Spear | Leathers | Band |
+| Archivist | Staff | Robes | Locket |
+| Desperado | Revolver, Blade | Leathers | Band |
+| Soulsmith | Forgehammer | Hauberk | Anvil Charm |
+| Broker | Rapier | Leathers | Band |
+| Transmuter | Alembic Wand | Robes | Locket |
+| Yggdrasil's Apostle | Staff, Bow | Leathers | Locket |
+| Void Sovereign | Blade, Staff | Hauberk | Band |
+| Titan Forgemaster | Forgehammer | Aegis | Anvil Charm |
+| Philosopher's Heir | Alembic Wand | Robes | Locket |
+| Gilded Sovereign | Rapier, Spear | Leathers | Band |
+
+**Prices:** gear is never worth less than its materials — top-tier pieces cost thousands. **Chests no longer drop gear.**
+
+## 15. New regions and dungeons
+
+* **Moonspire Heights** (lv 22) — north of the Crystal Caverns. Village *Silverhold*; **Moonlit Barrow** dungeon (lv 23-27, boss The Barrow King); world boss lair: **The Moon Queen**.
+* **The Cinder Foundry** (lv 25) — east of the Emberwaste. Village *Slagwright's Rest*; boss **The Forge Tyrant**.
+* **Aether Reach** (lv 28) — north of the Ruined Citadel. Village *Star-Broker's Rest*; **Aether Vault** dungeon (lv 29-33, boss The Vault Warden); boss **The Aether Sovereign**.
+
+## 16. Hidden and mythic skills (all unique now)
+
+Hidden and mythic classes no longer borrow anyone's skills: **Archivist** (Inkblade Flurry, Margin Note, Living Lexicon, Epilogue), **Desperado** (Loaded Dice, Bluff Step, Dead Man's Draw, All In), **Soulsmith** (Resonant Hammer, Forged Soul, Ember Chains, Coldstar Nova), **Broker** (Foresight Volley, Margin Call, Leveraged Buyout, Liquidation), **Transmuter** (Quicklime Flask, Lead to Gold, Catalytic Surge, Grand Transmutation). Mythic classes replaced their last borrowed skills too (Titan Grip, Quicksilver Burst, Gilded Barrage). Hidden classes also have their own stronger basic attacks.
+
+## 17. Bounties and customer orders
+
+Bounties are now **accepted** at the board and **never expire once accepted** (up to 6 at a time; abandon any). Un-accepted offers refresh daily. Tell a town customer **"I'll bring it"** and the order is kept on the board for 3 days even after they leave.
+
+## 18. Cinematics
+
+Ascending, mastery, every hidden class and each of the five mythic classes play their own full-screen pixel-art sequence (click or Esc to skip after a moment).

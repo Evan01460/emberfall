@@ -276,6 +276,7 @@ export class GameServer {
     if (!pt || dist(S.x, S.y, pt.x, pt.y) > 3.2) return this.toast(S, 'Move closer.');
     const res = R.unlockHidden(S.P, m.id);
     if (!res.ok) return this.toast(S, res.msg, 'bad');
+    if (R.HIDDEN[m.id]?.kind === 'class') S.conn.send({ t: 'cine', kind: 'hidden', id: m.id, name: res.name.toUpperCase(), color: CLASSES[m.id]?.color, sub: CLASSES[m.id]?.desc?.replace(/^HIDDEN\.\s*/, '').slice(0, 80) ?? '' });
     S.conn.send({ t: 'secret.done', name: res.name, msg: res.msg });
     this.systemChat(` ${S.P.name} has become a ${res.name}.`);
     this.afterChange(S);
@@ -283,7 +284,7 @@ export class GameServer {
   }
 
   afterChange(S) {
-    this.levelNotices(S);
+    this.levelNotices(S); if (this.reqs?.some((r) => r.to === S.id && r.status === 'accepted')) this.pushReqs(S);   // a crafter's open requests re-check what they now hold
     for (const h of R.checkHints(S.P)) this.toast(S, ' Your journal has a new entry.', 'secret');
     this.touch(S);
     S.conn.send({ t: 'vis', vis: this.visibleIds(S) });
@@ -517,7 +518,7 @@ export class GameServer {
     let cand = null;
     if (it.k === 'gear') cand = P.gear.filter((g) => g.id === c.itemId && g.q >= c.minQ && !R.isEquipped(P, g.uid) && !R.gearLocked(P, g)).sort((a, b) => a.q - b.q)[0];
     else if (R.freeStack(P, c.itemId) > 0) cand = { id: c.itemId };
-    if (!cand) return S.conn.send({ t: 'ui', panel: 'dialog', name: c.name, icon: 'customer', lines: [`I'm looking for ${it.n}${it.k === 'gear' ? ` (quality ${Math.round(c.minQ * 100)}% or better)` : ''}. ${R.isCrafter(P) && (P.crafted?.[c.itemId] || P.gear.some((g) => g.id === c.itemId && g.crafted)) ? 'Hm, I only deal with Merchants for guild-made goods. Sell it to one — or wait for a commission.' : 'Come back when you have one.'}`] });
+    if (!cand) return S.conn.send({ t: 'ui', panel: 'dialog', name: c.name, icon: 'customer', lines: [`I'm looking for ${it.n}${it.k === 'gear' ? ` (quality ${Math.round(c.minQ * 100)}% or better)` : ''}. ${R.isCrafter(P) && (P.crafted?.[c.itemId] || P.gear.some((g) => g.id === c.itemId && g.crafted)) ? 'Hm, I only deal with Merchants for guild-made goods. Sell it to one — or wait for a commission.' : 'Come back when you have one.'}`], actions: R.isCrafter(P) ? [] : [{ label: "I'll bring it", msg: { t: 'cust.promise', id: c.id } }] });
     this.customers = this.customers.filter((x) => x !== c);
     const h = R.haggleStart(this.markets.main, c, cand.q);
     S.haggle = { c, h, item: { itemId: c.itemId, uid: cand.uid, q: cand.q } };

@@ -4,6 +4,7 @@ import { connectPublic } from './p2p.js';
 import { dedicatedServer } from './config.js';
 import { answered } from './ask.js';
 import { startTutorial } from './tutorial.js';
+import { playCinematic, afterCinematic } from './cinematic.js';
 import { connectWs, connectLocal, soloCharacters, wipeSolo } from './net.js';
 import { WorldView } from './worldview.js';
 import { buildHud, updateHud, updateHotbar, showDeath, hideDeath, setPrompt, minimapCanvas, addChat, showAnnounce, showInvite, setPvp, setWar, playerMenu, showWho, openTrade, updateTrade, endTrade, dismissMenu } from './ui.js';
@@ -149,7 +150,8 @@ function wire(net) {
     }
   });
   net.on('market', (m) => updateExchange(m.view));
-  net.on('secret.done', (m) => { sfx('secret', 400); showSecretDone(m); });
+  net.on('cine', (m) => { closeAll(); playCinematic(m); });
+  net.on('secret.done', (m) => afterCinematic(() => { sfx('secret', 400); showSecretDone(m); }));
   net.on('gather.begin', (m) => { G.gather = { id: m.id, start: performance.now(), ms: m.ms }; });
   net.on('gather.cancel', () => { G.gather = null; });
   net.on('gather.done', (m) => { sfx('pickup', 100); G.gather = null; toast(`+ ${Object.entries(m.found).map(([id, n]) => `${n}× ${ITEMS[id].n}`).join(', ')}`, 'good'); });

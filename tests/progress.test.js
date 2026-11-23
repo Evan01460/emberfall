@@ -261,9 +261,16 @@ test('bounty board: three or four daily bounties that track kills, gathering and
   const { srv, clock } = world(); const a = client(srv, 'Hunter', 'warrior'); a.P.level = 6;
   const board = getMap('town').points.find((p) => p.kind === 'board'); a.teleport('town', board.x, board.y + 1); a.send('interact', { id: board.id });
   const ui = a.last('ui'); assert.equal(ui.panel, 'bounty'); assert.ok(ui.list.length >= 3);
-  const k = ui.list.find((b) => b.type === 'kill'); for (let i = 0; i < k.need; i++) srv.bountyEvent(a.S, 'kill', k.key);
+  const k = ui.list.find((b) => b.type === 'kill'); for (let i = 0; i < k.need; i++) srv.bountyEvent(a.S, 'kill', k.key); assert.equal(a.P.bounties.list.find((b) => b.id === k.id).got, 0, 'nothing counts until you accept');
+  a.send('bounty.accept', { id: k.id }); for (let i = 0; i < k.need; i++) srv.bountyEvent(a.S, 'kill', k.key);
   const g0 = a.P.gilt; a.send('bounty.claim', { id: k.id }); assert.ok(a.P.gilt > g0, 'paid'); a.send('bounty.claim', { id: k.id }); assert.equal(a.P.gilt, g0 + k.gilt, 'only once');
-  clock.t += 86400000 + 1000; a.send('bounty.open'); assert.ok(a.last('ui').list.every((b) => b.got === 0), 'new day, new bounties');
+  // an accepted bounty survives the daily reset (with its progress); unaccepted offers are replaced
+  const other = a.last('ui').list.find((b) => b.type === 'gather') ?? a.last('ui').list.find((b) => !b.claimed && !b.accepted); a.send('bounty.accept', { id: other.id }); srv.bountyEvent(a.S, other.type, other.key, 2);
+  const before = a.P.bounties.list.filter((b) => !b.accepted).map((b) => b.id);
+  clock.t += 3 * 86400000 + 1000; a.send('bounty.open'); const ui2 = a.last('ui'); const kept = ui2.list.find((b) => b.id === other.id);
+  assert.ok(kept && kept.accepted && kept.got === Math.min(2, other.need), 'accepted bounty and its progress survived three days'); assert.ok(ui2.list.every((b) => b.accepted || !before.includes(b.id)), 'old unaccepted offers were replaced');
+  // customer promises persist even after the customer leaves
+  const c = srv.customers[0]; a.teleport('town', c.x, c.y + 1); a.send('cust.promise', { id: c.id }); assert.equal(a.P.promises.length, 1); srv.customers = []; clock.t += 86400000; a.send('bounty.open'); assert.equal(a.last('ui').promises.length, 1, 'the promised order is still on the board');
   const s = client(srv, 'Crafty', 'blacksmith'); s.P.level = 6; assert.ok(srv.ensureBounties(s.P).list.some((b) => b.type === 'craft'), 'crafters get crafting bounties');
 });
 

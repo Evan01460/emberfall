@@ -1,7 +1,7 @@
 // Windows opened by interacting with the world. Every action goes to the server;
 // panels simply render the latest state the server sent. All icons are pixel sprites.
 import { G, blockInput } from './state.js';
-import { ITEMS, CLASSES, SKILLS, BASICS, RECIPES, HINTS, gradeOf, AFFIXES, qualityStatMult, TYPE_ICON } from '../data.js';
+import { ITEMS, CLASSES, SKILLS, BASICS, RECIPES, HINTS, gradeOf, AFFIXES, qualityStatMult, TYPE_ICON, fitsOf, classGear, FIT_BONUS } from '../data.js';
 import { vendorBuyPrice, vendorSellPrice, TRADE_ITEMS } from '../economy.js';
 import { heatStart, heatStep, heatBand, markerPos, strikeScore, isCrafter, lockedStack, freeStack, QUENCH, REAGENTS } from '../rules.js';
 import { h, sleep, spark, fmt, toast } from '../ui-lib.js';
@@ -41,13 +41,21 @@ export const refreshWindow = (n) => open[n]?.render();
 export const topWindow = () => Object.keys(open).at(-1);
 
 const itemLabel = (id, n) => h('span', { class: 'item' }, I.item(id, 22), n != null ? `${n}x ` : '', ITEMS[id].n);
-const gearLabel = (g) => { const gr = gradeOf(g.q), af = g.affix && AFFIXES.find((a) => a.id === g.affix); return h('span', { class: 'item' }, I.item(g.id, 22), h('span', { class: 'grade', style: { color: gr.color } }, gearName(g)), h('span', { class: 'dim' }, `(${gr.name} ${Math.round(g.q * 100)}%)`), g.by ? h('span', { class: 'tag g', title: g.crafted ? 'Your own creation: it can only be sold to a Merchant or used to fill an order.' : `Forged by ${g.by}` }, `forged by ${g.by}`) : null, (g.fx?.length || g.ench?.length) ? h('span', { class: 'tag v' }, `${(g.fx?.length ?? 0) + (g.ench?.length ?? 0)} effect${(g.fx?.length ?? 0) + (g.ench?.length ?? 0) === 1 ? '' : 's'}`) : null); };
+export const gearLabel = (g) => { const gr = gradeOf(g.q), af = g.affix && AFFIXES.find((a) => a.id === g.affix); return h('span', { class: 'item' }, I.item(g.id, 22), h('span', { class: 'grade', style: { color: gr.color } }, gearName(g)), h('span', { class: 'dim' }, `(${gr.name} ${Math.round(g.q * 100)}%)`), g.by ? h('span', { class: 'tag g', title: g.crafted ? 'Your own creation: it can only be sold to a Merchant or used to fill an order.' : `Forged by ${g.by}` }, `forged by ${g.by}`) : null, (g.fx?.length || g.ench?.length) ? h('span', { class: 'tag v' }, `${(g.fx?.length ?? 0) + (g.ench?.length ?? 0)} effect${(g.fx?.length ?? 0) + (g.ench?.length ?? 0) === 1 ? '' : 's'}`) : null); };
+// "What should I wear?" — derived from the same table that decides the +10% class-fit bonus.
+function gearAdvice(me) {
+  const g = classGear(me.classId), list = (a) => a.length ? a.join(', ') : '—';
+  return h('div', { class: 'card', style: { margin: '8px 0', padding: '8px 12px' } }, h('b', {}, `Gear made for a ${CLASSES[me.classId].name}`), h('div', { style: { fontSize: '13px', marginTop: '3px' } }, `Weapons: ${list(g.weapon)}  ·  Armour: ${list(g.armor)}  ·  Charms: ${list(g.charm)}`),
+    h('div', { class: 'dim', style: { fontSize: '12px' } }, `Gear made for your class gives +${Math.round(FIT_BONUS * 100)}% to its stats. Anything can be equipped — the bonus is the only difference. Metal tiers rise: Iron → Steel → Shadowsteel → Sunsteel → Moonsilver → Cinderforged → Aetherium.`));
+}
+let recAll = false;
 export function gearStatText(g) {
   const it = ITEMS[g.id], m = qualityStatMult(g.q), out = [];
   if (it.atk) out.push(`ATK +${(it.atk * m).toFixed(1)}`); if (it.def) out.push(`DEF +${(it.def * m).toFixed(1)}`); if (it.hp) out.push(`HP +${Math.round(it.hp * m)}`);
   if (it.mp) out.push(`MP +${Math.round(it.mp * m)}`); if (it.spd) out.push(`Speed +${Math.floor(it.spd * m)}`); if (it.wtype) out.push(`${it.wtype} (+10% dmg)`);
   const af = g.affix && AFFIXES.find((a) => a.id === g.affix); if (af) out.push(`${af.name}: ${af.text}`);
   out.push(...gearFxLines(g));
+  const fl = fitsOf(g.id); if (fl.length) out.push(`Made for: ${fl.map((c) => CLASSES[c]?.name ?? c).join(', ')}${G.me && fl.includes(G.me.classId) ? ` — SUITS YOUR CLASS (+${Math.round(FIT_BONUS * 100)}% stats)` : ''}`);
   return out.join(' / ');
 }
 
@@ -63,7 +71,7 @@ export function openCharacter(tab) {
       body = h('div', {}, h('div', { class: 'row sb' }, h('h2', { class: 'row' }, I.cls(me.classId, 32), `${me.name} - ${cls.name}${cls.hidden ? ' (hidden)' : ''}`), h('span', { class: 'tag g' }, `Level ${me.level}`)),
         h('div', { class: 'bar xp', style: { margin: '4px 0 10px' } }, h('i', { style: { width: `${me.xpNeed ? (me.xp / me.xpNeed) * 100 : 100}%` } })),
         h('div', { class: 'row' }, h('span', { class: 'tag g' }, `HP ${u.maxHp}`), h('span', { class: 'tag' }, `MP ${u.maxMp}`), h('span', { class: 'tag' }, `ATK ${Math.round(u.atk)}`), h('span', { class: 'tag' }, `DEF ${Math.round(u.def)}`), h('span', { class: 'tag' }, `Speed x${u.move.toFixed(2)}`), h('span', { class: 'tag' }, `Damage x${u.dmgMult.toFixed(2)}`)),
-        h('p', { class: 'dim' }, cls.desc), cls.role ? h('p', {}, h('b', {}, 'Your place in the economy: '), cls.role) : null,
+        h('p', { class: 'dim' }, cls.desc), gearAdvice(me), cls.role ? h('p', {}, h('b', {}, 'Your place in the economy: '), cls.role) : null,
         isCrafter(me) ? h('p', { class: 'gold', style: { fontSize: '13px' } }, 'Crafter rule: you cannot list your creations on the Exchange or sell them to the vendor. Sell them to a Merchant, or fill a commission (Orders tab).') : null,
         cls.group === 'trade' && !isCrafter(me) ? h('p', { class: 'gold', style: { fontSize: '13px' } }, 'Merchant rule: post wholesale buy orders for crafters\' goods at the price you choose, then resell on the Exchange at any price.') : null,
         !cls.hidden ? h('p', { class: 'dim' }, 'Hidden classes exist. Nobody will tell you how to find them.') : null,
@@ -93,9 +101,10 @@ export function openCharacter(tab) {
 }
 
 // ── dialogs ─────────────────────────────────────────────────────────────────
-export function showDialog({ name, lines }) {
+export function showDialog({ name, lines, actions = [] }) {
   let i = 0;
-  openWindow('dialog', name, (w) => h('div', {}, h('p', { class: 'speech' }, lines[i]), h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, i < lines.length - 1 ? h('button', { class: 'btn gold', onclick: () => { i++; w.render(); } }, 'Next') : h('button', { class: 'btn gold', onclick: () => closeWindow('dialog') }, 'Farewell'))));
+  openWindow('dialog', name, (w) => h('div', {}, h('p', { class: 'speech' }, lines[i]), h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+    i < lines.length - 1 ? h('button', { class: 'btn gold', onclick: () => { i++; w.render(); } }, 'Next') : [...actions.map((a) => h('button', { class: 'btn primary', onclick: () => { send(a.msg); closeWindow('dialog'); } }, a.label)), h('button', { class: 'btn gold', onclick: () => closeWindow('dialog') }, 'Goodbye')])), { icon: 'book' });
 }
 export function showSecret(m) {
   openWindow('secret', m.title, () => h('div', { class: 'secret-body' }, h('p', {}, m.text), h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '14px' } },
@@ -125,10 +134,11 @@ export function openTavern() {
 let extras = new Set();
 export function openCraft(family) {
   openWindow('craft', family === 'blacksmith' ? 'Forge & Anvil' : 'Alchemist\'s Cauldron', () => {
-    const me = G.me, recs = RECIPES.filter((r) => r.craft === family && (!r.secret || me.flags?.[r.secret]));
+    const me = G.me, recs = RECIPES.filter((r) => r.craft === family && (!r.secret || me.flags?.[r.secret]) && (recAll || r.lvl <= me.level + 4 || r.smelt)).sort((a, b) => a.lvl - b.lvl || a.out.localeCompare(b.out));
     return h('div', {}, h('div', { class: 'row' }, bigSprite(prop(family === 'blacksmith' ? 'anvil' : 'cauldron', 0), 64), h('p', { class: 'dim' }, family === 'blacksmith' ? 'Stop the marker inside the glowing sweet spot. Quality sets the stats and the price of everything you forge. Remember: your creations can only be sold to Merchants or to players who order them.' : 'Add catalyst for more bottles - every addition raises the risk of a burst. Your brews can only be sold to Merchants or to players who order them.')),
       family === 'alchemist' ? h('div', { class: 'card hl', style: { margin: '8px 0' } }, h('div', { class: 'row sb' }, h('div', {}, h('b', {}, 'Custom brewing'), h('div', { class: 'dim', style: { fontSize: '12px' } }, 'Draughts, thrown flasks and enchanting essences with effects you choose.')), h('button', { class: 'btn gold', disabled: !canCustomise(me), title: canCustomise(me) ? '' : 'Custom brewing needs level 5', onclick: () => openCustomBrew() }, 'Custom brew'))) : null,
       family === 'alchemist' ? h('div', { class: 'card', style: { margin: '8px 0' } }, h('b', {}, 'Reagents (optional, up to 2, consumed): '), h('span', { class: 'row', style: { display: 'inline-flex', marginLeft: '8px' } }, Object.entries(REAGENTS).map(([id, rg]) => h('button', { class: `btn small ${extras.has(id) ? 'gold' : 'ghost'}`, disabled: count(id) < 1, title: rg.note, onclick: () => { if (extras.has(id)) extras.delete(id); else if (extras.size < 2) extras.add(id); refreshWindow('craft'); } }, `${rg.name} x${count(id)}`)))) : null,
+      h('div', { class: 'row', style: { margin: '4px 0' } }, h('button', { class: `btn small ${recAll ? 'gold' : 'ghost'}`, onclick: () => { recAll = !recAll; refreshWindow('craft'); } }, recAll ? 'Showing every recipe' : 'Showing recipes up to your level + 4 (click for all)')),
       h('div', { class: 'grid g3' }, recs.map((r) => {
         const it = ITEMS[r.out], locked = me.level < r.lvl, ok = !locked && Object.entries(r.in).every(([id, n]) => count(id) >= n), fake = it.k === 'gear' ? { id: r.out, q: 0.5 } : null;
         return h('div', { class: 'card', style: { opacity: locked ? 0.5 : 1 } },
@@ -427,10 +437,19 @@ export function openRaid(m) {
     h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, h('button', { class: 'btn primary', disabled: st.busy, onclick: () => { send({ t: 'raid.enter' }); closeWindow('raid'); } }, 'Enter the Bastion'), h('button', { class: 'btn ghost', onclick: () => closeWindow('raid') }, 'Not yet'))), { icon: 'forge' });
 }
 export function openBounty(m) {
-  openWindow('bounty', 'Bounty Board', () => h('div', {}, h('p', { class: 'dim' }, `New bounties every day (in about ${Math.max(1, Math.round(m.resetIn / 3600000))}h). Progress counts wherever you are.`),
-    m.list.map((b) => h('div', { class: 'card', style: { margin: '6px 0' } }, h('div', { class: 'row sb' }, h('div', {}, h('b', {}, b.text), h('div', { class: 'dim', style: { fontSize: '12px' } }, `${b.got} / ${b.need} · reward ${b.gilt}g + ${b.xp} XP`)),
-      b.claimed ? h('span', { class: 'tag g' }, 'claimed') : h('button', { class: 'btn small gold', disabled: b.got < b.need, onclick: () => send({ t: 'bounty.claim', id: b.id }) }, 'Claim')),
-      h('div', { class: 'bar xp', style: { height: '6px', marginTop: '6px' } }, h('i', { style: { width: `${Math.min(100, (b.got / b.need) * 100)}%` } }))))), { icon: 'book' });
+  openWindow('bounty', 'Bounty Board', () => {
+    const mine = m.list.filter((b) => b.accepted && !b.claimed), offers = m.list.filter((b) => !b.accepted && !b.claimed);
+    const card = (b) => h('div', { class: 'card', style: { margin: '6px 0' } }, h('div', { class: 'row sb' }, h('div', {}, h('b', {}, b.text), h('div', { class: 'dim', style: { fontSize: '12px' } }, `${b.accepted ? `${b.got} / ${b.need} · ` : ''}reward ${fmt(b.gilt)}g + ${fmt(b.xp)} XP`)),
+      b.accepted ? h('span', { class: 'row' }, h('button', { class: 'btn small gold', disabled: b.got < b.need, onclick: () => send({ t: 'bounty.claim', id: b.id }) }, 'Claim'), h('button', { class: 'btn small ghost', title: 'Give this one up', onclick: () => { if (confirm('Abandon this bounty and its progress?')) send({ t: 'bounty.abandon', id: b.id }); } }, 'Abandon'))
+        : h('button', { class: 'btn small primary', onclick: () => send({ t: 'bounty.accept', id: b.id }) }, 'Accept')),
+      b.accepted ? h('div', { class: 'bar xp', style: { height: '6px', marginTop: '6px' } }, h('i', { style: { width: `${Math.min(100, (b.got / b.need) * 100)}%` } })) : null);
+    return h('div', {},
+      h('p', { class: 'dim' }, `Accept a bounty to start it — accepted bounties and promised customer orders never expire. The board offers a fresh set in about ${Math.max(1, Math.round(m.resetIn / 3600000))}h; offers you have not accepted are replaced.`),
+      h('h3', {}, `Your bounties (${mine.length}/6)`), mine.length ? mine.map(card) : h('p', { class: 'dim' }, 'None yet — accept one below. Progress counts wherever you are.'),
+      (m.promises ?? []).length ? [h('h3', { style: { marginTop: '10px' } }, 'Promised customer orders'), (m.promises ?? []).map((q) => h('div', { class: 'card', style: { margin: '6px 0' } }, h('div', { class: 'row sb' }, h('div', {}, h('b', {}, `${q.who} wants ${ITEMS[q.itemId]?.n ?? q.itemId}${q.minQ ? ` (${Math.round(q.minQ * 100)}%+)` : ''}`), h('div', { class: 'dim', style: { fontSize: '12px' } }, `pays ${fmt(q.pay)}g · kept ${Math.max(1, Math.round((q.until - Date.now()) / 3600000)) > 72 ? 72 : Math.max(1, Math.round((q.until - Date.now()) / 3600000))}h (approx.)`)),
+        h('span', { class: 'row' }, h('button', { class: 'btn small gold', disabled: !q.have, title: q.have ? '' : 'You do not have one that fits', onclick: () => send({ t: 'promise.deliver', id: q.id }) }, 'Deliver'), h('button', { class: 'btn small ghost', onclick: () => send({ t: 'promise.cancel', id: q.id }) }, 'Drop')))))] : null,
+      h('h3', { style: { marginTop: '10px' } }, 'Today\'s offers'), offers.length ? offers.map(card) : h('p', { class: 'dim' }, 'Nothing new right now.'));
+  }, { icon: 'book' });
 }
 // Guild war panel: the live score, or (for a leader) a picker to declare war on another guild.
 function warCard(g, lead) {

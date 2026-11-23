@@ -37,7 +37,15 @@ export const requestMethods = {
   reqView(r, P) {
     const mine = r.from === P.id ? 'from' : 'to', cr = this.players.get(r.to), rec = recipeFor(cr ? R.craftFamily(cr) : null, r.itemId);
     const v = { id: r.id, mine, other: mine === 'from' ? r.toName : r.fromName, itemId: r.itemId, qty: r.qty, minQ: r.minQ, price: r.price, status: r.status, ready: !!r.ready, left: Math.max(0, r.expires - this.now()), offer: r.offer ? { price: r.offer.price, byMe: r.offer.by === mine } : null };
-    if (mine === 'to') { v.canMake = canMakeKind(P, rec); v.needLvl = rec?.lvl ?? 0; v.secret = !!rec?.secret; v.have = this.reqStock(P, r).length; }
+    if (mine === 'to') {
+      v.canMake = canMakeKind(P, rec); v.needLvl = rec?.lvl ?? 0; v.secret = !!rec?.secret; const st = this.reqStock(P, r); v.have = st.length;
+      if (ITEMS[r.itemId]?.k === 'gear') {   // every fitting piece (customised, enchanted, with effects… all count), and the near-misses so the crafter can see why
+        const view = (g) => ({ uid: g.uid, id: g.id, q: g.q, affix: g.affix ?? null, fx: g.fx ?? null, ench: g.ench ?? null, cname: g.cname ?? null, by: g.by ?? null });
+        v.stock = st.slice(0, 12).map(view);
+        v.below = P.gear.filter((g) => g.id === r.itemId && g.q < r.minQ && !R.isEquipped(P, g.uid)).sort((a, b) => b.q - a.q).slice(0, 3).map(view);
+        v.worn = P.gear.filter((g) => g.id === r.itemId && g.q >= r.minQ && R.isEquipped(P, g.uid)).length;
+      }
+    }
     return v;
   },
   pushReqs(S) { if (S) S.conn.send({ t: 'reqs', list: this.reqs.filter((r) => (r.from === S.id || r.to === S.id) && (r.status === 'pending' || r.status === 'accepted')).map((r) => this.reqView(r, S.P)) }); },
@@ -117,7 +125,11 @@ export const requestMethods = {
   },
   on_req_deliver(S, m) {
     const r = this.reqOf(S, m); if (!r || r.to !== S.id || r.status !== 'accepted') return;
-    const P = S.P, to = this.players.get(r.from), stock = this.reqStock(P, r); if (!to) return;
+    const P = S.P, to = this.players.get(r.from); let stock = this.reqStock(P, r); if (!to) return;
+    if (Array.isArray(m.uids) && ITEMS[r.itemId]?.k === 'gear') {            // the crafter picked exactly which pieces to hand over
+      const want = [...new Set(m.uids.map(Number))], pick = want.map((u) => stock.find((g) => g.uid === u)).filter(Boolean);
+      if (pick.length !== want.length || pick.length !== r.qty) return this.toast(S, `Pick exactly ${r.qty} fitting piece${r.qty === 1 ? '' : 's'}.`, 'bad'); stock = pick;
+    }
     if (stock.length < r.qty) return this.toast(S, `You do not hold ${r.qty}× ${ITEMS[r.itemId].n}${r.minQ ? ` of quality ${Math.round(r.minQ * 100)}%+` : ''}. Forge/brew it first.`, 'bad');
     const it = ITEMS[r.itemId];
     if (it.k === 'gear') for (const g of stock.slice(0, r.qty)) { P.gear.splice(P.gear.indexOf(g), 1); R.addGear(to, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, by: g.by ?? P.name }); }

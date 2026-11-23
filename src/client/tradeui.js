@@ -5,12 +5,13 @@ import { ITEMS, CLASSES, RECIPES, gradeOf } from '../data.js';
 import { craftFamily } from '../rules.js';
 import { h, fmt } from '../ui-lib.js';
 import * as I from './icons.js';
-import { refreshWindow } from './panels.js';
+import { refreshWindow, gearLabel } from './panels.js';
+import { gearFxLines } from './customui.js';
 import { whisperTo } from './ui.js';
 
 const send = (m) => G.net.send(m), netSend = send;
 const FAM = { blacksmith: 'Blacksmith', alchemist: 'Alchemist' };
-let sub = 'requests', draft = null, loaded = false;
+let sub = 'requests', draft = null, lastLoad = 0; const picked = new Map();   // request id -> uids the crafter chose to hand over
 const priceTag = (id) => Math.max(10, Math.round((ITEMS[id]?.v ?? 20) * 1.4));
 const itemRow = (id, qty) => h('span', { class: 'row', style: { gap: '6px' } }, I.item(id, 22), h('b', {}, `${qty && qty > 1 ? qty + '× ' : ''}${ITEMS[id]?.n ?? id}`));
 const reload = () => { send({ t: 'req.list' }); send({ t: 'req.crafters' }); };
@@ -18,7 +19,7 @@ export const openRequestTo = (name, fam) => { draft = { to: name, fam, itemId: n
 export const pendingForMe = () => (G.reqs ?? []).filter((r) => (r.mine === 'to' && r.status === 'pending') || (r.mine === 'from' && r.ready)).length;
 
 export function tradingTab(me) {
-  if (!loaded) { loaded = true; reload(); }
+  if (performance.now() - lastLoad > 6000) { lastLoad = performance.now(); reload(); }   // what you hold changes while you craft: re-check regularly
   const nav = h('div', { class: 'row', style: { marginBottom: '8px' } }, [['requests', `Requests${(G.reqs ?? []).length ? ` (${G.reqs.length})` : ''}`], ['find', 'Find a crafter'], ['nearby', 'Players nearby']].map(([id, l]) => h('button', { class: `btn small ${sub === id ? 'gold' : ''}`, onclick: () => { sub = id; refreshWindow('character'); } }, l)));
   const note = h('p', { class: 'dim', style: { fontSize: '12px' } }, 'Blacksmiths and Alchemists may only sell what has been REQUESTED of them (here, or on the Exchange commission board). Everything else they make can only be sold through Merchants.');
   return h('div', {}, nav, note, sub === 'requests' ? requestsView(me) : sub === 'find' ? findView(me) : nearbyView(me));
@@ -45,11 +46,14 @@ function reqCard(r, me) {
     h('button', { class: 'btn small primary', disabled: !r.canMake, title: r.canMake ? '' : `Needs craft level ${r.needLvl}${r.secret ? ' and a secret recipe' : ''}`, onclick: () => send({ t: 'req.accept', id: r.id }) }, 'Accept'),
     h('button', { class: 'btn small ghost', onclick: () => send({ t: 'req.reject', id: r.id }) }, 'Reject'), ...common];
   else actions = [h('button', { class: 'btn small', disabled: r.have < r.qty, title: r.have < r.qty ? 'Make it first' : 'Tell them it is ready', onclick: () => send({ t: 'req.ready', id: r.id }) }, r.ready ? 'Tell again: ready' : 'It is ready'),
-    h('button', { class: 'btn small primary', disabled: r.have < r.qty, onclick: () => send({ t: 'req.deliver', id: r.id }) }, `Deliver for ${fmt(r.price)}g`), h('button', { class: 'btn small ghost', onclick: () => send({ t: 'req.reject', id: r.id }) }, 'Call off'), ...common];
+    h('button', { class: 'btn small primary', disabled: r.have < r.qty, onclick: () => { const uids = r.stock ? (picked.get(r.id)?.length === r.qty ? picked.get(r.id) : r.stock.slice(0, r.qty).map((g) => g.uid)) : undefined; send({ t: 'req.deliver', id: r.id, uids }); picked.delete(r.id); } }, `Deliver for ${fmt(r.price)}g`), h('button', { class: 'btn small ghost', onclick: () => send({ t: 'req.reject', id: r.id }) }, 'Call off'), ...common];
   return h('div', { class: 'card', style: { marginBottom: '8px' } },
     h('div', { class: 'row sb' }, h('div', {}, h('div', { class: 'dim', style: { fontSize: '12px' } }, head), itemRow(r.itemId, r.qty)), h('div', { style: { textAlign: 'right' } }, h('b', { class: 'gold' }, `${fmt(r.price)}g`), h('div', { class: 'row', style: { justifyContent: 'flex-end', marginTop: '3px' } }, tags))),
     !mineReq && r.status === 'pending' && !r.canMake ? h('p', { class: 'red', style: { fontSize: '12px', margin: '6px 0' } }, `You cannot make this yet (needs craft level ${r.needLvl}${r.secret ? ' and a secret recipe' : ''}). You can only reject.`) : null,
-    !mineReq && r.status === 'accepted' ? h('p', { class: 'dim', style: { fontSize: '12px', margin: '6px 0' } }, `You hold ${r.have} fitting ${it?.n ?? 'item'}${r.have === 1 ? '' : 's'}. ${r.have >= r.qty ? 'Deliver it, or press Ready to tell them first.' : 'Forge or brew it at your station, then come back.'}`) : null,
+    !mineReq && r.status === 'accepted' ? h('div', {}, h('p', { class: 'dim', style: { fontSize: '12px', margin: '6px 0' } }, `You hold ${r.have} fitting ${it?.n ?? 'item'}${r.have === 1 ? '' : 's'}${r.minQ > 0 ? ` (quality ${Math.round(r.minQ * 100)}%+; customised, enchanted or special-effect pieces all count)` : ' (customised, enchanted or special-effect pieces all count)'}. ${r.have >= r.qty ? 'Pick which to hand over, then Deliver — or press Ready to tell them first.' : 'Forge or brew it at your station, then come back.'}`),
+      r.stock?.length ? r.stock.map((g, i) => { const sel = picked.get(r.id) ?? r.stock.slice(0, r.qty).map((x) => x.uid), on = sel.includes(g.uid); return h('label', { class: 'row', style: { margin: '3px 0', alignItems: 'flex-start', cursor: 'pointer' } }, h('input', { type: r.qty > 1 ? 'checkbox' : 'radio', name: `pick${r.id}`, checked: on, onchange: () => { const cur = new Set(picked.get(r.id) ?? r.stock.slice(0, r.qty).map((x) => x.uid)); if (r.qty === 1) { cur.clear(); cur.add(g.uid); } else if (cur.has(g.uid)) cur.delete(g.uid); else cur.add(g.uid); picked.set(r.id, [...cur]); } }), h('span', {}, gearLabel(g), gearFxLines(g).length ? h('div', { class: 'dim', style: { fontSize: '11px' } }, gearFxLines(g).join(' · ')) : null)); }) : null,
+      r.below?.length ? h('p', { class: 'red', style: { fontSize: '12px', margin: '6px 0' } }, `Below the asked quality: ${r.below.map((g) => `${Math.round(g.q * 100)}%${g.cname ? ` “${g.cname}”` : ''}`).join(', ')} — propose a lower quality, or forge a better one.`) : null,
+      r.worn ? h('p', { class: 'dim', style: { fontSize: '12px', margin: '6px 0' } }, `${r.worn} fitting piece${r.worn === 1 ? ' is' : 's are'} equipped — unequip to hand over.`) : null) : null,
     mineReq && r.status === 'accepted' ? h('p', { class: r.ready ? 'gold' : 'dim', style: { fontSize: '12px', margin: '6px 0' } }, r.ready ? `${r.other} says it is READY. They will hand it over; your ${fmt(r.price)}g is paid on delivery.` : `${r.other} accepted. You will be told when it is ready.`) : null,
     offer, h('div', { class: 'row', style: { marginTop: '6px', flexWrap: 'wrap' } }, actions));
 }

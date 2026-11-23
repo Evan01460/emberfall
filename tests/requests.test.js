@@ -119,3 +119,42 @@ test('creating a character with a name that already exists never replaces or re-
   const conn = { msgs: [], send(m) { this.msgs.push(m); }, session: null }; const r = srv.join(conn, { name: 'taken', create: { classId: 'mage' } });
   assert.equal(r.ok, false); assert.match(r.error, /already taken/); assert.equal(srv.players.get(id).level, 9); assert.equal(srv.players.get(id).gilt, 777); assert.equal(srv.players.get(id).classId, 'warrior'); assert.equal(srv.players.size, 1);
 });
+
+test('requests: customised / effect-bearing pieces of the asked-for item all count, the crafter can pick which to hand over, and near-misses are explained', () => {
+  const { srv, buyer, smith } = setup(); smith.P.level = 8; buyer.send('req.new', { to: 'Smith', itemId: 'steel_bow', minQ: 0.5, price: 120 }); const r = srv.reqs[0]; smith.send('req.accept', { id: r.id });
+  const plain = R.addGear(smith.P, { id: 'steel_bow', q: 0.6, crafted: true, by: 'Smith' });
+  const fancy = R.addGear(smith.P, { id: 'steel_bow', q: 0.82, crafted: true, by: 'Smith', affix: 'keen', fx: [{ id: 'keen', k: 1.1 }], ench: [{ id: 'honed', k: 1 }], cname: 'Whisper' });
+  const weak = R.addGear(smith.P, { id: 'steel_bow', q: 0.35, crafted: true, by: 'Smith', fx: [{ id: 'keen', k: 1 }] });
+  const v = srv.reqView(r, smith.P); assert.equal(v.have, 2, 'plain and customised both fit'); assert.deepEqual(v.stock.map((g) => g.uid).sort(), [plain.uid, fancy.uid].sort()); assert.equal(v.stock.find((g) => g.uid === fancy.uid).cname, 'Whisper'); assert.deepEqual(v.below.map((g) => g.uid), [weak.uid], 'the 35% one is shown as below the asked quality');
+  smith.send('req.deliver', { id: r.id, uids: [weak.uid] }); assert.equal(r.status, 'accepted', 'an ineligible piece cannot be handed over');
+  smith.send('req.deliver', { id: r.id, uids: [fancy.uid] }); assert.equal(r.status, 'done'); const got = buyer.P.gear.at(-1); assert.equal(got.cname, 'Whisper'); assert.equal(got.affix, 'keen'); assert.equal(got.fx[0].id, 'keen'); assert.equal(got.ench[0].id, 'honed'); assert.ok(smith.P.gear.some((g) => g.uid === plain.uid), 'the plain one stayed');
+});
+
+import { ITEMS, RECIPES, CLASSES, classGear, ALL_CLASSES, FIT_BONUS, TIERS } from '../src/data.js';
+import { rtStats } from '../src/units.js';
+test('gear: every class — hidden and mythic too — has weapons and armour made for it, fit gives +10%, and top tiers cost what they are worth', () => {
+  for (const c of ALL_CLASSES) { const g = classGear(c); assert.ok(CLASSES[c], c); assert.ok(g.weapon.length && g.armor.length, `${c} has weapons and armour made for it`); }
+  const P = R.newPlayer({ id: 'g1', name: 'Fit', classId: 'archer' }); P.level = 10; const sword = R.addGear(P, { id: 'iron_sword', q: 0.5 }), bow = R.addGear(P, { id: 'short_bow', q: 0.5 });
+  P.equip.weapon = sword.uid; const a0 = rtStats(P).atk; P.equip.weapon = bow.uid; const a1 = rtStats(P).atk;
+  assert.ok(a1 >= a0 - 1e-9, 'an archer is at least as strong with the bow made for them as with an equal sword');
+  for (const t of TIERS) for (const r of RECIPES.filter((x) => ITEMS[x.out]?.k === 'gear' && x.out.startsWith(t.id + '_'))) { const cost = Object.entries(r.in).reduce((n, [id, q]) => n + ITEMS[id].v * q, 0); assert.ok(ITEMS[r.out].v >= cost * t.mult * 0.98, `${r.out} is not cheaper than its materials`); }
+  assert.ok(ITEMS.sun_blade.v >= 1500 && ITEMS.aether_sword.v > ITEMS.moon_sword.v, 'higher tiers cost more'); assert.equal(TIERS.length, 7, 'seven metal tiers');
+  const ing = RECIPES.find((r) => r.out === 'moonsilver_ingot'); assert.ok(ing && ING_OK(ing)); function ING_OK(r) { return Object.keys(r.in).every((k) => ITEMS[k]); }
+  // a fitting piece is 10% stronger than the identical stats worn by a class it is not made for
+  const W = R.newPlayer({ id: 'g2', name: 'Fit2', classId: 'warrior' }), Mg = R.newPlayer({ id: 'g3', name: 'Fit3', classId: 'mage' }); W.level = Mg.level = 10;
+  for (const X of [W, Mg]) { X.gear = []; const s = R.addGear(X, { id: 'sun_blade', q: 0.8 }); X.equip = { weapon: s.uid, armor: null, charm: null }; }
+  const base = (X) => rtStats(X).atk - ((CLASSES[X.classId].atk) + 2 * (X.level - 1)); assert.ok(base(W) > base(Mg), 'the warrior (blade fits) gets more from the same blade'); assert.ok(Math.abs(base(W) / base(Mg) - (1 + FIT_BONUS)) < 0.02);
+});
+
+import { ZONES, ENEMIES, NODE_TYPES, SKILLS } from '../src/data.js';
+import { MAP_IDS } from '../src/world.js';
+test('cinematics are triggered by the server for ascending, hidden classes and every mythic class; new regions, dungeons, enemies and ores exist', () => {
+  const { srv } = world(); const w = client(srv, 'Climber', 'warrior'); w.P.level = 10; w.conn.msgs.length = 0; w.send('ascend', { path: 'brute' });
+  const asc = w.conn.msgs.find((m) => m.t === 'cine'); assert.ok(asc && asc.kind === 'ascend' && asc.name, 'ascending plays a promotion cinematic');
+  const a = client(srv, 'Scholar', 'warrior'); a.P.level = 22; R.addItem(a.P, 'torn_page', 3); a.S.map = 'archive'; a.S.x = 28.5; a.S.y = 35; a.conn.msgs.length = 0; a.send('hidden.unlock', { id: 'archivist' });
+  const hid = a.conn.msgs.find((m) => m.t === 'cine'); assert.ok(hid && hid.kind === 'hidden' && hid.id === 'archivist', 'becoming an Archivist plays the hidden-class cinematic'); assert.ok(a.conn.msgs.findIndex((m) => m.t === 'cine') < a.conn.msgs.findIndex((m) => m.t === 'secret.done'), 'the cinematic comes first');
+  for (const id of ['apostle', 'void_sovereign', 'titan_forgemaster', 'philosopher', 'gilded']) { const p = client(srv, `M_${id}`, 'warrior'); p.conn.msgs.length = 0; srv.claimMythic(p.S, id, 'q'); const m = p.conn.msgs.find((x) => x.t === 'cine'); assert.ok(m && m.kind === 'mythic' && m.id === id, `${id} has its own cinematic`); }
+  for (const z of ['moonspire', 'cinder_foundry', 'aether_reach', 'moonlit_barrow_2', 'aether_vault_2']) { assert.ok(ZONES[z] && MAP_IDS.includes(z), z); for (const e of ZONES[z].enemies) assert.ok(ENEMIES[e], `${z}: ${e}`); if (ZONES[z].boss) assert.ok(ENEMIES[ZONES[z].boss].boss); }
+  for (const k of ['moonsilver', 'cinder', 'aether']) assert.ok(NODE_TYPES[k] && ITEMS[NODE_TYPES[k].item], `${k} ore can be mined`);
+  for (const id of ['archivist', 'desperado', 'soulsmith', 'broker', 'transmuter', 'apostle', 'void_sovereign', 'titan_forgemaster', 'philosopher', 'gilded']) for (const [sid] of CLASSES[id].skills) assert.deepEqual(SKILLS[sid].cls, [id], `${id}'s skill ${sid} belongs to that class alone (no borrowed skills)`);
+});

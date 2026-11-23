@@ -66,6 +66,35 @@ const HID = {
 };
 for (const [cls, list] of Object.entries(HID)) list.forEach(([id, name, kind, o], i) => add(sk(id, name, kind, cls, { src: 'hidden', hq: i === 0 ? 'vault' : 'bell', ...o })));
 
+// ── Hidden-class kits: every skill below is unique to its class — no borrowed base skills — and hits harder, looks grander and does
+//    more than anything a normal class can learn. (They are learned automatically at the levels listed on the class.)
+const HC = (id, name, kind, o) => add(sk(id, name, kind, [], { src: 'level', lvl: 1, ...o }));
+// Archivist — a scholar-duelist: ink, quills and living words
+HC('inkblade_flurry', 'Inkblade Flurry', 'melee', { power: 15, hits: 5, interval: 95, cd: 3400, cast: 90, range: 2.4, arc: 170, type: 'arcane', mag: 0.5, fx: { lifesteal: 0.12 }, g: 'void', col: '#8ad8d0', mp: 12, desc: 'Five lightning cuts of living ink in a wide arc. Each one heals you a little.' });
+HC('margin_note', 'Margin Note', 'dash', { dist: 4.6, cd: 5200, iframes: 520, land: { power: 34, radius: 2.1, stun: 700 }, stealth: 1200, type: 'arcane', g: 'void', col: '#8ad8d0', mp: 8, desc: 'Slip out of the page and back in elsewhere: untouchable for half a second, then a burst of ink where you land. Hides you briefly.' });
+HC('living_lexicon', 'Living Lexicon', 'proj', { power: 19, count: 9, spread: 360, speed: 12, range: 7.5, radius: 0.3, pierce: 2, cd: 8500, cast: 260, type: 'arcane', g: 'star', col: '#c8fff0', mp: 20, desc: 'The book opens and its words fly out in every direction, piercing everything they cross.' });
+HC('epilogue', 'Epilogue', 'aoe', { power: 125, cd: 16000, cast: 950, radius: 3.5, range: 9, at: 'cursor', stun: 1600, slow: 3500, type: 'arcane', mag: 1, g: 'void', col: '#8ad8d0', mp: 34, desc: 'Write the last line: a column of black ink collapses on the target, crushing, slowing and stunning all inside.' });
+// Desperado — luck, bluff and one last bullet
+HC('loaded_dice', 'Loaded Dice', 'proj', { power: 17, count: 6, spread: 34, speed: 21, range: 10, radius: 0.26, pierce: 1, cd: 3200, cast: 70, type: 'pierce', fx: { critChance: 0.5 }, g: 'star', col: '#ff9ad0', mp: 11, desc: 'Roll six explosive dice downrange. Each has a flat 50% chance to crit.' });
+HC('bluff_step', 'Bluff Step', 'dash', { dist: 4.8, cd: 4800, iframes: 650, land: { power: 30, radius: 1.9, stun: 900 }, stealth: 1600, type: 'blunt', g: 'wind', col: '#ff9ad0', mp: 8, desc: 'A card-sharp sidestep: invulnerable and unseen for a moment, then a stunning slap where you land.' });
+HC('dead_mans_draw', "Dead Man's Draw", 'proj', { power: 15, count: 12, spread: 360, speed: 17, range: 8, radius: 0.25, cd: 9500, cast: 240, type: 'slash', fx: { critChance: 0.5 }, g: 'skull', col: '#ff6aa8', mp: 22, desc: 'Spin and empty every chamber: twelve cards fly in a full circle, each 50% to crit.' });
+HC('all_in', 'All In', 'proj', { power: 160, count: 1, speed: 30, range: 17, radius: 0.4, pierce: 6, cd: 13000, cast: 750, type: 'blunt', fx: { crit: 1 }, vulnHit: { v: 0.3, ms: 5000 }, g: 'star', col: '#ffd36a', mp: 30, desc: 'Bet it all on one shot: a huge, always-critical round that tears through six enemies and leaves them exposed.' });
+// Soulsmith — the Cold Forge in your hands
+HC('resonant_hammer', 'Resonant Hammer', 'melee', { power: 40, cd: 4200, cast: 220, range: 2.5, arc: 150, stun: 800, type: 'blunt', vulnHit: { v: 0.25, ms: 5000 }, g: 'anvil', col: '#ff9f6b', mp: 14, desc: 'Strike with the note of the Cold Forge: stuns and leaves the target 25% more vulnerable.' });
+HC('forged_soul', 'Forged Soul', 'buff', { cd: 20000, dur: 10000, buff: { dmg: 0.35, red: 0.25, ls: 0.1 }, radius: 0, g: 'flame', col: '#ff9f6b', mp: 16, desc: 'Pour your own spirit into the metal: +35% damage, 25% less damage taken and a little life-steal for 10s.' });
+HC('ember_chains', 'Ember Chains', 'proj', { power: 32, count: 3, spread: 16, speed: 16, range: 9, radius: 0.32, pierce: 3, slow: 2500, cd: 6500, cast: 230, type: 'arcane', g: 'flame', col: '#ffb84a', mp: 18, desc: 'Three glowing chains of slag that pierce and drag at everything they touch.' });
+HC('coldstar_nova', 'Coldstar Nova', 'aoe', { power: 95, cd: 15000, cast: 850, radius: 3.7, at: 'self', stun: 1700, type: 'arcane', g: 'star', col: '#bfe8ff', mp: 32, desc: 'The Cold Forge detonates: a ring of starmetal fire that stuns everything around you.' });
+// Broker — you saw it coming
+HC('foresight_volley', 'Foresight Volley', 'proj', { power: 27, count: 4, spread: 12, speed: 24, range: 13, radius: 0.28, pierce: 2, cd: 5200, cast: 180, type: 'pierce', fx: { crit: 1 }, g: 'coin', col: '#e8e8ff', mp: 16, desc: 'Four silver coins thrown where the enemy WILL be: always critical, piercing.' });
+HC('margin_call', 'Margin Call', 'mark', { radius: 7.5, cd: 15000, dur: 9000, vuln: 0.4, g: 'coin', col: '#e8e8ff', mp: 14, desc: 'Call in every debt at once: all nearby enemies take 40% more damage for 9s.' });
+HC('leveraged_buyout', 'Leveraged Buyout', 'aoe', { power: 70, cd: 11000, cast: 600, radius: 2.7, range: 9, at: 'cursor', stun: 2000, type: 'pierce', g: 'coin', col: '#ffe36b', mp: 22, desc: 'Buy the room out from under them: a crushing burst of gold that stuns everything in it.' });
+HC('liquidation', 'Liquidation', 'aoe', { power: 110, cd: 16000, cast: 800, radius: 3.6, at: 'self', stun: 1300, type: 'pierce', g: 'coin', col: '#ffd36a', mp: 30, desc: 'Sell everything: a ring of falling coins damages and staggers all around you.' });
+// Transmuter — the cauldron answers to you
+HC('quicklime_flask', 'Quicklime Flask', 'proj', { power: 42, count: 1, speed: 11, range: 10, radius: 0.4, aoe: 2.3, slow: 2600, cd: 5000, cast: 200, type: 'arcane', g: 'drop', col: '#d0a0ff', mp: 16, desc: 'A flask that bursts into corrosive vapour, slowing and burning everything in the cloud.' });
+HC('lead_to_gold', 'Lead to Gold', 'aoe', { power: 48, cd: 10000, cast: 450, radius: 2.5, range: 8, at: 'cursor', stun: 2400, type: 'arcane', g: 'coin', col: '#ffd36a', mp: 20, desc: 'Turn enemies to lead for 2.4s — heavy, helpless, and worth their weight in gold.' });
+HC('catalytic_surge', 'Catalytic Surge', 'buff', { cd: 20000, dur: 9000, buff: { dmg: 0.3, regen: 0.05, mpRegen: 2.5 }, radius: 0, g: 'drop', col: '#d0a0ff', mp: 14, desc: 'Your veins run with catalyst: +30% damage, strong regeneration and fast mana for 9s.' });
+HC('grand_transmutation', 'Grand Transmutation', 'aoe', { power: 105, cd: 17000, cast: 900, radius: 3.8, at: 'self', stun: 1500, type: 'arcane', g: 'drop', col: '#e8c8ff', mp: 34, desc: 'The great work: everything near you changes state at once — a huge blast and a long stun.' });
+
 // ── Paths (Ascension). 4 skills per fighter path, 2 per trade path, plus one ultimate per mastery. ─────────────
 // mods are multipliers; perk are class-specific systems hooks (crafting / economy).
 export const PATHS = {};
@@ -267,15 +296,15 @@ export const MYTHICS = {
   titan_forgemaster: { id: 'titan_forgemaster', name: 'Titan Forgemaster', color: '#ff8a2a', group: 'trade', hp: 140, hpPer: 17, atk: 10, def: 8, move: 1.0, mpRegen: 1.5, gather: { ore: 2, coal: 2 }, craftFamily: 'blacksmith',
     desc: 'MYTHIC. The first forge was lit by a titan; you are its heir. Anything you forge is never crude, ember burns wherever you walk, and the Cold Forge itself answers to you.',
     status: { id: 'forgeheart', name: 'Heart of the Forge', desc: 'Forged items gain +15% quality and a Resonance affix. Enemies within 2 tiles burn for 4 damage per second.', forgeQ: 0.15, affix: 1, aura: { r: 2.0, dps: 4 } },
-    skills: [['hot_tongs', 1], ['titan_slam', 1], ['molten_chain', 1], ['forge_nova', 1]], basic: { name: 'Titan Hammer', kind: 'melee', power: 18, cd: 620, range: 1.9, arc: 120, type: 'blunt', combo: 'heavy' } },
+    skills: [['titan_grip', 1], ['titan_slam', 1], ['molten_chain', 1], ['forge_nova', 1]], basic: { name: 'Titan Hammer', kind: 'melee', power: 18, cd: 620, range: 1.9, arc: 120, type: 'blunt', combo: 'heavy' } },
   philosopher: { id: 'philosopher', name: "Philosopher's Heir", color: '#ffd36a', group: 'trade', hp: 110, hpPer: 13, atk: 12, def: 3, move: 1.06, mpRegen: 2.4, gather: { herb: 2, ghostbloom: 2 }, craftFamily: 'alchemist',
     desc: 'MYTHIC. Lead becomes gold, water becomes life. Your cauldron cannot burst, your potions heal half again as much, and every batch brims with extra bottles.',
     status: { id: 'gold_from_lead', name: 'Gold From Lead', desc: 'Brews never burst, yield 2 extra bottles, and all your healing is 50% stronger. Your attacks have a 20% chance to transmute a drop of gold.', noBurst: 1, bottles: 2, healMult: 0.5, midas: 0.2 },
-    skills: [['acid_splash', 1], ['elixir_storm', 1], ['aurum_flask', 1], ['panacea', 1]], basic: { name: 'Golden Flask', kind: 'proj', power: 13, cd: 520, speed: 10, range: 8, radius: 0.3, aoe: 1.1, type: 'arcane', col: '#ffd36a' } },
+    skills: [['quicksilver_burst', 1], ['elixir_storm', 1], ['aurum_flask', 1], ['panacea', 1]], basic: { name: 'Golden Flask', kind: 'proj', power: 13, cd: 520, speed: 10, range: 8, radius: 0.3, aoe: 1.1, type: 'arcane', col: '#ffd36a' } },
   gilded: { id: 'gilded', name: 'Gilded Sovereign', color: '#ffe36b', group: 'trade', hp: 125, hpPer: 15, atk: 11, def: 4, move: 1.08, mpRegen: 1.8,
     desc: 'MYTHIC. The market bows. You pay no fees, never lose a haggle and your wealth is a weapon — more gilt in your purse means harder hits.',
     status: { id: 'midas', name: "Midas' Ledger", desc: 'Pay no listing fees. Never lose a haggle round. +1% damage per 1000 gilt carried (max +40%).', noFee: 1, haggleWin: 1, goldPower: { per: 0.01, step: 1000, max: 0.4 } },
-    skills: [['fistful', 1], ['gilded_cage', 1], ['coin_storm', 1], ['golden_parachute', 1]], basic: { name: 'Gilt Toss', kind: 'proj', power: 14, cd: 400, speed: 13, range: 9, radius: 0.24, count: 2, spread: 10, type: 'pierce', col: '#ffe36b' } },
+    skills: [['gilded_barrage', 1], ['gilded_cage', 1], ['coin_storm', 1], ['golden_parachute', 1]], basic: { name: 'Gilt Toss', kind: 'proj', power: 14, cd: 400, speed: 13, range: 9, radius: 0.24, count: 2, spread: 10, type: 'pierce', col: '#ffe36b' } },
 };
 const MY = (cls, id, name, kind, o) => add(sk(id, name, kind, cls, { src: 'mythic', lvl: 1, ...o }));
 MY('apostle', 'thorn_lash', 'Thorn Lash', 'melee', { power: 32, cd: 2600, cast: 150, range: 2.8, arc: 170, type: 'pierce', fx: { lifesteal: 0.2 }, g: 'leaf', desc: 'A long whip of living thorn. Heals you.' });
@@ -326,3 +355,8 @@ export function describeSkill(s) {
   if (s.desc) return s.desc;
   return `${s.kind}${s.power ? `, power ${s.power}` : ''}`;
 }
+
+// Mythic classes no longer borrow anything: these replace the last shared skills.
+MY('titan_forgemaster', 'titan_grip', 'Titan Grip', 'melee', { power: 54, cd: 3600, cast: 200, range: 3.1, arc: 100, stun: 900, type: 'blunt', vulnHit: { v: 0.3, ms: 5000 }, g: 'anvil', col: '#ff8a2a', desc: 'Seize the enemy in a titan\'s grip: long reach, a stun, and 30% more damage taken after.' });
+MY('philosopher', 'quicksilver_burst', 'Quicksilver Burst', 'proj', { power: 46, count: 3, spread: 18, speed: 14, range: 10, radius: 0.36, aoe: 1.7, slow: 2200, cd: 4800, cast: 200, type: 'arcane', g: 'drop', col: '#e8f0ff', desc: 'Three globes of living quicksilver that burst into slowing clouds.' });
+MY('gilded', 'gilded_barrage', 'Gilded Barrage', 'proj', { power: 26, count: 7, spread: 44, speed: 20, range: 11, radius: 0.28, pierce: 2, cd: 5200, cast: 160, type: 'pierce', g: 'coin', col: '#ffe36b', desc: 'Seven heavy gold coins in a fan, each punching through two enemies.' });

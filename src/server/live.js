@@ -102,25 +102,55 @@ export const liveMethods = {
 
   // ═══ bounty board ════════════════════════════════════════════════════════
   bountyDay() { return Math.floor(this.now() / DAY_MS); },
+  // Bounties: the board offers a fresh set every day, but a bounty you ACCEPT is yours until you finish or abandon it — it never rotates away.
   ensureBounties(P) {
-    const day = this.bountyDay(); if (P.bounties?.day === day) return P.bounties;
-    const rng = new Rng(hashStr(P.id) ^ (day * 2654435761)), L = P.level, list = [];
+    const day = this.bountyDay(), cur = P.bounties;
+    if (cur?.day === day && cur.list) return cur;
+    const kept = (cur?.list ?? []).filter((e) => e.accepted && !e.claimed);                       // accepted ones survive the reset
+    let nextId = Math.max(0, ...(cur?.list ?? []).map((e) => e.id), cur?.nextId ?? 0) + 1;
+    const rng = new Rng(hashStr(P.id) ^ (day * 2654435761)), L = P.level, offers = [];
     const zones = Object.values(ZONES).filter((z) => z.enemies.length && !SECRET_ZONES.has(z.id) && z.lvl <= L + 2 && z.lvl >= Math.max(1, L - 9)), zs = zones.length ? zones : [ZONES.greenmeadow];
     const z = rng.pick(zs), e = rng.pick(z.enemies), n1 = rng.int(6, 12);
-    list.push({ id: 1, type: 'kill', key: e, need: n1, got: 0, text: `Slay ${n1} ${ENEMIES[e].name}`, gilt: Math.round((12 + L * 3) * n1), xp: Math.round((25 + L * 12) * n1 / 3) });
-    const z2 = rng.pick(zs), e2 = rng.pick(z2.enemies.filter((x) => x !== e).length ? z2.enemies.filter((x) => x !== e) : z2.enemies), n2 = rng.int(4, 9);
-    list.push({ id: 2, type: 'kill', key: e2, need: n2, got: 0, text: `Slay ${n2} ${ENEMIES[e2].name}`, gilt: Math.round((16 + L * 3.5) * n2), xp: Math.round((30 + L * 14) * n2 / 3) });
-    const nodeTypes = Object.entries(NODE_TYPES).filter(([, d]) => (ITEMS[d.item]?.tier !== 'hollow')); const [nk, nd] = rng.pick(nodeTypes), n3 = rng.int(8, 16);
-    list.push({ id: 3, type: 'gather', key: nd.item, need: n3, got: 0, text: `Gather ${n3} ${ITEMS[nd.item].n}`, gilt: Math.round((8 + L * 2) * n3), xp: Math.round((12 + L * 5) * n3 / 2) });
-    if (R.isCrafter(P)) { const n4 = rng.int(3, 6); list.push({ id: 4, type: 'craft', key: 'any', need: n4, got: 0, text: `Craft ${n4} items at your station`, gilt: Math.round((40 + L * 8) * n4), xp: Math.round((40 + L * 10) * n4 / 2) }); }
-    P.bounties = { day, list }; return P.bounties;
+    offers.push({ type: 'kill', key: e, need: n1, text: `Slay ${n1} ${ENEMIES[e].name}`, gilt: Math.round((12 + L * 3) * n1), xp: Math.round((25 + L * 12) * n1 / 3) });
+    const z2 = rng.pick(zs), pool2 = z2.enemies.filter((x) => x !== e), e2 = rng.pick(pool2.length ? pool2 : z2.enemies), n2 = rng.int(4, 9);
+    offers.push({ type: 'kill', key: e2, need: n2, text: `Slay ${n2} ${ENEMIES[e2].name}`, gilt: Math.round((16 + L * 3.5) * n2), xp: Math.round((30 + L * 14) * n2 / 3) });
+    const nodeTypes = Object.entries(NODE_TYPES).filter(([, d]) => (ITEMS[d.item]?.tier !== 'hollow')); const [, nd] = rng.pick(nodeTypes), n3 = rng.int(8, 16);
+    offers.push({ type: 'gather', key: nd.item, need: n3, text: `Gather ${n3} ${ITEMS[nd.item].n}`, gilt: Math.round((8 + L * 2) * n3), xp: Math.round((12 + L * 5) * n3 / 2) });
+    if (R.isCrafter(P)) { const n4 = rng.int(3, 6); offers.push({ type: 'craft', key: 'any', need: n4, text: `Craft ${n4} items at your station`, gilt: Math.round((40 + L * 8) * n4), xp: Math.round((40 + L * 10) * n4 / 2) }); }
+    const have = new Set(kept.map((x) => `${x.type}:${x.key}`));
+    const list = [...kept, ...offers.filter((o) => !have.has(`${o.type}:${o.key}`)).map((o) => ({ id: nextId++, got: 0, accepted: false, ...o }))];
+    P.bounties = { day, list, nextId }; return P.bounties;
   },
   bountyEvent(S, type, key, n = 1) {
     const b = this.ensureBounties(S.P); let changed = false;
-    for (const e of b.list) if (!e.claimed && e.got < e.need && e.type === type && (e.key === key || e.key === 'any')) { e.got = Math.min(e.need, e.got + n); changed = true; if (e.got >= e.need) this.toast(S, `* Bounty complete: ${e.text}. Claim it at the Bounty Board.`, 'secret'); }
+    for (const e of b.list) if (e.accepted && !e.claimed && e.got < e.need && e.type === type && (e.key === key || e.key === 'any')) { e.got = Math.min(e.need, e.got + n); changed = true; if (e.got >= e.need) this.toast(S, `* Bounty complete: ${e.text}. Claim it at the Bounty Board.`, 'secret'); }
     if (changed) this.touch(S);
   },
-  on_bounty_open(S) { S.conn.send({ t: 'ui', panel: 'bounty', list: this.ensureBounties(S.P).list, resetIn: DAY_MS - (this.now() % DAY_MS) }); },
+  on_bounty_open(S) { this.expirePromises(S.P); S.conn.send({ t: 'ui', panel: 'bounty', list: this.ensureBounties(S.P).list, promises: (S.P.promises ?? []).map((q) => ({ ...q, have: this.promiseStock(S.P, q).length > 0 })), resetIn: DAY_MS - (this.now() % DAY_MS) }); },
+  on_bounty_accept(S, m) {
+    const b = this.ensureBounties(S.P), e = b.list.find((x) => x.id === +m.id); if (!e || e.accepted || e.claimed) return;
+    if (b.list.filter((x) => x.accepted && !x.claimed).length >= 6) return this.toast(S, 'You can carry at most 6 bounties. Finish or abandon one first.', 'bad');
+    e.accepted = true; e.got = 0; this.toast(S, `Bounty accepted: ${e.text}. It will not expire.`, 'good'); this.touch(S); this.on_bounty_open(S);
+  },
+  on_bounty_abandon(S, m) { const b = this.ensureBounties(S.P), e = b.list.find((x) => x.id === +m.id); if (!e || !e.accepted || e.claimed) return; b.list = b.list.filter((x) => x !== e); this.touch(S); this.on_bounty_open(S); },
+  // ── customer promises: tell a town customer "I'll bring it" and the order is yours for 3 days, even after they walk off ──
+  expirePromises(P) { const now = this.now(); P.promises = (P.promises ?? []).filter((q) => q.until > now); },
+  promiseStock(P, q) { const it = ITEMS[q.itemId]; if (!it) return []; return it.k === 'gear' ? P.gear.filter((g) => g.id === q.itemId && g.q >= q.minQ && !R.isEquipped(P, g.uid) && !R.gearLocked(P, g)).sort((a, b) => a.q - b.q) : (R.freeStack(P, q.itemId) > 0 ? [{}] : []); },
+  on_cust_promise(S, m) {
+    const c = this.customers.find((x) => x.id === m.id); if (!c || S.map !== 'town' || dist(S.x, S.y, c.x, c.y) > 3) return this.toast(S, 'They have already left.', 'bad');
+    this.expirePromises(S.P); S.P.promises ??= []; if (S.P.promises.some((q) => q.cid === c.id)) return this.toast(S, 'You already promised that one.', 'bad');
+    if (S.P.promises.length >= 4) return this.toast(S, 'You are already carrying four promised orders.', 'bad');
+    const pay = Math.max(10, Math.round(valueOf(this.markets.main, c.itemId, Math.max(0.5, c.minQ ?? 0)) * 1.15));
+    S.P.promises.push({ id: (S.P.promiseSeq = (S.P.promiseSeq ?? 0) + 1), cid: c.id, who: c.name, itemId: c.itemId, minQ: c.minQ ?? 0, pay, until: this.now() + 3 * DAY_MS }); this.touch(S);
+    this.toast(S, `Promised: ${ITEMS[c.itemId].n} for ${c.name} — ${pay}g on delivery. It is kept at the Bounty Board for 3 days.`, 'good');
+  },
+  on_promise_deliver(S, m) {
+    this.expirePromises(S.P); const q = (S.P.promises ?? []).find((x) => x.id === +m.id); if (!q) return; const stock = this.promiseStock(S.P, q);
+    if (!stock.length) return this.toast(S, `You do not have ${ITEMS[q.itemId].n}${q.minQ ? ` of quality ${Math.round(q.minQ * 100)}%+` : ''} (crafters cannot hand over their own creations this way).`, 'bad');
+    if (ITEMS[q.itemId].k === 'gear') S.P.gear.splice(S.P.gear.indexOf(stock[0]), 1); else R.removeItem(S.P, q.itemId, 1);
+    S.P.gilt += q.pay; S.P.stats.profit = (S.P.stats.profit ?? 0) + q.pay; S.P.promises = S.P.promises.filter((x) => x !== q); this.toast(S, `Delivered to ${q.who}: +${q.pay}g.`, 'good'); this.afterChange(S); this.on_bounty_open(S);
+  },
+  on_promise_cancel(S, m) { S.P.promises = (S.P.promises ?? []).filter((x) => x.id !== +m.id); this.touch(S); this.on_bounty_open(S); },
   on_bounty_claim(S, m) {
     const e = this.ensureBounties(S.P).list.find((x) => x.id === +m.id); if (!e || e.claimed || e.got < e.need) return;
     e.claimed = true; S.P.gilt += e.gilt; const ups = R.gainXp(S.P, e.xp); this.toast(S, `* Bounty paid: +${e.gilt}g, +${e.xp} XP${ups.length ? ` — LEVEL ${ups.at(-1)}!` : ''}`, 'good'); S.P.stats.bounties = (S.P.stats.bounties ?? 0) + 1; this.guildXp(S, 20);

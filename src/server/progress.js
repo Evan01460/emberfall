@@ -44,14 +44,14 @@ export const progressMethods = {
     this.recalc(S); S.hp = S.rt.maxHp; S.mp = S.rt.maxMp;
     this.toast(S, `* ${r.msg}`, 'good'); this.systemChat(`${S.P.name} has ascended into a ${r.path.name}!`);
     this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: 2.5, c: 'heal' });
-    S.conn.send({ t: 'ascended', path: r.path.id }); this.afterChange(S);
+    S.conn.send({ t: 'ascended', path: r.path.id }); S.conn.send({ t: 'cine', kind: 'ascend', id: r.path.id, cls: S.P.classId, name: r.path.name.toUpperCase(), color: r.path.color, sub: r.path.blurb?.slice(0, 70) ?? '' }); this.afterChange(S);
   },
   on_master(S, m) {
     if (this.inCombat(S)) return this.toast(S, 'Not in the heat of battle.', 'bad');
     const r = L.master(S.P, String(m.id));
     if (!r.ok) return this.toast(S, r.msg, 'bad');
     this.recalc(S); this.toast(S, `* ${r.msg}`, 'good'); this.systemChat(`${S.P.name} has mastered ${r.mastery.name}!`);
-    this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: 3, c: 'rage' }); this.afterChange(S);
+    this.emit(S.map, { t: 'aura', x: S.x, y: S.y, r: 3, c: 'rage' }); S.conn.send({ t: 'cine', kind: 'ascend', id: r.mastery.id, cls: S.P.classId, name: r.mastery.name.toUpperCase(), tag: 'MASTERY ACHIEVED', color: L.pathOf(S.P)?.color ?? '#ffd36a', sub: r.mastery.desc?.slice(0, 70) ?? '' }); this.afterChange(S);
   },
   on_respec(S) {
     if (this.inCombat(S)) return this.toast(S, 'Not in the heat of battle.', 'bad');
@@ -231,6 +231,7 @@ export const progressMethods = {
     this.mythics[mid] = { pid: P.id, name: P.name, at: Date.now() };
     P.classId = mid; L.resetForNewClass(P); (P.titles ??= []).push(def.name);
     this.recalc(S); S.hp = S.rt.maxHp; S.mp = S.rt.maxMp;
+    S.conn.send({ t: 'cine', kind: 'mythic', id: mid, name: def.name.toUpperCase(), color: def.color, sub: def.status?.name ?? '' });
     S.conn.send({ t: 'secret.done', name: def.name, msg: `${MYTHIC_BLURB[mid]} You are the only ${def.name} there will ever be.` });
     for (const o of this.sessions.values()) o.conn.send({ t: 'announce', title: def.name, text: `${P.name} has awakened as ${def.name}. There can be only one.` });
     this.systemChat(` ${P.name} has awakened as ${def.name}!`);

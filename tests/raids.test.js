@@ -49,7 +49,7 @@ test('raid: a wipe resets the raid, other players are refused while it is busy, 
   assert.equal(srv.mobs.filter((m) => m.map === R0.wings[0].id && m.temp).length, 0, 'raid mobs cleaned up');
   const again = setup('void_citadel'); again.srv.on_raid2_enter(again.S, { raid: 'void_citadel' }); assert.ok(again.srv.raids.void_citadel);
   const other = { msgs: [], send(m) { this.msgs.push(m); }, session: null }; assert.ok(again.srv.join(other, { name: 'Bystander', create: { classId: 'mage' } }).ok);
-  const O = other.session; O.P.level = 50; again.srv.travel(O, 'far_p02', again.gate.x, again.gate.y + 1.5); again.srv.on_raid2_enter(O, { raid: 'void_citadel' }); assert.equal(O.map, 'far_p02', 'a busy raid refuses a second group');
+  const O = other.session; O.P.level = 50; again.srv.travel(O, R0.entry.map, again.gate.x, again.gate.y + 1.5); again.srv.on_raid2_enter(O, { raid: 'void_citadel' }); assert.equal(O.map, R0.entry.map, 'a busy raid refuses a second group');
   const t = setup('void_citadel'); t.S.P.level = 5; t.srv.on_raid2_enter(t.S, { raid: 'void_citadel' }); assert.equal(t.srv.raids.void_citadel, undefined, 'low level refused'); assert.equal(t.S.map, t.R0.entry.map);
   const w = setup('wyrmcrown'); w.S.P.level = 10; w.srv.on_raid2_enter(w.S, { raid: 'wyrmcrown' }); assert.equal(w.srv.raids.wyrmcrown, undefined);
 });

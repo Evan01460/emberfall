@@ -40,7 +40,7 @@ export const requestMethods = {
     if (mine === 'to') {
       v.canMake = canMakeKind(P, rec); v.needLvl = rec?.lvl ?? 0; v.secret = !!rec?.secret; const st = this.reqStock(P, r); v.have = st.length;
       if (ITEMS[r.itemId]?.k === 'gear') {   // every fitting piece (customised, enchanted, with effects… all count), and the near-misses so the crafter can see why
-        const view = (g) => ({ uid: g.uid, id: g.id, q: g.q, affix: g.affix ?? null, fx: g.fx ?? null, ench: g.ench ?? null, cname: g.cname ?? null, by: g.by ?? null });
+        const view = (g) => ({ uid: g.uid, id: g.id, q: g.q, affix: g.affix ?? null, fx: g.fx ?? null, ench: g.ench ?? null, cname: g.cname ?? null, by: g.by ?? null, up: g.up ?? 0 });
         v.stock = st.slice(0, 12).map(view);
         v.below = P.gear.filter((g) => g.id === r.itemId && g.q < r.minQ && !R.isEquipped(P, g.uid)).sort((a, b) => b.q - a.q).slice(0, 3).map(view);
         v.worn = P.gear.filter((g) => g.id === r.itemId && g.q >= r.minQ && R.isEquipped(P, g.uid)).length;
@@ -132,7 +132,7 @@ export const requestMethods = {
     }
     if (stock.length < r.qty) return this.toast(S, `You do not hold ${r.qty}× ${ITEMS[r.itemId].n}${r.minQ ? ` of quality ${Math.round(r.minQ * 100)}%+` : ''}. Forge/brew it first.`, 'bad');
     const it = ITEMS[r.itemId];
-    if (it.k === 'gear') for (const g of stock.slice(0, r.qty)) { P.gear.splice(P.gear.indexOf(g), 1); R.addGear(to, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, by: g.by ?? P.name }); }
+    if (it.k === 'gear') for (const g of stock.slice(0, r.qty)) { P.gear.splice(P.gear.indexOf(g), 1); R.addGear(to, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by ?? P.name }); }
     else { const c = Math.min(r.qty, R.lockedStack(P, r.itemId)); if (c && P.crafted) P.crafted[r.itemId] -= c; R.removeItem(P, r.itemId, r.qty); R.addItem(to, r.itemId, r.qty); }
     P.gilt += r.escrow; P.stats.profit = (P.stats.profit ?? 0) + r.escrow; P.stats.requests = (P.stats.requests ?? 0) + 1; to.stats.requestsBought = (to.stats.requestsBought ?? 0) + 1;
     const paid = r.escrow; r.escrow = 0; r.status = 'done'; r.ready = false;

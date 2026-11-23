@@ -21,11 +21,11 @@ export function buildHud(root, handlers) {
   els.hp = h('i'); els.hpTxt = h('span'); els.mp = h('i'); els.mpTxt = h('span');
   els.party = h('div', { class: 'hud-party' }); els.zone = h('div', { class: 'hud-zone' }); els.net = h('span', { class: 'dim' });
   els.mini = h('canvas', { width: 168, height: 120 }); els.prompt = h('div', { class: 'hud-prompt', style: { display: 'none' } }); els.invites = h('div', { class: 'hud-invites' }); els.menu = null;
-  els.bossBar = h('div', { class: 'boss-bar', style: { display: 'none' } }, els.bossName = h('div', {}), h('div', { class: 'bar hp', style: { height: '12px' } }, els.bossFill = h('i')));
+  els.bossBar = h('div', { class: 'boss-bar', style: { display: 'none' } }, els.bossName = h('div', {}), h('div', { class: 'bar hp boss-hp', style: { height: '12px' } }, els.bossFill = h('i'), h('b', { class: 'notch', style: { left: '66%' } }), h('b', { class: 'notch', style: { left: '33%' } })));
   const card = h('div', { class: 'hud-card' }, h('div', { class: 'row sb' }, els.name, els.gilt),
     h('div', { class: 'vbar hp' }, els.hp, els.hpTxt), h('div', { class: 'vbar mp' }, els.mp, els.mpTxt), h('div', { class: 'bar xp', style: { height: '5px', margin: '4px 0 2px' } }, els.xp), els.status = h('div', { class: 'row', style: { gap: '3px', margin: '2px 0', minHeight: '0' } }), els.pvp = h('button', { class: 'btn small pvp-btn', title: 'Toggle PvP (P). When on, other flagged players near your level can fight you.', onclick: () => send({ t: 'pvp.toggle' }) }, 'PvP: off'), els.war = h('div', { class: 'war-strip', style: { display: 'none' } }), els.party);
   const side = h('div', { class: 'hud-side' }, els.zone, els.mini, h('div', { class: 'row sb', style: { fontSize: '11px' } }, els.net, h('span', { class: 'row' },
-    h('button', { class: 'btn small ghost', title: 'Character (I)', onclick: handlers.character }, I.ui('bag', 18)), h('button', { class: 'btn small ghost', title: 'Journal (J)', onclick: handlers.journal }, I.ui('book', 18)), h('button', { class: 'btn small ghost', title: 'Who is online', onclick: () => send({ t: 'who' }) }, I.ui('people', 18)), h('button', { class: 'btn small ghost', title: 'Help (H)', onclick: handlers.help }, I.ui('help', 18)), h('button', { class: 'btn small ghost', title: 'Keybinds (K)', onclick: () => openKeybinds() }, 'KEY'), h('button', { class: 'btn small ghost', title: 'Leave the world', onclick: handlers.leave }, I.ui('power', 18)))));
+    h('button', { class: 'btn small ghost', title: 'Character (I)', onclick: handlers.character }, I.ui('bag', 18)), h('button', { class: 'btn small ghost', title: 'Journal (J)', onclick: handlers.journal }, I.ui('book', 18)), h('button', { class: 'btn small ghost', title: 'World map (N)', onclick: () => handlers.worldmap?.() }, I.ui('star', 18)), h('button', { class: 'btn small ghost', title: 'Adventure log (L)', onclick: () => handlers.adventure?.() }, 'LOG'), h('button', { class: 'btn small ghost', title: 'Recall to Lanternfall (B) — 5 s, 10 min cooldown', onclick: () => handlers.recall?.() }, 'HOME'), h('button', { class: 'btn small ghost', title: 'Who is online', onclick: () => send({ t: 'who' }) }, I.ui('people', 18)), h('button', { class: 'btn small ghost', title: 'Help (H)', onclick: handlers.help }, I.ui('help', 18)), h('button', { class: 'btn small ghost', title: 'Keybinds (K)', onclick: () => openKeybinds() }, 'KEY'), h('button', { class: 'btn small ghost', title: 'Leave the world', onclick: handlers.leave }, I.ui('power', 18)))));
   els.hotbar = h('div', { class: 'hotbar' }); els.slots = [];
   chatLog = h('div', { class: 'chat-log' });
   chatInput = h('input', { id: 'chat-input', placeholder: 'Enter to chat · /w name msg · /g global · /p party', maxlength: 200, autocomplete: 'off' });
@@ -49,7 +49,7 @@ export function buildHud(root, handlers) {
     if (k === 'enter') { e.preventDefault(); chatInput.focus(); }
     else if (k === 'escape') { dismissMenu(); handlers.escape?.(); }
     else if (G.inBattle) return;
-    else if (k === 'p') send({ t: 'pvp.toggle' }); else if (k === 'k') openKeybinds(); else if (k === 'i') handlers.character(); else if (k === 'j') handlers.journal(); else if (k === 'h') handlers.help();
+    else if (k === 'p') send({ t: 'pvp.toggle' }); else if (k === 'k') openKeybinds(); else if (k === 'i') handlers.character(); else if (k === 'j') handlers.journal(); else if (k === 'h') handlers.help(); else if (k === 'n') handlers.worldmap?.(); else if (k === 'l') handlers.adventure?.(); else if (k === 'b') handlers.recall?.();
   });
   listen(window, 'mousedown', (e) => { if (els.menu && e.timeStamp !== els.menuT && !els.menu.contains(e.target)) dismissMenu(); });
 }
@@ -214,6 +214,13 @@ function buildTrade() {
     h('p', { class: 'dim', style: { fontSize: '11px', textAlign: 'center' } }, 'Changing either offer resets both confirmations. Nothing moves until both of you confirm.'));
 }
 
+// A short call-out under the boss bar: which mechanic just started and what to do about it.
+export function showBossMsg(e) {
+  document.querySelectorAll('.bossmsg').forEach((x) => x.remove());
+  const col = { fire: '#ff9a5a', ice: '#9adfff', void: '#c89aff', storm: '#ffe96a', earth: '#d8b880', poison: '#9aff8a', holy: '#fff4b0' }[e.el] ?? '#fff';
+  const el = h('div', { class: `bossmsg ${e.big ? 'big' : ''}`, style: { borderColor: col, color: col } }, h('div', { class: 'bossmsg-t' }, e.text), e.hint ? h('div', { class: 'bossmsg-h' }, e.hint) : null);
+  document.getElementById('hud')?.append(el) ?? document.body.append(el); setTimeout(() => el.classList.add('out'), e.big ? 3200 : 2300); setTimeout(() => el.remove(), e.big ? 3900 : 2900);
+}
 export function showAnnounce({ title, text }) {
   const el = h('div', { class: 'announce' }, h('div', { class: 'announce-t' }, title), h('div', {}, text));
   document.body.append(el); setTimeout(() => el.classList.add('out'), 7000); setTimeout(() => el.remove(), 8000);

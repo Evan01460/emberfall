@@ -9,15 +9,17 @@ import { refreshWindow, gearLabel } from './panels.js';
 import { gearFxLines } from './customui.js';
 import { whisperTo } from './ui.js';
 import { browser, pickCard, statChips, fitIcons, ingredientRow } from './browse.js';
+import { upgCard, upgDraftView } from './upgradereq.js';
 
 const send = (m) => G.net.send(m), netSend = send;
 const FAM = { blacksmith: 'Blacksmith', alchemist: 'Alchemist' };
 let sub = 'requests', draft = null, lastLoad = 0; const picked = new Map();   // request id -> uids the crafter chose to hand over
 const priceTag = (id) => Math.max(10, Math.round((ITEMS[id]?.v ?? 20) * 1.4));
 const itemRow = (id, qty) => h('span', { class: 'row', style: { gap: '6px' } }, I.item(id, 22), h('b', {}, `${qty && qty > 1 ? qty + '× ' : ''}${ITEMS[id]?.n ?? id}`));
-const reload = () => { send({ t: 'req.list' }); send({ t: 'req.crafters' }); };
+const reload = () => { send({ t: 'req.list' }); send({ t: 'upg.list' }); send({ t: 'req.crafters' }); };
 export const openRequestTo = (name, fam) => { draft = { to: name, fam, itemId: null, qty: 1, minQ: 0, price: 0 }; sub = 'find'; G.openTrading?.(); };
-export const pendingForMe = () => (G.reqs ?? []).filter((r) => (r.mine === 'to' && r.status === 'pending') || (r.mine === 'from' && r.ready)).length;
+export const pendingForMe = () => (G.reqs ?? []).filter((r) => (r.mine === 'to' && r.status === 'pending') || (r.mine === 'from' && r.ready)).length + (G.upgs ?? []).filter((j) => j.mine === 'to' && (j.status === 'pending' || j.status === 'accepted')).length;
+G.openUpgradeReq = (uid) => { draft = { kind: 'upgrade', to: null, uid, price: null }; G.upInfo = null; sub = 'find'; G.openTrading?.(); };
 
 export function tradingTab(me) {
   if (performance.now() - lastLoad > 6000) { lastLoad = performance.now(); reload(); }   // what you hold changes while you craft: re-check regularly
@@ -27,10 +29,16 @@ export function tradingTab(me) {
 }
 
 // ── my requests ──────────────────────────────────────────────────────────────
+let filter = 'all';
 function requestsView(me) {
-  const list = G.reqs ?? [];
-  if (!list.length) return h('div', { class: 'card' }, h('p', { class: 'dim' }, 'No open requests. Find a Blacksmith or Alchemist, tell them what you need and what you will pay. You can haggle with them in private chat before they accept.'), h('button', { class: 'btn small gold', onclick: () => { sub = 'find'; refreshWindow('character'); } }, 'Find a crafter'));
-  return h('div', {}, list.map((r) => reqCard(r, me)));
+  const items = G.reqs ?? [], jobs = G.upgs ?? [];
+  if (!items.length && !jobs.length) return h('div', { class: 'card' }, h('p', { class: 'dim' }, 'Nothing open. Ask a Blacksmith or Alchemist for an item, or ask a Blacksmith to upgrade your gear (+1 to +99). Everything you hand over is held safely until the work is done.'), h('div', { class: 'row' }, h('button', { class: 'btn small gold', onclick: () => { sub = 'find'; refreshWindow('character'); } }, 'Find a crafter'), h('button', { class: 'btn small', onclick: () => G.openUpgradeReq() }, 'Upgrade my gear')));
+  const waiting = items.filter((r) => r.mine === 'to' && r.status === 'pending').length + jobs.filter((j) => j.mine === 'to' && j.status === 'pending').length, ready = items.filter((r) => r.mine === 'from' && r.ready).length + jobs.filter((j) => j.mine === 'from' && j.status === 'done').length, work = jobs.filter((j) => j.mine === 'to' && j.status === 'accepted').length;
+  const chips = [['all', 'All'], ['items', 'Items'], ['upgrades', 'Upgrades'], ['in', 'Asked of me'], ['out', 'My requests']].map(([id, l]) => h('button', { class: `chip ${filter === id ? 'on' : ''}`, onclick: () => { filter = id; refreshWindow('character'); } }, l));
+  const show = (mine, kind) => (filter === 'all' || (filter === 'items' && kind === 'item') || (filter === 'upgrades' && kind === 'upg') || (filter === 'in' && mine === 'to') || (filter === 'out' && mine === 'from'));
+  const cards = [...jobs.filter((j) => show(j.mine, 'upg')).map((j) => upgCard(j, me)), ...items.filter((r) => show(r.mine, 'item')).map((r) => reqCard(r, me))];
+  return h('div', {}, h('div', { class: 'reqhead' }, h('div', { class: 'reqstat' }, h('b', {}, waiting), h('span', {}, 'waiting for you')), h('div', { class: 'reqstat' }, h('b', {}, work), h('span', {}, 'to forge')), h('div', { class: 'reqstat' }, h('b', {}, ready), h('span', {}, 'ready / done')), h('div', { style: { flex: 1 } }), h('button', { class: 'btn small gold', onclick: () => G.openUpgradeReq() }, 'Upgrade my gear')),
+    h('div', { class: 'chips', style: { margin: '6px 0' } }, chips), cards.length ? cards : h('p', { class: 'dim' }, 'Nothing in this filter.'));
 }
 function reqCard(r, me) {
   const it = ITEMS[r.itemId], mineReq = r.mine === 'from', hrs = Math.ceil(r.left / 3600000);
@@ -61,11 +69,12 @@ function reqCard(r, me) {
 
 // ── find a crafter / write a request ─────────────────────────────────────────
 function findView(me) {
+  if (draft?.kind === 'upgrade') return upgDraftView(me, draft, (to) => { draft = null; sub = to; refreshWindow('character'); });
   if (draft) return draftView(me);
   const list = G.crafters ?? [], name = h('input', { placeholder: 'or type a crafter\'s name', style: { width: '190px' } });
   return h('div', {}, h('div', { class: 'row', style: { margin: '6px 0' } }, name, h('button', { class: 'btn small', onclick: () => { const n = name.value.trim(); const c = list.find((x) => x.n.toLowerCase() === n.toLowerCase()); if (!n) return; draft = { to: c?.n ?? n, fam: c?.fam ?? 'blacksmith', cl: c?.l, itemId: null, qty: 1, minQ: 0, price: 0 }; refreshWindow('character'); } }, 'Request from…'), h('button', { class: 'btn small ghost', onclick: reload }, 'Refresh')),
     list.length ? h('table', {}, h('tr', {}, ['Crafter', 'Craft', 'Lv', ''].map((x) => h('th', {}, x))), ...list.map((c) => h('tr', {}, h('td', {}, h('span', { class: 'row' }, I.cls(c.c, 20), h('b', {}, c.n), c.on ? h('span', { class: 'tag g' }, 'online') : h('span', { class: 'dim', style: { fontSize: '11px' } }, 'offline'))), h('td', {}, FAM[c.fam]), h('td', {}, c.l),
-      h('td', {}, h('span', { class: 'row' }, h('button', { class: 'btn small primary', onclick: () => { draft = { to: c.n, fam: c.fam, cl: c.l, itemId: null, qty: 1, minQ: 0, price: 0 }; refreshWindow('character'); } }, 'Request an item'), h('button', { class: 'btn small ghost', onclick: () => whisperTo(c.n) }, 'Message')))))) : h('p', { class: 'dim' }, 'No crafters known yet. Ask around in chat — "who" lists everyone online.'));
+      h('td', {}, h('span', { class: 'row' }, h('button', { class: 'btn small primary', onclick: () => { draft = { to: c.n, fam: c.fam, cl: c.l, itemId: null, qty: 1, minQ: 0, price: 0 }; refreshWindow('character'); } }, 'Request an item'), c.fam === 'blacksmith' ? h('button', { class: 'btn small gold', onclick: () => { draft = { kind: 'upgrade', to: c.n, cl: c.l, uid: null, price: null }; G.upInfo = null; refreshWindow('character'); } }, 'Upgrade gear') : null, h('button', { class: 'btn small ghost', onclick: () => whisperTo(c.n) }, 'Message')))))) : h('p', { class: 'dim' }, 'No crafters known yet. Ask around in chat — "who" lists everyone online.'));
 }
 function draftView(me) {
   const d = draft, fam = d.fam, opts = RECIPES.filter((r) => r.craft === fam && !r.smelt && ITEMS[r.out] && ITEMS[r.out].k !== 'quest');

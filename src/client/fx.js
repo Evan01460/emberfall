@@ -7,7 +7,7 @@ import { C, q, cellAt, pdisc, pring, psector, parc, pline, prect, drawText, shad
 import { PROJ2, VFX } from './skillfx.js';
 
 const TYPE_COL = { slash: '#f0f4ff', pierce: '#ffe9a8', blunt: '#ffb870', arcane: '#b58cff', heal: '#7dffa0', ward: '#7fb8ff', taunt: '#ffcf6a', mark: '#ff9ad5', rage: '#ff3b3b' };
-export const hooks = { shake: null };            // set by the world view
+export const hooks = { shake: null, bossmsg: null };            // set by the world view
 export const casts = new Map();                // who → { t, a, kind } (swing animation)
 const ZCOL = { acid: ['rgba(60,200,100,.28)', 'rgba(120,255,140,.28)', 'rgba(150,255,170,.9)', '#c8ffc0'], poison: ['rgba(110,200,60,.3)', 'rgba(170,230,90,.3)', 'rgba(190,240,110,.9)', '#e0ff9a'], fire: ['rgba(240,90,30,.3)', 'rgba(255,170,50,.3)', 'rgba(255,200,90,.9)', '#ffe36b'], arrows: ['rgba(220,200,150,.22)', 'rgba(255,240,200,.22)', 'rgba(255,240,200,.8)', '#ffffff'], holy: ['rgba(255,240,140,.22)', 'rgba(255,255,200,.28)', 'rgba(255,245,170,.9)', '#ffffff'], storm: ['rgba(100,150,255,.28)', 'rgba(170,200,255,.28)', 'rgba(190,220,255,.9)', '#ffffff'] };
 const list = [];                               // transient effects
@@ -33,6 +33,7 @@ export function ingest(events) {
         list.push({ k: 'star', t0: now, dur: 180, x: e.x, y: e.y, ty: e.ty, big: (e.n ?? 4) > 6 }); break;
       case 'vfx': { const d = VFX[e.id]; if (!d) break; list.push({ ...e, k: 'vfx', vid: e.id, t0: now, dur: d.dur }); if (['slap', 'jackpot', 'epilogue', 'hammer_smash', 'coldstar', 'grand', 'buyout', 'liquidation', 'allin_fire', 'wrath', 'roots', 'oblivion', 'titan_slam', 'forge_nova', 'event_horizon', 'titan_grip'].includes(e.id)) sfx('boom', 120); else if (['dice_pop', 'chain_end'].includes(e.id)) sfx('hit', 40); break; }
       case 'shake': if (e.who === G.id) hooks.shake?.(e.m ?? 1); break;
+      case 'bossmsg': hooks.bossmsg?.(e); break;
       case 'boom': list.push({ k: 'boom', t0: now, dur: 640, ...e }); sfx('boom', 120);
         for (let i = 0; i < 10; i++) { const a = rnd() * 6.28, sp = 1 + rnd() * 2.5; list.push({ k: 'bit', t0: now, dur: 420 + rnd() * 300, x: e.x + Math.cos(a) * e.r * 0.3, y: e.y + Math.sin(a) * e.r * 0.3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.2, col: BOOM_COL[e.g]?.[i % 3] ?? [TYPE_COL[e.ty] ?? '#fff', '#ffffff', shade(TYPE_COL[e.ty]?.length === 7 ? TYPE_COL[e.ty] : '#ffffff', 0.7)][i % 3], g: 2.2 }); }
         break;

@@ -8,13 +8,16 @@ import { playCinematic, afterCinematic } from './cinematic.js';
 import { HP_SCALE } from '../data.js';
 import { connectWs, connectLocal, soloCharacters, wipeSolo } from './net.js';
 import { WorldView } from './worldview.js';
-import { buildHud, updateHud, updateHotbar, showDeath, hideDeath, setPrompt, minimapCanvas, addChat, showAnnounce, showInvite, setPvp, setWar, playerMenu, showWho, openTrade, updateTrade, endTrade, dismissMenu } from './ui.js';
+import { buildHud, updateHud, updateHotbar, showDeath, hideDeath, setPrompt, minimapCanvas, addChat, showAnnounce, showBossMsg, showInvite, setPvp, setWar, playerMenu, showWho, openTrade, updateTrade, endTrade, dismissMenu } from './ui.js';
 import { sfx, toggleMute, isMuted } from './sfx.js';
 import { playTrack, trackFor, stopMusic } from './music.js';
 import { startTitleScene } from './title.js';
 import { dayPhase, isNight } from '../world.js';
+import { openWorldMap } from './worldmap.js';
+import { startUpgrade, showUpgradeResult } from './upgradeui.js';
+import { openAdventure, onAdvList, onAdvCur, onRecall, paintTracker } from './adventureui.js';
 import { openCharacter, openWindow, closeWindow, closeAll, refreshWindow, isOpen, topWindow, showDialog, showSecret, showSecretDone, showLegends, showLoot, openWaystone, openRaid, openRaid2, openGraid, openBounty, showLeaderboard, openVendor, openTavern, openCraft, openExchange, updateExchange, startForge, startBrew, showCraftResult, startHaggle, openHelp } from './panels.js';
-import { ingest, syncProjectiles } from './fx.js';
+import { ingest, syncProjectiles, hooks as fxHooks } from './fx.js';
 import { h, $, toast, modal } from '../ui-lib.js';
 import * as I from './icons.js';
 import { CLASSES, BASE_CLASSES, ITEMS, ZONES } from '../data.js';
@@ -83,7 +86,7 @@ function enter({ net, welcome }) {
   app.replaceChildren(canvas); document.body.classList.add('ingame');
   view = new WorldView(canvas); view.setMap(G.map);
   view.onPrompt = setPrompt; view.onClickPlayer = (p, e) => playerMenu(p, e);
-  buildHud(app, { character: () => openCharacter(), journal: () => openCharacter('journal'), help: openHelp, leave: leave, escape: () => { const t = topWindow(); if (t) closeWindow(t); }, touchKey: (k, d) => { view.keys[k] = d; }, interact: () => view.interact(), touchAttack: (d) => { view.touchAtk = d; }, touchSkill: (i) => view.useSkill(i), touchDodge: () => view.dodge() });
+  buildHud(app, { character: () => openCharacter(), journal: () => openCharacter('journal'), help: openHelp, worldmap: () => openWorldMap(), adventure: () => openAdventure(), recall: () => G.net.send({ t: 'recall' }), leave: leave, escape: () => { const t = topWindow(); if (t) closeWindow(t); }, touchKey: (k, d) => { view.keys[k] = d; }, interact: () => view.interact(), touchAttack: (d) => { view.touchAtk = d; }, touchSkill: (i) => view.useSkill(i), touchDodge: () => view.dodge() });
   G.refresh = refreshWindow; G.openAscend = () => openCharacter('ascend'); G.openTrading = () => openCharacter('trading'); G.reqs = []; G.crafters = []; G.buffs = {}; G.guild = null; G.guildLoaded = false;
   listen(document, 'click', (e) => { if (e.target.closest?.('.btn, .choice, .chat-tab')) sfx('click', 30); });
   wire(net); updateHud(); setTimeout(() => { if (running) startTutorial(G.me); }, 1800);
@@ -106,6 +109,7 @@ function stopGame() { unlistenAll(); running = false; cancelAnimationFrame(raf);
 function leave() { stopGame(); showLogin(); }
 
 function wire(net) {
+  fxHooks.bossmsg = showBossMsg;
   net.on('snap', (m) => {
     const seen = new Set();
     for (const p of m.players) { seen.add(p.id); const o = G.players.get(p.id); if (o) Object.assign(o, p); else G.players.set(p.id, { ...p }); }
@@ -114,7 +118,7 @@ function wire(net) {
     for (const p of m.mobs) { ms.add(p.id); const o = G.mobs.get(p.id); if (o) Object.assign(o, p); else G.mobs.set(p.id, { ...p }); }
     for (const id of [...G.mobs.keys()]) if (!ms.has(id)) G.mobs.delete(id);
     G.cust.clear(); for (const c of m.cust) G.cust.set(c.id, c);
-    G.cds = new Set(m.cds); G.zones = m.zones ?? []; syncProjectiles(m.projs ?? []); ingest(m.ev); G.guarding = !!G.players.get(G.id)?.gd;
+    G.cds = new Set(m.cds); G.zones = m.zones ?? []; G.haz = m.hz ?? []; G.snapNow = m.now; G.snapAt = performance.now(); syncProjectiles(m.projs ?? []); ingest(m.ev); G.guarding = !!G.players.get(G.id)?.gd;
   });
   net.on('me', (m) => {
     G.me = m.me; updateHud();
@@ -125,7 +129,7 @@ function wire(net) {
   net.on('correct', (m) => { G.pos.x = m.x; G.pos.y = m.y; });
   net.on('map', (m) => {
     closeAll(); G.map = m.id; G.pos = { x: m.x, y: m.y }; G.vis = new Set(m.vis); G.players.clear(); G.mobs.clear(); G.cust.clear(); G.gather = null;
-    view.setMap(m.id); fadeIn(); const z = getMap(m.id); zoneBanner(z, ZONES[m.id]); toast(`${z.name}${ZONES[m.id]?.lvl ? ` — recommended Lv ${ZONES[m.id].lvl}+` : ''}`, z.theme === 'hollow' ? 'secret' : '');
+    G.haz = []; view.setMap(m.id); fadeIn(); const z = getMap(m.id); zoneBanner(z, ZONES[m.id]); toast(`${z.name}${ZONES[m.id]?.lvl ? ` — recommended Lv ${ZONES[m.id].lvl}+` : ''}`, z.theme === 'hollow' ? 'secret' : '');
   });
   net.on('vis', (m) => { G.vis = new Set(m.vis); });
   net.on('toast', (m) => { toast(m.msg, m.kind); if (m.kind === 'secret') sfx('secret', 400); else if (m.kind === 'good') sfx('pickup', 200); });
@@ -185,6 +189,12 @@ function wire(net) {
   net.on('guild', (m) => { G.guild = m.guild; setWar(m.guild); if (isOpen('character')) refreshWindow('character'); });
   net.on('pvp', (m) => { G.pvp = m.on; setPvp(m.on); });
   net.on('reqs', (m) => { G.reqs = m.list ?? []; if (isOpen('character')) refreshWindow('character'); });
+  net.on('adv', onAdvList); net.on('adv.cur', onAdvCur); net.on('recall', onRecall);
+  net.on('upgs', (m) => { G.upgs = m.list ?? []; if (isOpen('character')) refreshWindow('character'); });
+  net.on('upgrade.info', (m) => { G.upInfo = { ...m.info, smith: m.smith, myLvl: m.myLvl, bonus: m.bonus }; G.upInfoCb?.(G.upInfo); if (isOpen('character')) refreshWindow('character'); });
+  net.on('upgrade.ticket', (m) => startUpgrade(m));
+  net.on('upgrade.result', (m) => { showUpgradeResult(m); updateHud(); });
+  net.on('upgrade.cancelled', () => closeWindow('upgrade'));
   net.on('crafters', (m) => { G.crafters = m.list ?? []; if (isOpen('character')) refreshWindow('character'); });
   net.on('searching', () => { view.searchFx = performance.now(); });
   net.on('search', () => { toast('You search the area. Nothing here.'); });

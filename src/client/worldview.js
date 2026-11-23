@@ -14,6 +14,8 @@ import { titleInfo } from '../rules.js';
 import { C, q, blit, flipped, drawText, drawTag, cellAt, pdisc, pring, pline, prect, vignette, hex } from './px.js';
 import { groundTile, wallSprite, doorSprite, treeSprite, rockSprite, crystalSprite, shelfSprite, prop, nodeSprite, personSprite, monsterSprite, shadowSprite, PAL } from './sprites.js';
 import { uiIcon } from './icons.js';
+import { navTarget } from './worldmap.js';
+import { drawHazards } from './hazards.js';
 import { casts, drawGround, drawAir, drawNumbers, drawWork, drawSwing, hooks, ingest } from './fx.js';
 
 const NPC_COLORS = { vendor: '#8a5a2b', lore: '#3d5a8a', tavern: '#8a3d3d', hidden: '#6a3d8a' };
@@ -216,17 +218,19 @@ export class WorldView {
     }
     for (const c of G.cust.values()) list.push({ y: c.y * TS + 8, fn: () => { blit(g, shadowSprite(12), c.x * TS, c.y * TS + 8); blit(g, personSprite('merchant', 'd', 0, 3, '#caa24a'), c.x * TS, c.y * TS + 8); blit(g, uiIcon('coin'), c.x * TS, c.y * TS - 36 + (Math.floor(t / 300) % 2) * C); drawTag(g, c.n, c.x * TS, c.y * TS - 52, '#ffe9a8'); } });
     const mobs = [...G.mobs.values()].filter((mb) => mb.rx !== undefined);
-    drawGround(g, mobs, G.zones, t);
+    drawGround(g, mobs, G.zones, t); drawHazards(g, G.haz, (G.snapNow ?? 0) + (performance.now() - (G.snapAt ?? 0)), t);
     for (const mb of mobs) list.push({ y: mb.ry * TS + 6, fn: () => this.drawMob(g, mb, t) });
     for (const p of G.players.values()) { const self = p.id === G.id, X = (self ? G.pos.x : (p.rx ?? p.x)) * TS, Y = (self ? G.pos.y : (p.ry ?? p.y)) * TS; list.push({ y: Y + 8, fn: () => this.drawPlayer(g, p, self, X, Y, t) }); }
     list.sort((a, b) => a.y - b.y); for (const it of list) it.fn();
     drawWork(g, t); drawAir(g);
     for (const [id, b] of G.bubbles) { if (b.until < Date.now()) { G.bubbles.delete(id); continue; } const p = G.players.get(id); if (!p) continue; const self = id === G.id; drawTag(g, b.text.length > 30 ? b.text.slice(0, 29) + '.' : b.text, (self ? G.pos.x : p.rx ?? p.x) * TS, (self ? G.pos.y : p.ry ?? p.y) * TS - 54 - 28 - (p.tt ? 12 : 0), '#ffffff', { bg: '#101830', border: '#3a4a7a' }); }
-    for (const p of m.portals) if (Math.abs(p.x - G.pos.x) < 30) drawTag(g, p.label, (p.x + p.w / 2) * TS, (p.y + p.h / 2) * TS - (p.h > p.w ? 0 : 14), '#ffe9a8');
+    const nav = navTarget();
+    for (const p of m.portals) { const cx = (p.x + p.w / 2) * TS, cy = (p.y + p.h / 2) * TS; if (cx < camX - 160 || cx > camX + this.vw + 160 || cy < camY - 60 || cy > camY + this.vh + 60) continue; const mine = nav?.portal === p; drawTag(g, mine ? `${p.label}  [YOUR ROUTE]` : p.label, cx, cy - (p.h > p.w ? 0 : 14), mine ? '#7fe0ff' : '#ffe9a8', { border: mine ? '#7fe0ff' : '#4a3a5a' }); }
     drawNumbers(g);
     if (!this.locked && !G.dead && this.mouseSeen) { const c = this.cursor, x = c.x * TS, y = c.y * TS; for (const [dx, dy] of [[-8, 0], [-6, 0], [6, 0], [8, 0], [0, -8], [0, -6], [0, 6], [0, 8]]) cellAt(g, x + dx - 1, y + dy - 1, 'rgba(255,255,255,.8)'); cellAt(g, x - 1, y - 1, 'rgba(255,255,255,.9)'); }
     g.setTransform(1, 0, 0, 1, 0, 0);
     this.drawAtmosphere(g, W, H, t, m);
+    this.drawCompass(g, W, H, camX, camY, Z, t);
     if (this.flash > 0) { g.fillStyle = `rgba(255,255,255,${Math.min(0.8, this.flash * 2)})`; g.fillRect(0, 0, W, H); }
     const low = G.maxHp ? Math.max(0, 0.35 - G.hp / G.maxHp) / 0.35 : 0;
     if (this.hurtFlash > 0 || low > 0) vignette(g, W, H, '#c00000', Math.min(0.85, low * 0.55 + this.hurtFlash * 1.6), 'red');
@@ -325,12 +329,33 @@ export class WorldView {
       else { const x = Math.floor((((seed * 5.7 + Math.sin(t / 900 + i) * 0.03) % 1 + 1) % 1) * W / 4) * 4, y = Math.floor(((1 - ((p.y + i * 0.05 + t / 7000 * sp) % 1)) * H) / 4) * 4; g.fillStyle = i % 3 ? '#ff8a3a' : '#ffd36a'; g.fillRect(x, y, 4, 4); }
     }
   }
+
+  // Arrows at the screen edge pointing at every exit that is not on screen; the exit on your tracked route is gold and larger.
+  drawCompass(g, W, H, camX, camY, Z, t) {
+    const m = this.map, nav = navTarget(); if (!m || G.dead) return;
+    const ins = 58, cxm = W / 2, cym = H / 2; g.save(); g.textBaseline = 'middle';
+    for (const p of m.portals) {
+      const wx = (p.x + p.w / 2) * TS, wy = (p.y + p.h / 2) * TS, sx = (wx - camX) * Z, sy = (wy - camY) * Z;
+      if (sx > ins && sx < W - ins && sy > ins && sy < H - ins) continue;
+      const mine = nav?.portal === p, dx = sx - cxm, dy = sy - cym, k = Math.min((W / 2 - ins) / Math.abs(dx || 1e-6), (H / 2 - ins) / Math.abs(dy || 1e-6)), ax = cxm + dx * k, ay = cym + dy * k, ang = Math.atan2(dy, dx);
+      const tiles = Math.round(Math.hypot(wx - G.pos.x * TS, wy - G.pos.y * TS) / TS), label = (p.label ?? '').replace(/^(< )?To /, '').replace(/ [><^v]$/, '').replace(/^Moonlit Pass: /, '');
+      const pulse = mine ? 1 + 0.12 * Math.sin(t / 220) : 1, r = (mine ? 17 : 12) * pulse, col = mine ? '#ffd24a' : '#e8e0f0';
+      g.globalAlpha = mine ? 1 : 0.78; g.translate(ax, ay); g.rotate(ang); g.fillStyle = col; g.strokeStyle = '#120d1c'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(r, 0); g.lineTo(-r * 0.7, -r * 0.8); g.lineTo(-r * 0.3, 0); g.lineTo(-r * 0.7, r * 0.8); g.closePath(); g.stroke(); g.fill(); g.rotate(-ang); g.translate(-ax, -ay);
+      g.font = `${mine ? 'bold 13' : '11'}px 'Pixel', monospace`; const line1 = label.length > 26 ? label.slice(0, 25) + '.' : label, line2 = `${tiles} tiles${mine ? '  - your route' : ''}`;
+      const tw = Math.max(g.measureText(line1).width, g.measureText(line2).width) + 12, th = mine ? 34 : 30; let bx = ax - dx / Math.hypot(dx, dy || 1) * (r + 6) - (dx > 0 ? tw : 0), by = ay - dy / Math.hypot(dx || 1, dy) * (r + 6) - th / 2;
+      bx = Math.max(6, Math.min(W - tw - 6, bx)); by = Math.max(6, Math.min(H - th - 6, by));
+      g.fillStyle = 'rgba(14,10,24,.82)'; g.fillRect(bx, by, tw, th); g.strokeStyle = mine ? '#ffd24a' : '#4a3a5a'; g.lineWidth = 2; g.strokeRect(bx + 1, by + 1, tw - 2, th - 2);
+      g.fillStyle = mine ? '#ffe9a8' : '#fff'; g.fillText(line1, bx + 6, by + th * 0.33); g.fillStyle = '#b8a8d8'; g.fillText(line2, bx + 6, by + th * 0.72); g.globalAlpha = 1;
+    }
+    g.restore();
+  }
   drawMinimap(cv) {
     if (!this.mini) return; const g = cv.getContext('2d'), m = this.map, s = Math.min(cv.width / m.w, cv.height / m.h);
     g.clearRect(0, 0, cv.width, cv.height); g.imageSmoothingEnabled = false; g.drawImage(this.mini, 0, 0, m.w * s, m.h * s);
     for (const p of G.players.values()) { g.fillStyle = p.id === G.id ? '#ffe36b' : '#7fe0ff'; g.fillRect(Math.round((p.id === G.id ? G.pos.x : p.x) * s) - 1, Math.round((p.id === G.id ? G.pos.y : p.y) * s) - 1, 3, 3); }
     for (const mb of G.mobs.values()) { g.fillStyle = mb.bo ? '#ff9a2a' : '#ff5a4a'; g.fillRect(Math.round(mb.x * s) - 1, Math.round(mb.y * s) - 1, mb.bo ? 4 : 2, mb.bo ? 4 : 2); }
-    for (const p of m.portals) { g.fillStyle = '#ffffff'; g.fillRect(Math.round(p.x * s), Math.round(p.y * s), Math.max(2, Math.round(p.w * s)), Math.max(2, Math.round(p.h * s))); }
+    const nav = navTarget(); for (const p of m.portals) { const mine = nav?.portal === p, blink = mine && Math.floor(performance.now() / 350) % 2; g.fillStyle = mine ? (blink ? '#7fe0ff' : '#ffd24a') : '#ffd24a'; g.fillRect(Math.round(p.x * s) - 1, Math.round(p.y * s) - 1, Math.max(4, Math.round(p.w * s) + 2), Math.max(4, Math.round(p.h * s) + 2)); g.strokeStyle = '#000'; g.strokeRect(Math.round(p.x * s) - 1.5, Math.round(p.y * s) - 1.5, Math.max(4, Math.round(p.w * s) + 2) + 1, Math.max(4, Math.round(p.h * s) + 2) + 1); }
     g.strokeStyle = 'rgba(255,255,255,.5)'; g.strokeRect(Math.round(this.cam.x / TS * s), Math.round(this.cam.y / TS * s), Math.round(this.vw / TS * s), Math.round(this.vh / TS * s));
   }
 }

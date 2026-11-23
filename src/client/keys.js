@@ -4,7 +4,7 @@ export const ACTIONS = [
   { id: 'heal', label: 'Health potion', def: '5' }, { id: 'mana', label: 'Mana potion', def: '6' }, { id: 'flask', label: 'Custom flask / draught', def: '7' },
   { id: 'dodge', label: 'Dodge roll', def: ' ' }, { id: 'interact', label: 'Interact', def: 'e' },
 ];
-export const RESERVED = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter', 'escape', 'i', 'j', 'h', 'm', 'p', 'k', 'tab', 'control', 'alt', 'meta', 'capslock']);
+export const RESERVED = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter', 'escape', 'i', 'j', 'h', 'm', 'p', 'k', 'n', 'l', 'b', 'tab', 'control', 'alt', 'meta', 'capslock']);
 const SK = 'emberfall.keys';
 let binds = null; const listeners = new Set();
 const defaults = () => Object.fromEntries(ACTIONS.map((a) => [a.id, a.def]));

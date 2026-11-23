@@ -41,7 +41,7 @@ export const liveMethods = {
       if (!mob || mob.deadUntil) { this.worldBoss = null; this.nextWorldBoss = nw + WB_EVERY; }
       else if (nw >= this.worldBoss.until) { this.mobs = this.mobs.filter((m) => m !== mob); this.worldBoss = null; this.nextWorldBoss = nw + WB_EVERY; this.announceAll('The Colossus retreats', 'It sinks back into the ground. Another will rise.'); }
     }
-    this.tickRaid(nw); this.tickRaids2(nw); this.tickGraid(nw); this.tickWars(nw); this.tickRequests(nw);
+    this.tickRaid(nw); this.tickRaids2(nw); this.tickUpgrades(nw); this.tickAdventure(nw); this.tickGraid(nw); this.tickWars(nw); this.tickRequests(nw);
   },
   worldBossLoot(S) {
     const P = S.P; P.gilt += 400; R.addItem(P, 'sunsteel_ore', 4); const got = ['400g', '4× Sunsteel Ore'];

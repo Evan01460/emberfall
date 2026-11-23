@@ -10,6 +10,9 @@ import { combatMethods } from './combat.js';
 import { progressMethods } from './progress.js';
 import { liveMethods } from './live.js';
 import { raidMethods } from './raids.js';
+import { bossMethods } from './bosses.js';
+import { upgradeMethods } from './upgrade.js';
+import { adventureMethods } from './adventure.js';
 import { RAID_ARENA_IDS, RAIDS } from '../raids.js';
 import { pvpMethods } from './pvp.js';
 import { requestMethods } from './requests.js';
@@ -47,7 +50,7 @@ export class GameServer {
       this.markets = { main: createMarket(this.rng, 'main'), hollow: createMarket(this.rng, 'hollow') };
     }
     this.customers = [];            // customer entities currently in town
-    this.initProgress(state); this.initLive(state); this.initRaids(); this.initPvp(state); this.initRequests(state);
+    this.initProgress(state); this.initLive(state); this.initRaids(); this.initBosses(); this.initUpgrades(state); this.initPvp(state); this.initRequests(state);
     this.initCombat();
     this.refillBotOrders();
     this.spawnCustomers();
@@ -58,7 +61,7 @@ export class GameServer {
   // ── persistence ───────────────────────────────────────────────────────────
   exportState() {
     for (const S of this.sessions.values()) this.syncRecord(S);
-    return { v: 2, rngS: this.rng.s, nextId: this.nextId, orders: this.orders, nextOrder: this.nextOrder, players: Object.fromEntries(this.players), markets: this.markets, mythics: this.mythics, guilds: this.guilds, wars: this.wars, reqs: this.reqs, nextReq: this.nextReq };
+    return { v: 2, rngS: this.rng.s, nextId: this.nextId, orders: this.orders, nextOrder: this.nextOrder, players: Object.fromEntries(this.players), markets: this.markets, mythics: this.mythics, guilds: this.guilds, wars: this.wars, reqs: this.reqs, nextReq: this.nextReq, upg: this.upg, nextUpg: this.nextUpg };
   }
   syncRecord(S) { S.P.map = S.map; S.P.x = S.x; S.P.y = S.y; }
 
@@ -96,7 +99,7 @@ export class GameServer {
 
   leave(conn) {
     const S = conn.session; if (!S || this.sessions.get(S.id) !== S) return;
-    this.cancelTicket(S, true);
+    this.cancelTicket(S, true); this.dropUpTicket(S);
     if (S.duel) this.endDuel(S, this.sessions.get(S.duel), true);
     this.endTradeFor(S, 'Partner disconnected.');
     this.leaveParty(S);
@@ -164,6 +167,7 @@ export class GameServer {
     S.map = mapId; S.x = x; S.y = y; S.gather = null; S.market = null; S.immuneUntil = this.now() + 3500; S.moving = false;
     if (!wasShadow && realmOf(mapId) === 'hollow') { S.P.stats.hollowVisits++; this.toast(S, ' You step into the Shadowfell. Your mana drains away while you are out here.', 'secret'); }
     S.conn.send({ t: 'map', id: mapId, x, y, vis: this.visibleIds(S) });
+    (S.P.seen ??= {})[mapId] = 1; this.advPush?.(S);
     const fl = ZONES[mapId]?.spire; if (fl && fl > (S.P.stats.spire ?? 0)) { S.P.stats.spire = fl; if (fl % 10 === 0) this.toast(S, `* Endless Spire: floor ${fl} reached!`, 'secret'); }
     this.touch(S);
   }
@@ -315,7 +319,7 @@ export class GameServer {
     const nt = NODE_TYPES[g.type];
     this.nodeCd[g.id] = this.now() + nt.respawn * 1000;
     const res = R.gatherYield(S.P, g.type, this.rng);
-    S.conn.send({ t: 'gather.done', id: g.id, found: res.found }); for (const [id, n] of Object.entries(res.found)) this.bountyEvent(S, 'gather', id, n);
+    S.conn.send({ t: 'gather.done', id: g.id, found: res.found }); for (const [id, n] of Object.entries(res.found)) { this.bountyEvent(S, 'gather', id, n); this.advGather(S, n); }
     if (res.levelUps.length) this.toast(S, `* Level ${res.levelUps.at(-1)}!`, 'good');
     this.afterChange(S);
   }
@@ -456,7 +460,7 @@ export class GameServer {
       const g = P.gear.find((x) => x.uid === +m.uid);
       if (!g || g.id !== m.itemId || R.isEquipped(P, g.uid)) return this.toast(S, 'Unequip it first.', 'bad');
       if (R.gearLocked(P, g)) return this.toast(S, 'Crafters cannot list their own creations. Sell it to a Merchant, or fill a commission on the Orders tab.', 'bad');
-      q = g.q; affix = g.affix; x = { fx: g.fx, ench: g.ench, cname: g.cname, by: g.by }; P.gear.splice(P.gear.indexOf(g), 1); qty = 1;
+      q = g.q; affix = g.affix; x = { fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by, up: g.up }; P.gear.splice(P.gear.indexOf(g), 1); qty = 1;
     } else {
       if (qty > R.freeStack(P, m.itemId)) return this.toast(S, R.lockedStack(P, m.itemId) ? `Only ${R.freeStack(P, m.itemId)} of those are tradeable — your own creations can only go to Merchants or fill orders.` : 'Not enough items.', 'bad');
       if (!R.removeItem(P, m.itemId, qty)) return this.toast(S, 'Not enough items.', 'bad');
@@ -613,7 +617,7 @@ export class GameServer {
     let pay = 0;
     for (const u of units) pay += o.kind === 'bot' ? this.botPay(o, u.q ?? 0.5) : o.price;
     const poster = o.by ? this.players.get(o.by) : null;
-    if (it.k === 'gear') for (const g of units) { P.gear.splice(P.gear.indexOf(g), 1); if (poster) R.addGear(poster, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, by: g.by }); }
+    if (it.k === 'gear') for (const g of units) { P.gear.splice(P.gear.indexOf(g), 1); if (poster) R.addGear(poster, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by }); }
     else { const c = Math.min(units.length, R.lockedStack(P, o.itemId)); if (c) P.crafted[o.itemId] -= c; R.removeItem(P, o.itemId, units.length); if (poster) R.addItem(poster, o.itemId, units.length); }
     P.gilt += pay; P.stats.profit += pay; o.left -= units.length; if (o.kind !== 'bot') o.escrow = Math.max(0, o.escrow - pay);
     if (o.left <= 0) this.orders.splice(this.orders.indexOf(o), 1);
@@ -709,7 +713,7 @@ export class GameServer {
     if (!this.validOffer(A, oa, B) || !this.validOffer(B, ob, A)) { this.endTrade(tr, 'Trade failed: an offer became invalid.'); return; }
     const move = (from, to, o) => {
       for (const [id, n] of Object.entries(o.items)) { const c = Math.min(n, R.lockedStack(from, id)); if (c) from.crafted[id] -= c; R.removeItem(from, id, n); R.addItem(to, id, n); }
-      for (const uid of o.gear) { const g = from.gear.splice(from.gear.findIndex((x) => x.uid === uid), 1)[0]; R.addGear(to, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, by: g.by }); }
+      for (const uid of o.gear) { const g = from.gear.splice(from.gear.findIndex((x) => x.uid === uid), 1)[0]; R.addGear(to, { id: g.id, q: g.q, affix: g.affix, fx: g.fx, ench: g.ench, cname: g.cname, up: g.up, by: g.by }); }
       for (const uid of o.flasks ?? []) { const i = from.flasks.findIndex((x) => x.uid === uid), f = from.flasks.splice(i, 1)[0]; const g = R.addFlask(to, { form: f.form, name: f.name, fx: f.fx, n: f.n, by: f.by }); delete g.crafted; g.q = f.q; }
       from.gilt -= o.gilt; to.gilt += o.gilt;
     };
@@ -752,7 +756,7 @@ export class GameServer {
       const cust = mapId === 'town' ? this.customers.map((c) => ({ id: c.id, n: c.name, x: c.x, y: c.y, it: c.itemId })) : [];
       const cds = []; for (const p of getMap(mapId).points) if (p.kind === 'node' && (this.nodeCd[p.id] ?? 0) > nw) cds.push(p.id);
       const ev = this.fx[mapId] ? this.fx[mapId].splice(0) : [];
-      const snap = { t: 'snap', now: nw, players, mobs, projs, zones, cust, cds, ev };
+      const snap = { t: 'snap', now: nw, players, mobs, projs, zones, cust, cds, ev, hz: this.hazardsView(mapId) };
       for (const S of list) S.conn.send(snap);
     }
     for (const k of Object.keys(this.fx)) if (!groups[k]) this.fx[k].length = 0;
@@ -763,4 +767,4 @@ export class GameServer {
   on_who(S) { S.conn.send({ t: 'who', players: [...this.sessions.values()].map((o) => ({ n: o.P.name, c: o.P.classId, l: o.P.level, map: getMap(o.map).name })) }); }
 }
 
-Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, raidMethods, pvpMethods, requestMethods);
+Object.assign(GameServer.prototype, combatMethods, progressMethods, liveMethods, raidMethods, bossMethods, upgradeMethods, adventureMethods, pvpMethods, requestMethods);

@@ -251,3 +251,11 @@ Before every attack except **All In** the Desperado rolls dice (one per projecti
   * Wyrmcrown follows the same rules with five wings; the Worldwyrm is the longest fight in the game.
   * Raids reset if everyone dies; a raid is also ended after 40 minutes. Only one group can be in each raid at a time.
 * Eight new ores/metals (Voidglass, Drakesteel, Celestine, Eternium, Nullsteel, Solarite, Mythril, Worldsteel) are mined in the Far Reaches and forged into gear for every class.
+
+## 21. The ring continent, boss mechanics, upgrades and the log
+
+* **Route.** Aether Reach → the Crossing (Lv 34). West ring = Mirelands, east ring = Ember Sands, both climb to the Gate of the Crown. The Citadel gate is on the eastern spur next to the Crossing; the Wyrmcrown gate is at the Crown's front door. Moonspire Heights has a pass into the western ring (a big jump in difficulty).
+* **Bosses.** Read the red/orange shapes. *Wheel*: cross a beam with a dodge roll or keep moving. *Sanctuary*: run into a lit circle. *Grid*: stand on a tile that is not filling. *Walls*: use the green corridor. *Orbs*: they aim at you when released — move after they leave the boss. *Blink*: step out of each cut. *Closing circle*: stay inside. A boss below 66% and 33% health learns new patterns and overlaps them.
+* **Upgrades.** Success needs luck and skill: the minigame can lift a +40 step from 14% to about 18%, a smith's level and perks add a little more, and "Quick forge" skips the game. Do the early steps yourself and ask a stronger smith for the deep ones. Keep spare materials: echo shards from +20, starmetal from +50.
+* **Adventure log.** Mastering regions earns the titles Pathfinder (3), Cartographer (12) and World-Walker (30).
+

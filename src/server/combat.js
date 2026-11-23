@@ -370,7 +370,7 @@ export const combatMethods = {
   },
   rollMob(m, zone) {
     const key = m.forceKey ?? (m.boss ? zone.boss : m.elite ? zone.elite : this.rng.pick(zone.enemies)), level = m.forceLevel ?? zone.lvl + (m.boss ? 2 : m.elite ? 2 : this.rng.int(0, 2)), st = enemyStats(key, level);
-    Object.assign(m, { key, level, name: m.elite ? `${ENEMIES[key].name} (Elite)` : null, hp: st.maxHp, maxHp: st.maxHp, atk: st.atk, def: st.def, speed: st.speed, moves: ENEMIES[key].moves.map((id) => MOVES[id]), x: m.hx, y: m.hy, target: null, wind: null, dash: null, cds: {}, stunUntil: 0, vulnUntil: 0, vuln: 0, tauntUntil: 0, threat: {}, deadUntil: 0, state: 'idle', wx: m.hx, wy: m.hy, wt: 0, flash: 0, enraged: false, radius: RADIUS[ENEMIES[key].shape] ?? 0.4 });
+    Object.assign(m, { key, level, name: m.elite ? `${ENEMIES[key].name} (Elite)` : null, hp: st.maxHp, maxHp: st.maxHp, atk: st.atk, def: st.def, speed: st.speed, moves: ENEMIES[key].moves.map((id) => MOVES[id]), x: m.hx, y: m.hy, target: null, wind: null, dash: null, cds: {}, stunUntil: 0, vulnUntil: 0, vuln: 0, tauntUntil: 0, threat: {}, deadUntil: 0, state: 'idle', wx: m.hx, wy: m.hy, wt: 0, flash: 0, enraged: false, bs: null, radius: RADIUS[ENEMIES[key].shape] ?? 0.4 });
     if (m.elite) { m.maxHp = m.hp = Math.round(m.maxHp * 1.8); m.atk += 3; }
   },
   becomeShade(m, S) {
@@ -380,6 +380,7 @@ export const combatMethods = {
 
   killMob(mob) {
     if (mob.deadUntil) return;
+    this.clearHazards(mob.id); mob.bs = null;
     const now = this.now(); mob.hp = 0; mob.deadUntil = now + (mob.boss ? 300000 : mob.elite ? 180000 : 22000 + this.rng.int(0, 15000)); mob.wind = null; mob.dash = null; mob.target = null;
     this.emit(mob.map, { t: 'mobdeath', x: mob.x, y: mob.y, k: mob.key, boss: mob.boss ? 1 : 0 });
     // contributors + nearby party members
@@ -393,7 +394,7 @@ export const combatMethods = {
       const gb = this.guildXpBonus?.(S.P) ?? 0; if (gb) rw.xp = Math.round(rw.xp * (1 + gb)); this.guildXp?.(S, mob.boss ? 12 : mob.elite ? 6 : 1);
       const tome = R.rollTome(S.P, mob.key, mob.boss || mob.elite, this.rng); if (tome) rw.drops[`tome_${tome}`] = 1;
       S.lastKillAt = now; if (S.rt.status?.stacks) S.voidStacks = Math.min(S.rt.status.stacks.max, (S.voidStacks ?? 0) + 1);
-      this.questKill?.(S, mob); this.bountyEvent?.(S, 'kill', mob.key); if (mob.worldBoss) this.worldBossLoot?.(S); this.dungeonClear?.(S, mob);
+      this.questKill?.(S, mob); this.bountyEvent?.(S, 'kill', mob.key); if (mob.worldBoss) this.worldBossLoot?.(S); this.dungeonClear?.(S, mob); this.advKill?.(S, mob);
       const ups = R.applyKill(S.P, { rewards: rw, lowHp: S.hp < S.rt.maxHp * 0.25 });
       S.mp = Math.min(S.rt.maxMp, S.mp + 4);
       S.conn.send({ t: 'loot', xp: rw.xp, gold: rw.gold, drops: rw.drops, levelUps: ups, boss: mob.boss ? 1 : 0, x: mob.x, y: mob.y });
@@ -428,6 +429,7 @@ export const combatMethods = {
       if (mob.hp > 0 && mob.hp < mob.maxHp && nw - (mob.hurtAt ?? 0) > MOB_HEAL_DELAY) mob.hp = Math.min(mob.maxHp, mob.hp + mob.maxHp * MOB_HEAL_RATE * dt);
       if (mob.hp < (mob.lastHp ?? mob.hp)) mob.hurtAt = nw; mob.lastHp = mob.hp;
       if (mob.stunUntil > nw) continue;
+      if (mob.boss) this.tickBossScript(mob, nw);
       if (mob.boss && !mob.enraged && mob.hp < mob.maxHp * 0.5) { mob.enraged = true; mob.speed *= 1.15; this.emit(mob.map, { t: 'aura', x: mob.x, y: mob.y, r: 3, c: 'rage' }); }
       // dash in progress
       if (mob.dash) {
@@ -438,6 +440,7 @@ export const combatMethods = {
       }
       // winding up an attack?
       if (mob.wind) { if (nw >= mob.wind.at) this.resolveMobMove(mob, nw); continue; }
+      if (mob.bs && nw < mob.bs.busy) continue;                                   // channelling a boss pattern: it holds its ground
       const S = this.mobTarget(mob, nw);
       const home = dist(mob.x, mob.y, mob.hx, mob.hy);
       if (!S) {
@@ -581,7 +584,7 @@ export const combatMethods = {
   },
   tickCombat(dt, nw) {
     for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= nw) { const t = this.timers.splice(i, 1)[0]; try { t.fn(); } catch (e) { console.error(e); } }
-    this.tickPlayers(dt, nw); this.tickMobs(dt, nw); this.tickProjectiles(dt, nw); this.tickZones(nw);
+    this.tickPlayers(dt, nw); this.tickMobs(dt, nw); this.tickProjectiles(dt, nw); this.tickZones(nw); this.tickHazards(nw);
   },
 
   // ── duels (consensual PvP) ────────────────────────────────────────────────

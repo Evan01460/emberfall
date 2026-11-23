@@ -84,36 +84,89 @@ const ELDERS = ['Warden Corvane', 'Elder Mirenna', 'Captain Hask', 'Speaker Ilva
 const LORE = [(n) => `${n} was settled by people who did not read the warnings. The warnings were correct.`, (n) => `Travellers say the road through ${n} was built by hands that no longer exist.`, (n) => `The old maps of ${n} do not match the land. Trust the land.`, (n) => `Something big sleeps under ${n}. We keep the tavern loud so it does not wake.`, (n) => `Everything that dies in ${n} gets up again. Eventually it stops getting up. Eventually.`, (n) => `The waystone in ${n} still works. It is the only thing here that does.`, (n) => `A caravan went into ${n} last spring. Their wagons came back. Only the wagons.`, (n) => `The lord of ${n} has not been seen in years. The tax collector has.`];
 
 // ── the regions ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-const PATH = 24;
 const used = new Set();
 function zoneName(b, r) { for (let k = 0; k < 40; k++) { const n = `${pick(r, b.adj)} ${pick(r, b.noun)}`; if (!used.has(n)) { used.add(n); return n; } } let n = 2; while (used.has(`${b.adj[0]} ${b.noun[0]} ${n}`)) n++; const x = `${b.adj[0]} ${b.noun[0]} ${n}`; used.add(x); return x; }
 const LAIR_AT = [0.5, 0.12];
-for (let i = 0; i < PATH * 2; i++) {
-  const side = i >= PATH, pi = side ? i - PATH : i, r = mulberry(5000 + i * 97), b = BIOMES[(pi * 5 + (side ? 3 : 0)) % BIOMES.length];
-  const L = Math.min(100, Math.round(34 + pi * 2.75 + (side ? 1 : 0))), tier = tierForLevel(L), id = side ? `far_s${String(pi).padStart(2, '0')}` : `far_p${String(pi).padStart(2, '0')}`, name = zoneName(b, r), cave = b.kind === 'cave';
-  const kitStart = (i * 2) % 5, picks = [0, 1, 2, 3].map((k) => b.kit[(kitStart + k) % 5]), pre = PREFIX[Math.min(PREFIX.length - 1, Math.floor(pi / 3))];
+// ── THE FAR REACHES: a ring continent ───────────────────────────────────────────────────────────────────────────────────────────────────
+// Aether Reach leads to the Crossing (the hub). From it two roads climb round a great ring - west through the Mirelands and east through the
+// Ember Sands - and meet at the Gate of the Crown in the north. Behind the gate is the Crown itself. Spurs branch off the ring to dungeons
+// and lair bosses nobody has to visit. Levels rise with the road distance from the Crossing, so every region lists the level it expects.
+// Grid cells are [x, y, biome, role, parent?]; x runs east, y runs south, so north is negative y. Original Aether Reach sits at [2, -3].
+const CELL = [
+  [2, -4, 'ashen', 'hub'],
+  [1, -4, 'sylvan', 'spur', [2, -4]], [3, -4, 'dune', 'spur', [2, -4]], [4, -4, 'storm', 'spur', [3, -4]], [5, -4, 'ruin', 'spur', [4, -4]],
+  [2, -5, 'ruin', 'ring'], [1, -5, 'sylvan', 'ring'], [0, -5, 'marsh', 'ring'], [-1, -5, 'bone', 'ring'], [3, -5, 'dune', 'ring'], [4, -5, 'ashen', 'ring'], [5, -5, 'storm', 'ring'],
+  [-1, -6, 'marsh', 'ring'], [-1, -7, 'sylvan', 'ring'], [-1, -8, 'abyss', 'ring'], [-1, -9, 'marsh', 'ring'], [-1, -10, 'frost', 'ring'],
+  [5, -6, 'ruin', 'ring'], [5, -7, 'bone', 'ring'], [5, -8, 'dune', 'ring'], [5, -9, 'ashen', 'ring'], [5, -10, 'sky', 'ring'],
+  [0, -10, 'frost', 'ring'], [1, -10, 'crystal', 'ring'], [2, -10, 'sky', 'ring'], [3, -10, 'crystal', 'ring'], [4, -10, 'frost', 'ring'],
+  [2, -9, 'void', 'crown'], [2, -8, 'storm', 'crown'], [1, -8, 'abyss', 'crown'], [3, -8, 'crystal', 'crown'], [2, -7, 'void', 'crown'], [2, -6, 'storm', 'crown'],
+  [1, -7, 'void', 'crown'], [3, -7, 'abyss', 'crown'],
+  [-2, -5, 'bone', 'spur', [-1, -5]], [-2, -6, 'marsh', 'spur', [-1, -6]], [-2, -8, 'sylvan', 'spur', [-1, -8]], [-3, -8, 'marsh', 'spur', [-2, -8]], [-2, -10, 'frost', 'spur', [-1, -10]],
+  [6, -6, 'ruin', 'spur', [5, -6]], [6, -8, 'dune', 'spur', [5, -8]], [7, -8, 'ashen', 'spur', [6, -8]], [6, -10, 'sky', 'spur', [5, -10]],
+  [0, -11, 'crystal', 'spur', [0, -10]], [2, -11, 'sky', 'spur', [2, -10]], [2, -12, 'void', 'spur', [2, -11]], [4, -11, 'storm', 'spur', [4, -10]],
+];
+const key = (x, y) => `${x},${y}`;
+const cellAt = new Map(CELL.map((c) => [key(c[0], c[1]), c]));
+// who is joined to whom (ring cells to their ring neighbours, crown cells as a small tree, spurs to their parents)
+const FAR_LINKS = [];
+const join = (a, b) => { if (cellAt.has(key(...a)) && cellAt.has(key(...b))) FAR_LINKS.push([a, b]); else throw new Error(`far reaches layout: ${a} / ${b}`); };
+join([2, -4], [2, -5]);
+for (const [a, b] of [[[2, -5], [1, -5]], [[1, -5], [0, -5]], [[0, -5], [-1, -5]], [[2, -5], [3, -5]], [[3, -5], [4, -5]], [[4, -5], [5, -5]]]) join(a, b);
+for (let y = -5; y > -10; y--) { join([-1, y], [-1, y - 1]); join([5, y], [5, y - 1]); }
+for (let x = -1; x < 5; x++) join([x, -10], [x + 1, -10]);
+for (const [a, b] of [[[2, -10], [2, -9]], [[2, -9], [2, -8]], [[2, -8], [1, -8]], [[2, -8], [3, -8]], [[2, -8], [2, -7]], [[2, -7], [2, -6]], [[1, -8], [1, -7]], [[3, -8], [3, -7]]]) join(a, b);
+for (const c of CELL) if (c[3] === 'spur') join(c[4], [c[0], c[1]]);
+// breadth-first from the hub: depth sets the level, parents set the arrival side of each region
+const nbr = new Map(); for (const [a, b] of FAR_LINKS) { (nbr.get(key(...a)) ?? nbr.set(key(...a), []).get(key(...a))).push(b); (nbr.get(key(...b)) ?? nbr.set(key(...b), []).get(key(...b))).push(a); }
+const depth = new Map([[key(2, -4), 0]]), order = [[2, -4]], par = new Map();
+for (let q = 0; q < order.length; q++) for (const n of nbr.get(key(...order[q])) ?? []) if (!depth.has(key(...n))) { depth.set(key(...n), depth.get(key(...order[q])) + 1); par.set(key(...n), order[q]); order.push(n); }
+if (order.length !== CELL.length) throw new Error('far reaches layout is not connected');
+let nMain = 0, nSide = 0; const idOf = new Map();
+for (const [x, y] of order) { const c = cellAt.get(key(x, y)); idOf.set(key(x, y), c[3] === 'spur' ? `far_s${String(nSide++).padStart(2, '0')}` : `far_p${String(nMain++).padStart(2, '0')}`); }
+export const FAR_POS = Object.fromEntries(order.map(([x, y]) => [idOf.get(key(x, y)), [x, y]]));
+const DIRS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+// [from, to, side of `from` the road leaves by] in breadth-first order, so each region's first portal faces the hub
+export const FAR_EDGES = [];
+for (const [x, y] of order) for (const n of nbr.get(key(x, y)) ?? []) if (depth.get(key(...n)) === depth.get(key(x, y)) + 1) { const d = Object.entries(DIRS).find(([, v]) => v[0] === n[0] - x && v[1] === n[1] - y)[0]; FAR_EDGES.push([idOf.get(key(x, y)), idOf.get(key(...n)), d]); }
+// edges between regions at equal depth (the ring top, crown rungs) - joined too, after the tree edges
+for (const [a, b] of FAR_LINKS) if (depth.get(key(...a)) === depth.get(key(...b))) { const d = Object.entries(DIRS).find(([, v]) => v[0] === b[0] - a[0] && v[1] === b[1] - a[1])[0]; FAR_EDGES.push([idOf.get(key(...a)), idOf.get(key(...b)), d]); }
+export const FAR_GATES = {};   // raid gates: region ids, filled below
+
+let zi = 0;
+for (const [cx, cy] of order) {
+  const c = cellAt.get(key(cx, cy)), id = idOf.get(key(cx, cy)), dpt = depth.get(key(cx, cy)), spur = c[3] === 'spur', i = zi++, r = mulberry(5000 + i * 97), b = BIOMES.find((x) => x.id === c[2]);
+  const L = Math.min(100, Math.round(34 + dpt * 4.125)), tier = tierForLevel(L), name = zoneName(b, r), cave = b.kind === 'cave', pi = dpt;
+  const kitStart = (i * 2) % 5, picks = [0, 1, 2, 3].map((k) => b.kit[(kitStart + k) % 5]), pre = PREFIX[Math.min(PREFIX.length - 1, Math.floor(dpt / 2.2))];
   const enemyIds = []; picks.forEach(([nm, sh, col, role], k) => { const eid = `${id}_m${k}`; EXP_ENEMIES[eid] = mobDef(`${pre}${nm}`, sh, col, L + (k % 2), role, tier, k === 1 ? { blunt: 0.85 } : k === 2 ? { arcane: 0.7 } : {}); enemyIds.push(eid); });
-  const eliteId = `${id}_e`, bossId = `${id}_b`, bn = b.bosses[(pi + (side ? 1 : 0)) % b.bosses.length];
+  const eliteId = `${id}_e`, bossId = `${id}_b`, bn = b.bosses[(i + (spur ? 1 : 0)) % b.bosses.length];
   EXP_ENEMIES[eliteId] = eliteDef(`${pre}${b.elite[0]}`, b.elite[1], b.elite[2], L + 2, tier);
-  EXP_ENEMIES[bossId] = bossDef(side ? `${bn} the Lesser` : bn, picks[1][1] === 'golem' ? 'golem' : 'brute', picks[1][2], L + 3, tier, BOSS_MOVES[(pi + i) % BOSS_MOVES.length]);
-  const village = !side && pi % 3 === 0 && !cave, dun = !side && pi % 2 === 1 && !cave, dk = `far_d${String(pi).padStart(2, '0')}`;
+  EXP_ENEMIES[bossId] = bossDef(spur ? `${bn} the Lesser` : bn, picks[1][1] === 'golem' ? 'golem' : 'brute', picks[1][2], L + 3, tier, BOSS_MOVES[(i + pi) % BOSS_MOVES.length]);
+  const village = !cave && (c[3] === 'hub' || (c[3] === 'ring' && dpt % 4 === 0) || (c[3] === 'crown' && cx === 2 && cy === -9)), dun = spur && !cave, dk = `far_d${String(i).padStart(2, '0')}`;
+  // exits (as fractions of the region's edges): where the roads leave, so the lair can be put well away from them
+  const exitsAt = []; for (const [a, bb, d] of FAR_EDGES) { const back = { n: 's', s: 'n', e: 'w', w: 'e' }[d]; if (idOf.get(key(cx, cy)) === a) exitsAt.push(d); if (idOf.get(key(cx, cy)) === bb) exitsAt.push(back); }
+  const edgePt = (d) => (d === 'n' ? [0.5, 0] : d === 's' ? [0.5, 1] : d === 'w' ? [0, 0.5] : [1, 0.5]);
+  const LAIRS = [[0.2, 0.2], [0.8, 0.2], [0.2, 0.78], [0.8, 0.74], [0.5, 0.5]], lairAt = LAIRS.map((p) => ({ p, d: Math.min(9, ...exitsAt.map((e) => { const q = edgePt(e); return Math.hypot((p[0] - q[0]) * 1.4, p[1] - q[1]); })) })).sort((u, v) => v.d - u.d)[(i % 2)].p;
   const lm = [];
   if (village) lm.push({ t: 'village', at: [0.5, 0.78], vendor: pick(r, VENDORS), inn: pick(r, INNS), elder: pick(r, ELDERS), lines: [pick(r, LORE)(name), pick(r, LORE)(name)] });
   if (dun && !cave) lm.push({ t: 'dungeon', at: [0.82 - r() * 0.1, 0.3 + r() * 0.15], to: `${dk}_1`, label: `${name.split(' ')[0]} Depths (Lv ${L + 1}-${L + 5})`, signName: `${name.split(' ')[0]} Depths`, lines: [`THE ${name.toUpperCase()} DEPTHS. Whatever is down there has been waiting. (Lv ${L + 1}-${L + 5})`] });
   const jit = () => (r() - 0.5) * 0.12;
-  if (!cave) lm.push({ t: 'camp', at: [0.2 + jit(), 0.4 + jit()], chest: `${pick(r, b.noun)} Camp` }, { t: 'camp', at: [0.78 + jit(), 0.35 + jit()] }, { t: 'ruin', at: [0.4 + jit(), 0.62 + jit()], chest: `${pick(r, b.adj)} Ruin` }, { t: 'ruin', at: [0.7 + jit(), 0.66 + jit()], chest: `Lost ${pick(r, ['Cache', 'Vault', 'Reliquary', 'Strongbox'])}` }, { t: 'tower', at: [0.3 + jit(), 0.28 + jit()], name: `${pick(r, ['Watch', 'Signal', 'Memorial', 'Old'])} Stone`, lines: [`Scratched into the stone: ${pick(r, ['THE ROAD GOES ON AND SO MUST YOU.', 'TURN BACK OR CARRY MORE POTIONS.', 'THE BEAST IN THE NORTH IS NOT THE WORST OF IT.', 'WE WERE HERE. THEN WE WERE NOT.', 'SEVEN CAME. ONE LEFT.'])}`] }, { t: 'shrine', at: [0.85 + jit(), 0.8 + jit()] }, { t: 'lair', at: LAIR_AT });
+  if (!cave) lm.push({ t: 'camp', at: [0.2 + jit(), 0.4 + jit()], chest: `${pick(r, b.noun)} Camp` }, { t: 'camp', at: [0.78 + jit(), 0.35 + jit()] }, { t: 'ruin', at: [0.4 + jit(), 0.62 + jit()], chest: `${pick(r, b.adj)} Ruin` }, { t: 'ruin', at: [0.7 + jit(), 0.66 + jit()], chest: `Lost ${pick(r, ['Cache', 'Vault', 'Reliquary', 'Strongbox'])}` }, { t: 'tower', at: [0.3 + jit(), 0.28 + jit()], name: `${pick(r, ['Watch', 'Signal', 'Memorial', 'Old'])} Stone`, lines: [`Scratched into the stone: ${pick(r, ['THE ROAD GOES ON AND SO MUST YOU.', 'TURN BACK OR CARRY MORE POTIONS.', 'THE BEAST IN THE NORTH IS NOT THE WORST OF IT.', 'WE WERE HERE. THEN WE WERE NOT.', 'SEVEN CAME. ONE LEFT.'])}`] }, { t: 'shrine', at: [0.85 + jit(), 0.8 + jit()] }, { t: 'lair', at: lairAt });
   const nodes = { [tier.id]: cave ? 22 : 16 + (pi % 5), herb: 8, hide: 6, ore: 4 + (pi % 3) * 2, coal: 4 + (pi % 2) * 3 }; if (b.id === 'frost' || b.id === 'sky') nodes.frostbloom = 8; if (b.id === 'marsh' || b.id === 'abyss' || b.id === 'void') nodes.ghostbloom = 5; if (cave || b.id === 'crystal') nodes.echo = 6;
-  const spec = { id, name, lvl: L, kind: cave ? 'cave' : 'out', theme: b.theme, biome: b.id, w: cave ? 128 : side ? 144 : 176, h: cave ? 104 : side ? 104 : 128, seed: 6100 + i * 31, ground: b.ground, patch: b.patch, edge: b.edge, trees: b.trees, thin: b.thin, water: b.water, rocks: b.rocks, clear: b.clear, fs: 12 + (i % 7) * 2, fill: b.fill, pool: b.pool, crystal: b.crystal, landmarks: lm, nodes, mobs: cave ? 56 : 60 + (pi % 4) * 2, elites: cave ? 5 : undefined, chests: 9, deco: [['bones', 12, { solid: false }], ['stump', 6]], waystones: 1,
-    enemies: enemyIds, elite: eliteId, boss: bossId, tier: tier.id, parent: side ? `far_p${String(pi).padStart(2, '0')}` : pi === 0 ? 'aether_reach' : `far_p${String(pi - 1).padStart(2, '0')}`, village, dungeon: dun ? dk : null };
+  const spec = { id, name, lvl: L, kind: cave ? 'cave' : 'out', theme: b.theme, biome: b.id, w: cave ? 128 : spur ? 144 : 176, h: cave ? 104 : spur ? 104 : 128, seed: 6100 + i * 31, ground: b.ground, patch: b.patch, edge: b.edge, trees: b.trees, thin: b.thin, water: b.water, rocks: b.rocks, clear: b.clear, fs: 12 + (i % 7) * 2, fill: b.fill, pool: b.pool, crystal: b.crystal, landmarks: lm, nodes, mobs: cave ? 56 : 60 + (pi % 4) * 2, elites: cave ? 5 : undefined, chests: 9, deco: [['bones', 12, { solid: false }], ['stump', 6]], waystones: 1,
+    enemies: enemyIds, elite: eliteId, boss: bossId, tier: tier.id, parent: par.has(key(cx, cy)) ? idOf.get(key(...par.get(key(cx, cy)))) : 'aether_reach', depth: dpt, role: c[3], biomeId: b.id, gx: cx, gy: cy, village, dungeon: dun ? dk : null };
   EXP_ZONES.push(spec);
   // the dungeon behind this region
   if (dun) {
-    const dl = L + 1, dBoss = `${dk}_b`; EXP_ENEMIES[dBoss] = bossDef(`${bn}, Warden of the Depths`, 'warden', picks[2][2], dl + 4, tier, BOSS_MOVES[(pi + 2) % BOSS_MOVES.length]);
+    const dl = L + 1, dBoss = `${dk}_b`; EXP_ENEMIES[dBoss] = bossDef(`${bn}, Warden of the Depths`, 'warden', picks[2][2], dl + 4, tier, BOSS_MOVES[(i + 2) % BOSS_MOVES.length]);
     const de = [0, 1, 2, 3].map((k) => { const eid = `${dk}_m${k}`, p = b.kit[(kitStart + k + 1) % 5]; EXP_ENEMIES[eid] = mobDef(`${pre}${p[0]}`, p[1], p[2], dl + (k % 3), p[3], tier); return eid; });
-    EXP_ZONES.push({ id: `${dk}_1`, name: `${name.split(' ')[0]} Depths — Upper`, lvl: dl, dungeon: true, biome: b.id, theme: cave ? 'cave' : b.theme === 'desert' ? 'desert' : b.theme, enemies: de, elite: eliteId, tier: tier.id, floor: 1, dk, seed: 7100 + pi * 13, parentZone: id });
-    EXP_ZONES.push({ id: `${dk}_2`, name: `${name.split(' ')[0]} Depths — Heart`, lvl: dl + 2, dungeon: true, biome: b.id, theme: cave ? 'cave' : b.theme, enemies: de, elite: eliteId, boss: dBoss, tier: tier.id, floor: 2, dk, seed: 7101 + pi * 13, parentZone: id });
+    EXP_ZONES.push({ id: `${dk}_1`, name: `${name.split(' ')[0]} Depths — Upper`, lvl: dl, dungeon: true, biome: b.id, theme: cave ? 'cave' : b.theme === 'desert' ? 'desert' : b.theme, enemies: de, elite: eliteId, tier: tier.id, floor: 1, dk, seed: 7100 + i * 13, parentZone: id });
+    EXP_ZONES.push({ id: `${dk}_2`, name: `${name.split(' ')[0]} Depths — Heart`, lvl: dl + 2, dungeon: true, biome: b.id, theme: cave ? 'cave' : b.theme, enemies: de, elite: eliteId, boss: dBoss, tier: tier.id, floor: 2, dk, seed: 7101 + i * 13, parentZone: id });
   }
 }
+
+
+// raid gates: the first is a hub spur (an early raid), the second is the front door of the Crown
+FAR_GATES.void_citadel = idOf.get(key(3, -4)); FAR_GATES.wyrmcrown = idOf.get(key(2, -9));
 
 // ── the Endless Spire ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export const SPIRE_FLOORS = 120, SPIRE_BAND = 5;

@@ -3,7 +3,7 @@
 // Coordinates are in tile units (floats). A tile (tx,ty) spans [tx,tx+1) × [ty,ty+1).
 // Two realms: "main" (Lanternfall and its wilds) and "hollow" (the mirror realm).
 // ─────────────────────────────────────────────────────────────────────────────
-import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS } from './expansion.js';
+import { EXP_ZONES, SPIRE_ZONES, SPIRE_FLOORS, FAR_EDGES, FAR_POS } from './expansion.js';
 import { RAIDS } from './raids.js';
 import { Rng } from './rng.js';
 
@@ -445,7 +445,24 @@ function genOutdoor(S) {
   chests(m, rng, S.chests ?? 6, { gap: 16, avoid: mobAvoid }, S.chestName ?? 'Chest');
   for (const [kind, n, opts] of S.deco ?? []) decoScatter(m, rng, kind, n, opts ?? {}, { gap: 3, avoid: mobAvoid });
   for (const [x, y] of place(m, rng, S.waystones ?? 0, { gap: 30, avoid: mobAvoid })) pt(m, 'waystone', `waystone${x}`, x, y, { name: 'Waystone' });
+  ensureReach(m, rng);
   return m;
+}
+
+// Everything the player is meant to reach must be reachable from the arrival point: carve a road from any pocket that is cut off.
+function ensureReach(m, rng) {
+  for (let pass = 0; pass < 5; pass++) {
+    const seen = new Uint8Array(m.w * m.h), st = [[Math.floor(m.spawn.x), Math.floor(m.spawn.y)]]; seen[st[0][1] * m.w + st[0][0]] = 1;
+    while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= m.w || ny >= m.h || seen[ny * m.w + nx] || blockedAt(m, nx + 0.5, ny + 0.5)) continue; seen[ny * m.w + nx] = 1; st.push([nx, ny]); } }
+    const targets = [...m.points.map((p) => [p.x, p.y]), ...m.mobSpawns.map((q) => [q.x + 0.5, q.y + 0.5]), ...(m.eliteSpawns ?? []).map((q) => [q.x + 0.5, q.y + 0.5]), ...(m.bossSpawn ? [[m.bossSpawn.x, m.bossSpawn.y]] : []), ...m.portals.map((p) => [p.x + p.w / 2, p.y + p.h / 2])];
+    let fixed = 0;
+    for (const [tx, ty] of targets) {
+      const ix = Math.floor(tx), iy = Math.floor(ty); if (ix < 0 || iy < 0 || ix >= m.w || iy >= m.h || seen[iy * m.w + ix]) continue;
+      let best = null; for (let r = 1; r < 90 && !best; r++) { let bd = 1e9; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ix + dx, y = iy + dy; if (x < 0 || y < 0 || x >= m.w || y >= m.h || !seen[y * m.w + x]) continue; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = { x, y }; } } }
+      if (best) { road(m, rng, { x: ix, y: iy }, best, 3); fixed++; }
+    }
+    if (!fixed) break;
+  }
 }
 
 // Spec → cave / dungeon zone (cellular automata).
@@ -628,12 +645,50 @@ link('frostpeak', 'w', 0.7, 'ironhold', 'e', 0.45, '< To Ironhold Mines', 'To Fr
 link('crystal_caverns', 'n', 0.5, 'moonspire', 's', 0.5, 'To Moonspire Heights ^', 'To the Crystal Caverns v');
 link('emberwaste', 'e', 0.5, 'cinder_foundry', 'w', 0.5, 'To the Cinder Foundry >', '< To the Emberwaste');
 link('ruined_citadel', 'n', 0.5, 'aether_reach', 's', 0.5, 'To Aether Reach ^', 'To the Ruined Citadel v');
-// The Far Reaches: a main road north from Aether Reach (24 regions), with a side region branching off every one of them.
+// The Far Reaches: a ring continent (layout and levels in src/expansion.js). Aether Reach leads to the Crossing; every other link comes from FAR_EDGES.
 {
-  const road = EXP_ZONES.filter((z) => z.kind && z.id.startsWith('far_p')), sides = EXP_ZONES.filter((z) => z.kind && z.id.startsWith('far_s'));
-  for (const z of road) link(z.parent, 'n', 0.5, z.id, 's', 0.5, `To ${z.name} ^`, `To ${Z[z.parent].name} v`);
-  sides.forEach((z, i) => { const east = i % 2 === 0; link(z.parent, east ? 'e' : 'w', 0.5, z.id, east ? 'w' : 'e', 0.5, east ? `To ${z.name} >` : `< To ${z.name}`, east ? `< To ${Z[z.parent].name}` : `To ${Z[z.parent].name} >`); });
+  const E = new Map(EXP_ZONES.map((e) => [e.id, e])), ARROW = { n: '^', s: 'v', e: '>', w: '<' }, BACK = { n: 's', s: 'n', e: 'w', w: 'e' };
+  const lab = (to, d) => { const e = E.get(to), nm = e ? `${e.name} (Lv ${e.lvl})` : to; return d === 'w' ? `< To ${nm}` : d === 'e' ? `To ${nm} >` : `To ${nm} ${ARROW[d]}`; };
+  link('aether_reach', 'n', 0.5, FAR_EDGES[0][0], 's', 0.5, `To ${E.get(FAR_EDGES[0][0]).name} (Lv ${E.get(FAR_EDGES[0][0]).lvl}) ^`, 'To Aether Reach v');
+  for (const [a, b, d] of FAR_EDGES) link(a, d, 0.5, b, BACK[d], 0.5, lab(b, d), lab(a, BACK[d]));
+  // a dangerous shortcut: from Moonspire Heights over the mountains straight into the western ring
+  const wm = [...E.values()].find((e) => e.gx === 0 && e.gy === -5);
+  link('moonspire', 'n', 0.5, wm.id, 's', 0.5, `Moonlit Pass: ${wm.name} (Lv ${wm.lvl}) ^`, 'To Moonspire Heights v');
 }
+// ── the world as a graph (for the world map, route finding and "where do I go next?") ───────────────────────────────────────────────────────
+export const WORLD_POS = { town: [0, 0], quarry: [1, 0], ironhold: [2, 0], gloomwood: [-1, 0], mistfen: [-2, 0], archive: [0, 1], greenmeadow: [0, -1], saltmere: [-1, -1], sunscorch: [1, -1], emberwaste: [2, -1], cinder_foundry: [3, -1],
+  frostpeak: [0, -2], crystal_caverns: [0, -3], moonspire: [0, -4], ruined_citadel: [2, -2], aether_reach: [2, -3], ...FAR_POS };
+let _graph = null;
+export function worldGraph() {
+  if (_graph) return _graph; const g = {}, add = (a, b) => { (g[a] ??= new Set()).add(b); (g[b] ??= new Set()).add(a); };
+  for (const [a, b] of [['town', 'greenmeadow'], ['town', 'quarry'], ['town', 'gloomwood'], ['town', 'archive'], ['quarry', 'ironhold'], ['gloomwood', 'mistfen']]) add(a, b);
+  for (const [id, S] of Object.entries(Z)) for (const p of S.portals ?? []) if (id in WORLD_POS && p.to?.map in WORLD_POS) add(id, p.to.map);
+  return (_graph = g);
+}
+// The regions to walk through from `from` to `to` (inclusive), or null. `cost(id)` makes dangerous regions "longer" so the route prefers safe roads.
+export function routeTo(from, to, cost = () => 1) {
+  const g = worldGraph(); if (!(from in g) || !(to in g)) return null; if (from === to) return [from];
+  const dist = { [from]: 0 }, prev = {}, todo = new Set([from]);
+  while (todo.size) {
+    let u = null; for (const n of todo) if (u === null || dist[n] < dist[u]) u = n; todo.delete(u); if (u === to) break;
+    for (const n of g[u]) { const d = dist[u] + cost(n); if (!(n in dist) || d < dist[n]) { dist[n] = d; prev[n] = u; todo.add(n); } }
+  }
+  if (!(to in prev)) return null; const out = [to]; for (let c = prev[to]; c !== undefined; c = prev[c]) out.push(c); return out.reverse();
+}
+// The overland region a map belongs to: the map itself, or (for a dungeon floor) the region its entrance is in.
+export function regionOf(mapId) {
+  let id = mapId;
+  for (let i = 0; i < 5 && id && !(id in WORLD_POS); i++) { const m = getMap(id), next = m?.portals.map((p) => p.to.map).find((t) => t in WORLD_POS) ?? m?.portals.map((p) => p.to.map).find((t) => t !== id) ?? null; id = next; }
+  return id in WORLD_POS ? id : null;
+}
+// What a region offers, from its landmark list (no map generation needed).
+export function regionFeatures(id) {
+  const S = Z[id], out = { theme: S?.theme ?? 'main', village: false, dungeons: [], camps: 0, ruins: 0, lair: false, shrines: 0, waystones: S?.waystones ?? 0 };
+  if (id === 'town') { out.village = true; }
+  for (const L of S?.landmarks ?? []) { if (L.t === 'village') out.village = true; else if (L.t === 'dungeon') out.dungeons.push(L.label); else if (L.t === 'camp') out.camps++; else if (L.t === 'ruin') out.ruins++; else if (L.t === 'lair') out.lair = true; else if (L.t === 'shrine') out.shrines++; }
+  return out;
+}
+
 // Existing hand-made maps get their new exits here.
 function openNewExits(m) {
   if (m.id === 'town') { rect(m, 16, 0, 4, 10, T.PATH); portal(m, 16, 0, 4, 1, { map: 'greenmeadow', ...approach('greenmeadow', 's', 0.5) }, 'To Greenmeadow ^'); }
@@ -777,6 +832,7 @@ const RAID_BUILDERS = Object.fromEntries(Object.values(RAIDS).flatMap((R) => R.w
 const BUILDERS = { town: buildTown, quarry: buildQuarry, gloomwood: buildGloomwood, archive: buildArchive, hollow_reach: buildShadowReach, hollow_depths: buildShadowDepths, ...Object.fromEntries(Object.entries(DUN).map(([id, S]) => [id, () => genDungeon(S)])), raid_bastion: buildRaid, guild_raid: buildGuildRaid, ...RAID_BUILDERS, root_cellar: buildRootCellar, world_tree: buildWorldTree, sunken_vault: buildSunkenVault, void_rift: buildVoidRift, ...Object.fromEntries(Object.entries(Z).map(([id, S]) => [id, () => (S.kind === 'cave' ? genCave(S) : genOutdoor(S))])) };
 const cache = {};
 export function getMap(id) { if (!cache[id]) { cache[id] = BUILDERS[id](); openNewExits(cache[id]); addHiddenSpots(cache[id]); } return cache[id]; }
+export { FAR_POS };
 export const MAP_IDS = Object.keys(BUILDERS);
 export const realmOf = (mapId) => (getMap(mapId).theme === 'hollow' ? 'hollow' : 'main');
 

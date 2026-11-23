@@ -4,6 +4,7 @@ import { clamp } from './rng.js';
 import { modsOf, statusOf } from './loadout.js';
 import { sumGearFx } from './custom.js';
 import { flatScale } from './gearscale.js';
+import { upMult } from './upgrade.js';
 
 export { MAX_LEVEL, HP_SCALE };
 // Beyond level 30 each level takes progressively longer, so the road to 100 is a real journey.
@@ -15,7 +16,8 @@ export function gearBonuses(gearList, classId = null) {
     if (!g) continue;
     const it = ITEMS[g.id], m = qualityStatMult(g.q);
     const f = classId && fits(g.id, classId) ? 1 + FIT_BONUS : 1;                // gear made for your class is 10% stronger
-    b.atk += (it.atk ?? 0) * m * f; b.def += (it.def ?? 0) * m * f; b.hp += (it.hp ?? 0) * m * f; b.crit += it.crit ?? 0;
+    const um = upMult(g.up);                                                      // an upgraded piece (+0..+99) is stronger in attack, defence and health
+    b.atk += (it.atk ?? 0) * m * f * um; b.def += (it.def ?? 0) * m * f * um; b.hp += (it.hp ?? 0) * m * f * um; b.crit += it.crit ?? 0;
     b.mp += (it.mp ?? 0) * m * f; b.spd += Math.floor((it.spd ?? 0) * m);
     if (it.wtype) b.wtype = it.wtype;
     const fk = flatScale(g.id); sumGearFx(g.fx, b, fk); sumGearFx(g.ench, b, fk);

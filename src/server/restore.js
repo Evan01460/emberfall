@@ -25,6 +25,7 @@ export function heldFor(srv, P) {
   for (const mk of Object.values(srv.markets)) for (const l of mk.listings) if (l.sellerId === P.id) { if (l.q != null) held.gear.push({ id: l.itemId, q: l.q, affix: l.affix ?? null, ...(l.x ?? {}) }); else held.items.push([l.itemId, l.qty]); }
   for (const o of srv.orders) if (o.by === P.id) held.gilt += o.escrow ?? 0;
   for (const r of srv.reqs ?? []) if (r.from === P.id && (r.status === 'pending' || r.status === 'accepted')) held.gilt += r.escrow ?? 0;
+  for (const j of srv.upg ?? []) if (j.from === P.id && (j.status === 'pending' || j.status === 'accepted')) { held.gilt += j.escrow ?? 0; held.gear.push({ ...j.gear }); for (const [id, n] of Object.entries(j.mats ?? {})) held.items.push([id, n]); }
   return held;
 }
 export function applyHeld(P, h) {

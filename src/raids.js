@@ -8,7 +8,7 @@
 // (adds, meteors, enrage, a shield that holds while its servants live) and loot for every raider who is still standing when it dies.
 // A wipe resets the whole raid. Pure data here; the engine is src/server/raids.js.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-import { mobDef, bossDef, EXP_TIERS } from './expansion.js';
+import { mobDef, bossDef, EXP_TIERS, FAR_GATES } from './expansion.js';
 
 const tier = (id) => EXP_TIERS.find((t) => t.id === id);
 export const RAID_ENEMIES = {};
@@ -42,7 +42,7 @@ add('wc_aurelian', bossDef('Aurelian, the Worldwyrm', 'worm', '#ffe36b', 92, wt,
 //   enrage { speed, atk } · shield (the boss takes 10% damage while any add is alive) · heal (fraction of max health restored)
 export const RAIDS = {
   void_citadel: {
-    id: 'void_citadel', name: 'Citadel of the Void Emperor', short: 'the Citadel', minLevel: 40, size: 5, entry: { map: 'far_p02', npc: 'Citadel Gatekeeper', say: ['Beyond this door the Void Emperor holds court. None have walked out unchanged.'] }, theme: 'cave', color: '#a984ff', tier: ['voidglass', 'drakesteel'], lootLevel: 44, title: 'Voidbreaker', blurb: 'Four wings, four bosses. Kill the Gatewarden, the Oracle Twins (together!), the Hollow Choir (kill its acolytes first) and finally the Emperor himself.',
+    id: 'void_citadel', name: 'Citadel of the Void Emperor', short: 'the Citadel', minLevel: 40, size: 5, entry: { map: FAR_GATES.void_citadel, npc: 'Citadel Gatekeeper', say: ['Beyond this door the Void Emperor holds court. None have walked out unchanged.'] }, theme: 'cave', color: '#a984ff', tier: ['voidglass', 'drakesteel'], lootLevel: 44, title: 'Voidbreaker', blurb: 'Four wings, four bosses. Kill the Gatewarden, the Oracle Twins (together!), the Hollow Choir (kill its acolytes first) and finally the Emperor himself.',
     wings: [
       { id: 'vc_1', lvl: 42, name: 'The Gate of Teeth', theme: 'volcano', seed: 8101, bosses: [{ key: 'vc_krosh', hpMult: 1 }], intro: ['WING 1 — THE GATE OF TEETH', 'Gatewarden Krosh bars the way.'],
         phases: [{ at: 0.5, say: ['KROSH ENRAGES', 'The Gatewarden roars and calls his thralls.'], enrage: { speed: 1.25, atk: 1.15 }, adds: { key: 'vc_thrall', n: 2, every: 14000, cap: 6 } }] },
@@ -54,7 +54,7 @@ export const RAIDS = {
     ],
   },
   wyrmcrown: {
-    id: 'wyrmcrown', name: 'Wyrmcrown Sanctum', short: 'the Sanctum', minLevel: 80, size: 5, entry: { map: 'far_p17', npc: 'Wyrmcrown Warden', say: ['The dragons of the old world sleep under that crown. Do not wake the one at the bottom.'] }, theme: 'volcano', color: '#ffe36b', tier: ['solarite', 'mythril', 'worldsteel'], lootLevel: 88, title: 'Wyrmslayer', blurb: 'Five wings. A brood, twin wyrms, a storm, a hollow dragon and the Worldwyrm itself.',
+    id: 'wyrmcrown', name: 'Wyrmcrown Sanctum', short: 'the Sanctum', minLevel: 80, size: 5, entry: { map: FAR_GATES.wyrmcrown, npc: 'Wyrmcrown Warden', say: ['The dragons of the old world sleep under that crown. Do not wake the one at the bottom.'] }, theme: 'volcano', color: '#ffe36b', tier: ['solarite', 'mythril', 'worldsteel'], lootLevel: 88, title: 'Wyrmslayer', blurb: 'Five wings. A brood, twin wyrms, a storm, a hollow dragon and the Worldwyrm itself.',
     wings: [
       { id: 'wc_1', lvl: 82, name: 'The Brood Hall', theme: 'swamp', seed: 8201, bosses: [{ key: 'wc_brood', hpMult: 1 }], intro: ['WING 1 — THE BROOD HALL', 'Brood Mother Skathra guards her clutch.'], phases: [{ at: 0.8, say: ['THE CLUTCH HATCHES', 'Hatchlings pour from the eggs.'], adds: { key: 'wc_hatchling', n: 3, every: 12000, cap: 9 } }, { at: 0.35, say: ['SKATHRA ENRAGES', 'She is done being gentle.'], enrage: { speed: 1.25, atk: 1.2 } }] },
       { id: 'wc_2', lvl: 84, name: 'The Twin Furnace', theme: 'volcano', seed: 8202, bosses: [{ key: 'wc_cinderfang', hpMult: 1, fx: 0.3 }, { key: 'wc_frostmaw', hpMult: 1, fx: 0.7 }], link: 'twin', intro: ['WING 2 — THE TWIN FURNACE', 'Fire and frost, bound together. Whichever lives longer grows terrible.'], phases: [{ at: 0.5, say: ['BREATH OF EXTREMES', 'Fire and ice rain down together.'], meteors: { every: 5000, radius: 2.4, pct: 0.2 } }] },

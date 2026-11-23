@@ -172,7 +172,10 @@ export class WorldView {
     const t = this.t, Z = this.Z, W = this.cv.width, H = this.cv.height, th = m.theme, stone = m.id === 'archive';
     g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false; g.fillStyle = '#05030a'; g.fillRect(0, 0, W, H);
     const sh = this.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * this.shake) : 0;
-    const camX = q(this.cam.x), camY = q(this.cam.y);
+    // The camera trails the player a little, but it must move in lock-step with the player's SNAPPED draw position: otherwise the two round at
+    // different moments and the character shivers on screen while walking diagonally. The slow-moving lag is kept; only the rounding is shared.
+    const rawX = G.pos.x * TS, rawY = G.pos.y * TS, vw = this.vw, vh = this.vh, edgeX = m.w * TS <= vw || this.cam.x <= 0 || this.cam.x >= m.w * TS - vw - 0.001, edgeY = m.h * TS <= vh || this.cam.y <= 0 || this.cam.y >= m.h * TS - vh - 0.001;
+    const camX = Math.round(this.cam.x + (edgeX ? 0 : q(rawX) - rawX)), camY = Math.round(this.cam.y + (edgeY ? 0 : q(rawY) - rawY));
     g.setTransform(Z, 0, 0, Z, -camX * Z + sh, -camY * Z + sh);
     const x0 = Math.max(0, Math.floor(camX / TS) - 1), y0 = Math.max(0, Math.floor(camY / TS) - 1), x1 = Math.min(m.w - 1, Math.ceil((camX + this.vw) / TS) + 1), y1 = Math.min(m.h - 1, Math.ceil((camY + this.vh) / TS) + 3);
     const list = [], wf = Math.floor(t / 420) % 3, f3 = Math.floor(t / 170) % 3, f2 = Math.floor(t / 320) % 2;

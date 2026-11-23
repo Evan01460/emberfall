@@ -82,7 +82,7 @@ export const BASICS = {
   archivist: { kind: 'proj', icon: '', name: 'Quill Storm', power: 7, cd: 380, speed: 15, range: 9, radius: 0.24, count: 3, spread: 22, type: 'arcane' },
   soulsmith: { kind: 'melee', icon: '', name: 'Coldforge Hammer', power: 19, cd: 640, range: 1.9, arc: 130, type: 'arcane', combo: 'heavy' },
   broker: { kind: 'proj', icon: '', name: 'Silver Salvo', power: 7, cd: 400, speed: 17, range: 10, radius: 0.22, count: 2, spread: 10, type: 'pierce', fx: { crit: 0 } },
-  transmuter: { kind: 'proj', icon: '', name: 'Quicksilver Flask', power: 13, cd: 620, speed: 9, range: 8, radius: 0.3, count: 1, type: 'arcane', aoe: 1.3 },
+  transmuter: { kind: 'proj', icon: '', name: 'Quicksilver Flask', power: 26, cd: 620, speed: 9, range: 8, radius: 0.3, count: 1, type: 'arcane', aoe: 1.3 },
 };
 
 // Signature artwork for the hidden classes' basic attacks (drawn by client/skillfx.js): no hidden class borrows another's look.

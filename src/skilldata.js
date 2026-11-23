@@ -90,10 +90,10 @@ HC('margin_call', 'Margin Call', 'mark', { radius: 7.5, cd: 15000, dur: 9000, vu
 HC('leveraged_buyout', 'Leveraged Buyout', 'aoe', { power: 70, cd: 11000, cast: 600, radius: 2.7, range: 9, at: 'cursor', stun: 2000, type: 'pierce', g: 'coin', col: '#ffe36b', mp: 22, desc: 'Buy the room out from under them: a crushing burst of gold that stuns everything in it.' });
 HC('liquidation', 'Liquidation', 'aoe', { power: 110, cd: 16000, cast: 800, radius: 3.6, at: 'self', stun: 1300, type: 'pierce', g: 'coin', col: '#ffd36a', mp: 30, desc: 'Sell everything: a ring of falling coins damages and staggers all around you.' });
 // Transmuter — the cauldron answers to you
-HC('quicklime_flask', 'Quicklime Flask', 'proj', { power: 42, count: 1, speed: 11, range: 10, radius: 0.4, aoe: 2.3, slow: 2600, cd: 5000, cast: 200, type: 'arcane', g: 'drop', col: '#d0a0ff', mp: 16, desc: 'A flask that bursts into corrosive vapour, slowing and burning everything in the cloud.' });
-HC('lead_to_gold', 'Lead to Gold', 'aoe', { power: 48, cd: 10000, cast: 450, radius: 2.5, range: 8, at: 'cursor', stun: 2400, type: 'arcane', g: 'coin', col: '#ffd36a', mp: 20, desc: 'Turn enemies to lead for 2.4s — heavy, helpless, and worth their weight in gold.' });
-HC('catalytic_surge', 'Catalytic Surge', 'buff', { cd: 20000, dur: 9000, buff: { dmg: 0.3, regen: 0.05, mpRegen: 2.5 }, radius: 0, g: 'drop', col: '#d0a0ff', mp: 14, desc: 'Your veins run with catalyst: +30% damage, strong regeneration and fast mana for 9s.' });
-HC('grand_transmutation', 'Grand Transmutation', 'aoe', { power: 105, cd: 17000, cast: 900, radius: 3.8, at: 'self', stun: 1500, type: 'arcane', g: 'drop', col: '#e8c8ff', mp: 34, desc: 'The great work: everything near you changes state at once — a huge blast and a long stun.' });
+HC('quicklime_flask', 'Quicklime Flask', 'proj', { power: 72, count: 1, speed: 11, range: 10, radius: 0.4, aoe: 2.3, slow: 2600, cd: 4200, cast: 200, type: 'arcane', g: 'drop', col: '#d0a0ff', mp: 16, desc: 'A flask that bursts into corrosive vapour, slowing and burning everything in the cloud.' });
+HC('lead_to_gold', 'Lead to Gold', 'aoe', { power: 75, cd: 10000, cast: 450, radius: 2.5, range: 8, at: 'cursor', stun: 2400, type: 'arcane', g: 'coin', col: '#ffd36a', mp: 20, desc: 'Turn enemies to lead for 2.4s — heavy, helpless, and worth their weight in gold.' });
+HC('catalytic_surge', 'Catalytic Surge', 'buff', { cd: 20000, dur: 9000, buff: { dmg: 0.45, regen: 0.05, mpRegen: 2.5 }, radius: 0, g: 'drop', col: '#d0a0ff', mp: 14, desc: 'Your veins run with catalyst: +30% damage, strong regeneration and fast mana for 9s.' });
+HC('grand_transmutation', 'Grand Transmutation', 'aoe', { power: 120, cd: 17000, cast: 900, radius: 3.8, at: 'self', stun: 1500, type: 'arcane', g: 'drop', col: '#e8c8ff', mp: 34, desc: 'The great work: everything near you changes state at once — a huge blast and a long stun.' });
 // Signature visuals: each hidden skill names its own projectile artwork (`vi`) and timed effects (`vfx*`, drawn by client/skillfx.js).
 // `quiet` switches off the generic slash/boom/aura so the signature effect is the whole show.
 const SIG = {
@@ -303,7 +303,7 @@ export const MYTHICS = {
   void_sovereign: { id: 'void_sovereign', name: 'Void Sovereign', color: '#7a5aff', group: 'combat', hp: 120, hpPer: 15, atk: 13, def: 3, move: 1.16, mpRegen: 2.0,
     desc: 'MYTHIC. A crown cut from nothing. Reality does not like to hit you, and everything you kill makes you worse to fight.',
     status: { id: 'voidborn', name: 'Voidborn', desc: 'Each hit has a 16% chance to phase through you. Every kill grants a Void stack (+3% damage, up to 15) that fades after 20 seconds without a kill.', phase: 0.16, stacks: { per: 0.03, max: 15, decay: 20000 } },
-    skills: [['void_rend', 1], ['rift_step', 1], ['event_horizon', 1], ['null_barrage', 1], ['oblivion', 1]], basic: { name: 'Null Edge', kind: 'melee', power: 14, cd: 380, range: 2.0, arc: 120, type: 'arcane', combo: 'spell' } },
+    skills: [['void_rend', 1], ['rift_step', 1], ['event_horizon', 1], ['null_barrage', 1], ['oblivion', 1]], basic: { name: 'Null Edge', kind: 'melee', power: 20, cd: 380, range: 2.0, arc: 120, type: 'arcane', combo: 'spell' } },
   titan_forgemaster: { id: 'titan_forgemaster', name: 'Titan Forgemaster', color: '#ff8a2a', group: 'trade', hp: 140, hpPer: 17, atk: 10, def: 8, move: 1.0, mpRegen: 1.5, gather: { ore: 2, coal: 2 }, craftFamily: 'blacksmith',
     desc: 'MYTHIC. The first forge was lit by a titan; you are its heir. Anything you forge is never crude, ember burns wherever you walk, and the Cold Forge itself answers to you.',
     status: { id: 'forgeheart', name: 'Heart of the Forge', desc: 'Forged items gain +15% quality and a Resonance affix. Enemies within 2 tiles burn for 4 damage per second.', forgeQ: 0.15, affix: 1, aura: { r: 2.0, dps: 4 } },
@@ -311,7 +311,7 @@ export const MYTHICS = {
   philosopher: { id: 'philosopher', name: "Philosopher's Heir", color: '#ffd36a', group: 'trade', hp: 110, hpPer: 13, atk: 12, def: 3, move: 1.06, mpRegen: 2.4, gather: { herb: 2, ghostbloom: 2 }, craftFamily: 'alchemist',
     desc: 'MYTHIC. Lead becomes gold, water becomes life. Your cauldron cannot burst, your potions heal half again as much, and every batch brims with extra bottles.',
     status: { id: 'gold_from_lead', name: 'Gold From Lead', desc: 'Brews never burst, yield 2 extra bottles, and all your healing is 50% stronger. Your attacks have a 20% chance to transmute a drop of gold.', noBurst: 1, bottles: 2, healMult: 0.5, midas: 0.2 },
-    skills: [['quicksilver_burst', 1], ['elixir_storm', 1], ['aurum_flask', 1], ['panacea', 1]], basic: { name: 'Golden Flask', kind: 'proj', power: 13, cd: 520, speed: 10, range: 8, radius: 0.3, aoe: 1.1, type: 'arcane', col: '#ffd36a' } },
+    skills: [['quicksilver_burst', 1], ['elixir_storm', 1], ['aurum_flask', 1], ['panacea', 1]], basic: { name: 'Golden Flask', kind: 'proj', power: 18, cd: 520, speed: 10, range: 8, radius: 0.3, aoe: 1.1, type: 'arcane', col: '#ffd36a' } },
   gilded: { id: 'gilded', name: 'Gilded Sovereign', color: '#ffe36b', group: 'trade', hp: 125, hpPer: 15, atk: 11, def: 4, move: 1.08, mpRegen: 1.8,
     desc: 'MYTHIC. The market bows. You pay no fees, never lose a haggle and your wealth is a weapon — more gilt in your purse means harder hits.',
     status: { id: 'midas', name: "Midas' Ledger", desc: 'Pay no listing fees. Never lose a haggle round. +1% damage per 1000 gilt carried (max +40%).', noFee: 1, haggleWin: 1, goldPower: { per: 0.01, step: 1000, max: 0.4 } },
@@ -323,19 +323,19 @@ MY('apostle', 'rootbind', 'Rootbind', 'aoe', { power: 26, cd: 9000, cast: 350, r
 MY('apostle', 'seed_barrage', 'Seed Barrage', 'proj', { power: 22, count: 7, spread: 50, speed: 14, range: 10, radius: 0.26, pierce: 1, cd: 7000, cast: 220, type: 'pierce', g: 'leaf', desc: 'Seven explosive seeds.' });
 MY('apostle', 'bloom', 'Bloom', 'field', { cd: 14000, cast: 250, radius: 3.4, dur: 7000, at: 'self', field: { heal: 0.06, every: 1000, dmg: 14 }, k: 'holy', g: 'leaf', col: '#6adf8a', desc: 'A flowering field that heals allies and scorches enemies.' });
 MY('apostle', 'worldtree_wrath', "World Tree's Wrath", 'aoe', { power: 115, cd: 22000, cast: 900, radius: 4.4, at: 'self', stun: 1400, type: 'pierce', g: 'leaf', desc: 'The tree itself answers: enormous damage in all directions.' });
-MY('void_sovereign', 'void_rend', 'Void Rend', 'melee', { power: 42, cd: 5000, cast: 200, range: 2.6, arc: 200, type: 'arcane', mag: 1, g: 'void', desc: 'Tear the air itself.' });
+MY('void_sovereign', 'void_rend', 'Void Rend', 'melee', { power: 60, cd: 3800, cast: 200, range: 2.6, arc: 200, type: 'arcane', mag: 1, g: 'void', desc: 'Tear the air itself.' });
 MY('void_sovereign', 'rift_step', 'Rift Step', 'dash', { dist: 5.2, cd: 5000, iframes: 600, land: { power: 36, radius: 2.0 }, type: 'arcane', stealth: 800, g: 'void', desc: 'Step through a rift and strike from the other side.' });
-MY('void_sovereign', 'event_horizon', 'Event Horizon', 'aoe', { power: 70, cd: 13000, cast: 700, radius: 3.4, range: 9, at: 'cursor', stun: 1800, slow: 3000, type: 'arcane', g: 'void', desc: 'A hole in the world. Enemies caught in it are held.' });
-MY('void_sovereign', 'null_barrage', 'Null Barrage', 'proj', { power: 20, count: 9, spread: 90, speed: 17, range: 11, radius: 0.26, pierce: 2, cd: 8000, cast: 200, type: 'arcane', g: 'void', desc: 'Nine bolts of nothing.' });
+MY('void_sovereign', 'event_horizon', 'Event Horizon', 'aoe', { power: 95, cd: 13000, cast: 700, radius: 3.4, range: 9, at: 'cursor', stun: 1800, slow: 3000, type: 'arcane', g: 'void', desc: 'A hole in the world. Enemies caught in it are held.' });
+MY('void_sovereign', 'null_barrage', 'Null Barrage', 'proj', { power: 30, count: 9, spread: 90, speed: 17, range: 11, radius: 0.26, pierce: 2, cd: 8000, cast: 200, type: 'arcane', g: 'void', desc: 'Nine bolts of nothing.' });
 MY('void_sovereign', 'oblivion', 'Oblivion', 'aoe', { power: 150, cd: 26000, cast: 1100, radius: 4.6, at: 'self', type: 'arcane', g: 'void', desc: 'Erase everything close to you.' });
 MY('titan_forgemaster', 'titan_slam', 'Titan Slam', 'aoe', { power: 70, cd: 9000, cast: 600, radius: 2.8, at: 'self', stun: 1400, type: 'blunt', g: 'anvil', desc: 'The first hammer-blow.' });
-MY('titan_forgemaster', 'molten_chain', 'Molten Chain', 'proj', { power: 52, count: 1, speed: 18, range: 11, radius: 0.5, pierce: 5, cd: 6000, cast: 250, type: 'arcane', g: 'flame', desc: 'A chain of molten iron that cuts through a line of enemies.' });
+MY('titan_forgemaster', 'molten_chain', 'Molten Chain', 'proj', { power: 66, count: 1, speed: 18, range: 11, radius: 0.5, pierce: 5, cd: 6000, cast: 250, type: 'arcane', g: 'flame', desc: 'A chain of molten iron that cuts through a line of enemies.' });
 MY('titan_forgemaster', 'forge_nova', 'Forge Nova', 'aoe', { power: 130, cd: 22000, cast: 900, radius: 4.2, at: 'self', stun: 1400, type: 'arcane', g: 'flame', desc: 'The forge detonates.' });
-MY('philosopher', 'elixir_storm', 'Elixir Storm', 'proj', { power: 18, count: 10, spread: 100, speed: 12, range: 9, radius: 0.28, aoe: 1.2, cd: 9000, cast: 250, type: 'arcane', g: 'drop', col: '#ffd36a', desc: 'A storm of flasks.' });
-MY('philosopher', 'aurum_flask', 'Aurum Flask', 'proj', { power: 95, count: 1, speed: 11, range: 10, radius: 0.45, aoe: 2.8, cd: 14000, cast: 300, type: 'arcane', fx: { lifesteal: 0.5 }, g: 'drop', col: '#ffd36a', desc: 'Liquid gold that drains what it burns.' });
+MY('philosopher', 'elixir_storm', 'Elixir Storm', 'proj', { power: 26, count: 10, spread: 100, speed: 12, range: 9, radius: 0.28, aoe: 1.2, cd: 9000, cast: 250, type: 'arcane', g: 'drop', col: '#ffd36a', desc: 'A storm of flasks.' });
+MY('philosopher', 'aurum_flask', 'Aurum Flask', 'proj', { power: 130, count: 1, speed: 11, range: 10, radius: 0.45, aoe: 2.8, cd: 14000, cast: 300, type: 'arcane', fx: { lifesteal: 0.5 }, g: 'drop', col: '#ffd36a', desc: 'Liquid gold that drains what it burns.' });
 MY('philosopher', 'panacea', 'Panacea', 'heal', { heal: 0.65, party: 10, shield: 120, dur: 7000, cd: 24000, g: 'drop', col: '#ffd36a', desc: 'The cure for everything. Heals and shields the whole party.' });
-MY('gilded', 'gilded_cage', 'Gilded Cage', 'aoe', { power: 40, cd: 12000, cast: 400, radius: 2.8, range: 9, at: 'cursor', stun: 2400, type: 'pierce', g: 'coin', desc: 'Bars of gold close around a group.' });
-MY('gilded', 'coin_storm', 'Coin Storm', 'proj', { power: 18, count: 14, spread: 140, speed: 15, range: 9, radius: 0.26, pierce: 1, cd: 10000, cast: 200, type: 'pierce', g: 'coin', desc: 'A storm of coins in every direction.' });
+MY('gilded', 'gilded_cage', 'Gilded Cage', 'aoe', { power: 55, cd: 12000, cast: 400, radius: 2.8, range: 9, at: 'cursor', stun: 2400, type: 'pierce', g: 'coin', desc: 'Bars of gold close around a group.' });
+MY('gilded', 'coin_storm', 'Coin Storm', 'proj', { power: 30, count: 14, spread: 140, speed: 15, range: 9, radius: 0.26, pierce: 1, cd: 10000, cast: 200, type: 'pierce', g: 'coin', desc: 'A storm of coins in every direction.' });
 MY('gilded', 'golden_parachute', 'Golden Parachute', 'dash', { dist: 5.0, back: true, cd: 8000, iframes: 700, stealth: 2000, land: { power: 30, radius: 2.0 }, g: 'coin', desc: 'A golden exit, with a bang.' });
 
 // ── Combo definitions for basic attacks (arrays of steps; merged over the basic's own fields) ──
@@ -368,8 +368,8 @@ export function describeSkill(s) {
 }
 
 // Mythic classes no longer borrow anything: these replace the last shared skills.
-MY('titan_forgemaster', 'titan_grip', 'Titan Grip', 'melee', { power: 54, cd: 3600, cast: 200, range: 3.1, arc: 100, stun: 900, type: 'blunt', vulnHit: { v: 0.3, ms: 5000 }, g: 'anvil', col: '#ff8a2a', desc: 'Seize the enemy in a titan\'s grip: long reach, a stun, and 30% more damage taken after.' });
-MY('philosopher', 'quicksilver_burst', 'Quicksilver Burst', 'proj', { power: 46, count: 3, spread: 18, speed: 14, range: 10, radius: 0.36, aoe: 1.7, slow: 2200, cd: 4800, cast: 200, type: 'arcane', g: 'drop', col: '#e8f0ff', desc: 'Three globes of living quicksilver that burst into slowing clouds.' });
+MY('titan_forgemaster', 'titan_grip', 'Titan Grip', 'melee', { power: 70, cd: 3600, cast: 200, range: 3.1, arc: 100, stun: 900, type: 'blunt', vulnHit: { v: 0.3, ms: 5000 }, g: 'anvil', col: '#ff8a2a', desc: 'Seize the enemy in a titan\'s grip: long reach, a stun, and 30% more damage taken after.' });
+MY('philosopher', 'quicksilver_burst', 'Quicksilver Burst', 'proj', { power: 58, count: 3, spread: 18, speed: 14, range: 10, radius: 0.36, aoe: 1.7, slow: 2200, cd: 4800, cast: 200, type: 'arcane', g: 'drop', col: '#e8f0ff', desc: 'Three globes of living quicksilver that burst into slowing clouds.' });
 MY('gilded', 'gilded_barrage', 'Gilded Barrage', 'proj', { power: 26, count: 7, spread: 44, speed: 20, range: 11, radius: 0.28, pierce: 2, cd: 5200, cast: 160, type: 'pierce', g: 'coin', col: '#ffe36b', desc: 'Seven heavy gold coins in a fan, each punching through two enemies.' });
 
 // ── Mythic signatures (artwork in client/skillfx.js) and the power of the best classes in the game ──────────────────────────────────

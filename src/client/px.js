@@ -97,10 +97,10 @@ export function drawText(g, text, x, y, color = '#fff', { scale = 1, outline = '
   put(0, 0, color);
 }
 // Label with a solid plate (used for names above heads)
-export function drawTag(g, text, x, yBottom, color = '#fff', { scale = 1, bg = '#1a1424', border = '#4a3a5a', align = 'center' } = {}) {
-  const w = textWidth(text, scale) + 4 * C, h = 5 * scale * C + 4 * C, X = q(align === 'center' ? x - w / 2 : x), Y = q(yBottom - h);
+export function drawTag(g, text, x, yBottom, color = '#fff', { scale = 1, bg = '#1a1424', border = '#4a3a5a', align = 'center', padX = 2, padY = 2 } = {}) {
+  const w = textWidth(text, scale) + 2 * padX * C, h = 5 * scale * C + 2 * padY * C, X = q(align === 'center' ? x - w / 2 : x), Y = q(yBottom - h);
   g.fillStyle = border; g.fillRect(X - C, Y - C, w + 2 * C, h + 2 * C); g.fillStyle = bg; g.fillRect(X, Y, w, h);
-  drawText(g, text, X + 2 * C, Y + 2 * C, color, { scale, outline: null });
+  drawText(g, text, X + padX * C, Y + padY * C, color, { scale, outline: null });
 }
 
 // ── pixel-grid effect primitives (all in world px, snapped to the art grid) ──

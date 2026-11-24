@@ -93,7 +93,7 @@ const ITEM = {
 // colour of a worn piece: cloth, leather or metal depending on the style and the metal tier
 export const styleColor = (t, style) => style === 'robe' ? ({ shadow: '#6a3ab0', steel: '#4a6ab8', sun: '#d8b040', moon: '#8ab0e0', cinder: '#c0502a', aether: '#3ac0a8' }[t] ?? METAL[t]?.[0] ?? '#5a4a9a')
   : t === 'shadow' ? '#5a3a9a' : t === 'steel' ? '#8aa0c8' : METAL[t] && EXP_TIERS.some((x) => x.id === t) ? METAL[t][0] : style === 'mail' || style === 'plate' ? (METAL[t]?.[0] ?? '#7a8a98') : '#8a5a38';
-// colours for the big vector art (gearart.js): the metal, the glow colour of staffs/wands, and the cloth/leather of a style
+// colours for the large gear sprites (gearpix.js): the metal, the glow colour of staffs/wands, and the cloth/leather of a style
 export function gearPalette(id) { const t = tier(id), m = METAL[t] ?? METAL.iron; return { m, accent: t === 'shadow' ? '#a984ff' : t === 'sun' ? '#ffd36a' : t === 'moon' ? '#bfe0ff' : t === 'cinder' ? '#ff8a4a' : t === 'aether' ? '#6af0d0' : m[1], cloth: (style) => styleColor(t, style) }; }
 export function gearIcon(id) {
   const it = ITEMS[id], t = tier(id), m = METAL[t] ?? METAL.iron, ak = archOf(id), A = ARCH[ak] ?? {};

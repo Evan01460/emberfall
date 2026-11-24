@@ -2,8 +2,8 @@
 // and the REVEAL (the odds, the roll, and the piece flaring up or going dull). Each returns { el, ... } with a destroy().
 //
 // Everything is drawn at 4× the logical 240×150 size and scaled down by the browser, with smooth shapes and the large vector artwork of the piece
-// (gearart.js) — never a 16-pixel icon blown up into blocks, and text that stays sharp.
-import { gearPixel } from './gearart.js';
+// (gearpix.js, hand-drawn at 32 pixels) — never a 16-pixel icon blown up into blocks — and text that stays sharp.
+import { gearPixel } from './gearpix.js';
 import { upColor } from '../upgrade.js';
 
 const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), TAU = Math.PI * 2;
@@ -33,7 +33,7 @@ const dense = (pts, step = 0.02) => { const out = []; for (let i = 1; i < pts.le
 // ── ENGRAVING: trace the piece's rune ───────────────────────────────────────────────────────────────────────────────────────────────────
 export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeout } = {}) {
   const [cv, g] = canvas(), RW = 104, RH = 104, RX = (W - RW) / 2, RY = 11, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [], path = dense(pts);
-  const gear = gearPixel(itemId, 48), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
+  const gear = gearPixel(itemId), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
   let pressed = false, armed = false, mx = 0.5, my = 0.5, t0 = 0, alive = true, finished = false, coveredN = 0, lastSample = 0, ptr = false, raf = 0, hint = 0, doneAt = 0, born = performance.now();
   const norm = (e) => { const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H; return [(x - RX) / RW, (y - RY) / RH]; };
   const move = (e) => { [mx, my] = norm(e); ptr = true; };
@@ -95,7 +95,7 @@ const OUT = '#14101c';
 // steady pace polishes the edge a little more.
 export function createPolishScene(itemId, polish, { onStroke } = {}) {
   const [cv, g] = canvas(); cv.style.cursor = 'pointer';
-  const gear = gearPixel(itemId, 48), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
+  const gear = gearPixel(itemId), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
   const strokes = [], mid = (polish.lo + polish.hi) / 2, sparks = []; let last = 0, alive = true, good = 0, flashT = 0, lastGood = true, raf = 0, msg = '', msgT = 0, started = 0, interacted = false;
   const beatAt = (now) => { const ph = ((now - started) / mid) % 2; return ph < 1 ? ph : 2 - ph; };   // 0 at one end, 1 at the other
   const tap = () => {
@@ -136,7 +136,7 @@ export function createPolishScene(itemId, polish, { onStroke } = {}) {
 // ── REVEAL: the odds, the roll, the result ──────────────────────────────────────────────────────────────────────────────────────────────
 export function createRevealScene(itemId, res) {
   const [cv, g] = canvas(); cv.style.cursor = 'default';
-  const base = gearPixel(itemId, 48), glow = gearPixel(itemId, 48, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
+  const base = gearPixel(itemId), glow = gearPixel(itemId, 32, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
   const t0 = performance.now(), sparks = [], rings = []; let alive = true, burst = false, raf = 0; const col = res.ok ? upColor(res.to) : '#8a8090';
   const SWEEP = 1700, HOLD = 500;
   function draw(now, dt) {

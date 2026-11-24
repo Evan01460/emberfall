@@ -1,7 +1,7 @@
 // Bring a character back from the player's own copy (the "vault") into a world that has lost it — used by the browser-hosted public
 // world and by the Node host on free hosting where the disk is wiped. The caller has already proved the record is genuine (passphrase
 // hash for the browser-hosted world, a server HMAC signature for the Node host); this adds sanity limits and installs it.
-import { newPlayer, addGear, addItem } from '../rules.js';
+import { newPlayer, addGear, addItem, normalizeGear } from '../rules.js';
 import { CLASSES, MAX_LEVEL } from '../data.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -12,6 +12,7 @@ export function installRestored(srv, r, pw = undefined) {
   const base = newPlayer({ id: `u${srv.nextId++}`, name: r.name, classId: r.classId });
   const P = Object.assign(base, clone(r), { id: base.id, mail: [], gilt: Math.max(0, Math.min(+r.gilt || 0, 5e6)), guild: null });
   if (pw !== undefined) P.pw = pw;
+  normalizeGear(P);
   for (const k of Object.keys(P.items ?? {})) if (!(P.items[k] > 0)) delete P.items[k];
   srv.players.set(P.id, P); srv.byName.set(key, P.id);
   if (CLASSES[P.classId].mythic) srv.mythics[P.classId] = { pid: P.id, name: P.name, at: Date.now() };

@@ -139,6 +139,12 @@ Beyond the ring: **The Sporewilds** (Lv 51-71), **The Clockwork Dominion** (Lv 6
 
 ---
 
+## 7c. Gear slots
+
+You wear seven things: **weapon, helmet, chestplate, leggings, boots, ring and charm**. Blacksmiths forge every piece in every metal; gear made for your class gives +10%. Armour pieces are lighter versions of the chestplate of their style (robes for casters, leathers for light fighters, hauberks and aegises for the front line) - a full set is about 40% stronger than a chestplate alone. Your character visibly wears it. In Character -> Bag & Gear, a green triangle marks spare pieces that beat what you wear, and "Equip best" fills every slot at once.
+
+---
+
 ## 8. The economy rules nobody mentions
 
 * **Crafters cannot list their own creations on the Exchange or sell them to the NPC vendor.** Blacksmiths/Alchemists sell to **Merchants** (who post wholesale buy orders and resell at their own price) or fill **commissions**.

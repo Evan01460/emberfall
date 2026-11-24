@@ -7,12 +7,12 @@ import { h } from '../ui-lib.js';
 import * as I from './icons.js';
 
 const STATE = {};
-const CATS = { blacksmith: [['all', 'All'], ['weapon', 'Weapons'], ['armor', 'Armour'], ['charm', 'Charms'], ['refine', 'Ingots'], ['other', 'Keys']], alchemist: [['all', 'All'], ['potion', 'Potions']] };
+const CATS = { blacksmith: [['all', 'All'], ['weapon', 'Weapons'], ['head', 'Helmets'], ['chest', 'Chestplates'], ['legs', 'Leggings'], ['feet', 'Boots'], ['ring', 'Rings'], ['charm', 'Charms'], ['refine', 'Ingots'], ['other', 'Keys']], alchemist: [['all', 'All'], ['potion', 'Potions']] };
 const catOf = (r) => (r.smelt ? 'refine' : ITEMS[r.out]?.slot ?? (ITEMS[r.out]?.k === 'cons' ? 'potion' : 'other'));
 const metalOf = (id) => ITEMS[id]?.k === 'gear' ? (ITEMS[id].n ?? '').split(' ')[0] : null;
 const METAL_ORDER = TIERS.map((t) => t.name);
 const METAL_COL = { Iron: '#a8b0bc', Steel: '#d8e4f0', Shadowsteel: '#a984ff', Sunsteel: '#ffd36a', Moonsilver: '#bfe8ff', Cinderforged: '#ff9a4a', Aetherium: '#7dffd8', ...Object.fromEntries(EXP_TIERS.map((t) => [t.name, t.metal[1]])) };
-export const headlineStats = (id, q = 1) => { const it = ITEMS[id]; if (!it) return []; const m = qualityStatMult(q), out = []; if (it.atk) out.push(['ATK', (it.atk * m).toFixed(0), '#ff9a6a']); if (it.def) out.push(['DEF', (it.def * m).toFixed(0), '#7fb8ff']); if (it.hp) out.push(['HP', Math.round(it.hp * m * HP_SCALE), '#ff7a7a']); if (it.mp) out.push(['MP', Math.round(it.mp * m), '#8ad8ff']); if (it.spd) out.push(['SPD', Math.floor(it.spd * m), '#7dffa0']); return out; };
+export const headlineStats = (id, q = 1) => { const it = ITEMS[id]; if (!it) return []; const m = qualityStatMult(q), out = []; if (it.atk) out.push(['ATK', (it.atk * m).toFixed(0), '#ff9a6a']); if (it.def) out.push(['DEF', (it.def * m).toFixed(0), '#7fb8ff']); if (it.hp) out.push(['HP', Math.round(it.hp * m * HP_SCALE), '#ff7a7a']); if (it.mp) out.push(['MP', Math.round(it.mp * m), '#8ad8ff']); if (it.spd) out.push(['SPD', Math.floor(it.spd * m), '#7dffa0']); if (it.crit) out.push(['CRIT', `${(it.crit * 100).toFixed(0)}%`, '#ffd36a']); return out; };
 export const statChips = (id, q = 1) => headlineStats(id, q).map(([k, v, c]) => h('span', { class: 'sc', style: { color: c } }, `${k} ${v}`));
 export const fitIcons = (id, me, max = 4) => { const fl = fitsOf(id); if (!fl.length) return null; return h('span', { class: 'fits', title: `Made for: ${fl.map((c) => CLASSES[c]?.name ?? c).join(', ')}` }, ...fl.slice(0, max).map((c) => h('span', { class: me && c === me.classId ? 'fit mine' : 'fit' }, I.cls(c, 16))), fl.length > max ? h('span', { class: 'dim', style: { fontSize: '11px' } }, `+${fl.length - max}`) : null); };
 export const ingredientRow = (r, have) => h('div', { class: 'ing' }, Object.entries(r.in).map(([id, n]) => h('span', { class: `ingi ${have ? (have(id) >= n ? '' : 'short') : ''}`, title: `${ITEMS[id]?.n ?? id}${have ? ` (have ${have(id)})` : ''}` }, I.item(id, 18), h('b', {}, `${n}`), have && have(id) < n ? h('span', { class: 'red', style: { fontSize: '10px' } }, `/${have(id)}`) : null)));
@@ -28,7 +28,7 @@ export function browser(opts) {
   const toggles = h('div', { class: 'chips' });
   function paintBar() {
     chipsRow.replaceChildren(...cats.map(([c, l]) => chip(`${l}${c === 'all' ? '' : ` ${recipes.filter((r) => catOf(r) === c).length}`}`, st.cat === c, () => { st.cat = c; render(); })));
-    const metals = family === 'blacksmith' && (st.cat === 'all' || ['weapon', 'armor', 'charm'].includes(st.cat)) ? METAL_ORDER.filter((m) => recipes.some((r) => metalOf(r.out) === m)) : [];
+    const metals = family === 'blacksmith' && (st.cat === 'all' || ['weapon', 'head', 'chest', 'legs', 'feet', 'ring', 'charm'].includes(st.cat)) ? METAL_ORDER.filter((m) => recipes.some((r) => metalOf(r.out) === m)) : [];
     metalRow.replaceChildren(...(metals.length ? [chip('Any metal', st.metal === 'all', () => { st.metal = 'all'; render(); }), ...metals.map((m) => chip(m, st.metal === m, () => { st.metal = st.metal === m ? 'all' : m; render(); }, METAL_COL[m]))] : []));
     toggles.replaceChildren(...[opts.canMake ? chip('Craftable now', st.can, () => { st.can = !st.can; render(); }) : null, me && recipes.some((r) => fitsOf(r.out).includes(me.classId)) ? chip(`Suits my class`, st.mine, () => { st.mine = !st.mine; render(); }) : null].filter(Boolean));
   }

@@ -1,104 +1,129 @@
-// Scenes for the gear-upgrade minigame, drawn in pixels: the ENGRAVING table (trace a glowing rune with a chisel), the WHETSTONE (polish in an even
-// rhythm) and the REVEAL (the odds, the roll, and the piece either flaring up or going dull). Each returns { el, ... } with a destroy().
-import { itemIcon } from './icons.js';
-import { shade } from './px.js';
+// Scenes for the gear-upgrade minigame: the ENGRAVING table (trace the piece's own rune with a chisel), the WHETSTONE (tap along with the stone)
+// and the REVEAL (the odds, the roll, and the piece flaring up or going dull). Each returns { el, ... } with a destroy().
+//
+// Everything is drawn at 4× the logical 240×150 size and scaled down by the browser, with smooth shapes and the large vector artwork of the piece
+// (gearart.js) — never a 16-pixel icon blown up into blocks, and text that stays sharp.
+import { gearArt } from './gearart.js';
 import { upColor } from '../upgrade.js';
 
-const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const W = 240, H = 150;
-function canvas() { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.style.cssText = 'width:100%;max-width:720px;image-rendering:pixelated;display:block;margin:0 auto;background:#120a14;box-shadow:inset 0 0 0 3px #3a2a40;touch-action:none;cursor:crosshair;'; const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; return [cv, g]; }
-const px = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
-// the piece, big, optionally tinted by a colour (heat) and with a glowing outline
-function gearImg(id, scale, tint, tintA = 0) {
-  const ic = itemIcon(id), c = document.createElement('canvas'); c.width = ic.width * scale; c.height = ic.height * scale; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ic, 0, 0, c.width, c.height);
-  if (tint && tintA > 0) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = tintA; g.fillStyle = tint; g.fillRect(0, 0, c.width, c.height); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
-  return c;
+const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), TAU = Math.PI * 2;
+const W = 240, H = 150, S = 4, FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
+function canvas() {
+  const cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+  cv.style.cssText = 'width:100%;max-width:720px;display:block;margin:0 auto;background:#120a14;border:3px solid #3a2a40;border-radius:4px;touch-action:none;cursor:crosshair;box-sizing:border-box;';
+  const g = cv.getContext('2d'); g.setTransform(S, 0, 0, S, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.lineJoin = 'round'; g.lineCap = 'round'; return [cv, g];
 }
-// a small caption with its own background, sized to the text
-function label(g, text, x, y, { align = 'left', color = '#ffe9a8', size = 7 } = {}) {
-  g.font = `${size}px monospace`; const w = Math.ceil(g.measureText(text).width) + 8, bx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(Math.round(bx), y - size - 2, w, size + 5); g.fillStyle = color; g.textAlign = 'left'; g.fillText(text, Math.round(bx) + 4, y);
+// a small caption with its own plate, sized to the text
+function label(g, text, x, y, { align = 'left', color = '#ffe9a8', size = 7, weight = 700 } = {}) {
+  g.font = `${weight} ${size}px ${FONT}`; g.textBaseline = 'alphabetic'; const w = g.measureText(text).width + 9, bx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  g.fillStyle = 'rgba(10,6,14,.72)'; g.beginPath(); g.roundRect(bx, y - size - 2.5, w, size + 6, 2.5); g.fill(); g.fillStyle = color; g.textAlign = 'left'; g.fillText(text, bx + 4.5, y);
 }
-function table(g, t, accent = '#2a1c2c') {
-  g.fillStyle = '#150c18'; g.fillRect(0, 0, W, H);
-  for (let y = 0; y < H; y += 6) for (let x = ((y / 6) % 2) * 9 - 9; x < W; x += 18) px(g, x, y, y < 30 ? '#241628' : accent, 17, 5);
-  g.fillStyle = '#34202a'; g.fillRect(0, 118, W, 32); for (let x = 0; x < W; x += 12) px(g, x, 118, '#4e3038', 11, 1);   // a workbench
-  // lamp light
-  const gr = g.createRadialGradient(W / 2, 60, 6, W / 2, 60, 130); gr.addColorStop(0, 'rgba(255,190,110,.20)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#6a4a2a'; g.fillRect(W / 2 - 1, 0, 2, 12); px(g, W / 2 - 5, 12, '#c8a050', 10, 3); px(g, W / 2 - 3, 15, `rgba(255,220,140,${0.7 + 0.3 * Math.sin(t / 160)})`, 6, 1);
+function table(g, t) {
+  const wall = g.createLinearGradient(0, 0, 0, 118); wall.addColorStop(0, '#1a1020'); wall.addColorStop(1, '#2a1a24'); g.fillStyle = wall; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 0.6; for (let y = 6; y < 118; y += 6) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); for (let x = ((y / 6) % 2) * 9; x < W; x += 18) { g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x, y); g.stroke(); } }
+  const bench = g.createLinearGradient(0, 118, 0, H); bench.addColorStop(0, '#4a2e22'); bench.addColorStop(1, '#2a1a16'); g.fillStyle = bench; g.fillRect(0, 118, W, 32); g.fillStyle = 'rgba(255,200,150,.14)'; g.fillRect(0, 118, W, 1.2);
+  const lamp = g.createRadialGradient(W / 2, 56, 4, W / 2, 56, 130); lamp.addColorStop(0, 'rgba(255,190,110,.26)'); lamp.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = lamp; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#6a4a2a'; g.fillRect(W / 2 - 0.6, 0, 1.2, 11); g.fillStyle = '#c8a050'; g.beginPath(); g.roundRect(W / 2 - 5, 11, 10, 3.2, 1); g.fill(); g.fillStyle = `rgba(255,224,150,${0.75 + 0.25 * Math.sin(t / 160)})`; g.beginPath(); g.roundRect(W / 2 - 3, 14, 6, 1.4, 0.7); g.fill();
 }
+const spark = (g, s) => { g.globalAlpha = clamp(1 - s.age / s.life, 0, 1); g.fillStyle = s.c; g.beginPath(); g.arc(s.x, s.y, 1.1, 0, TAU); g.fill(); g.globalAlpha = 1; };
+const dense = (pts, step = 0.02) => { const out = []; for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1], [bx, by] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / step)); for (let k = 0; k <= n; k++) out.push([ax + (bx - ax) * (k / n), ay + (by - ay) * (k / n)]); } return out; };
 
-// ── ENGRAVING: a rune to trace ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function createRuneScene(itemId, rune, { onProgress } = {}) {
-  const [cv, g] = canvas(), RX = 44, RY = 18, RW = 152, RH = 96, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [];
-  const gear = gearImg(itemId, 8), dense = []; for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1], [bx, by] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 0.02)); for (let k = 0; k <= n; k++) dense.push([ax + (bx - ax) * (k / n), ay + (by - ay) * (k / n)]); }
-  const covered = new Uint8Array(dense.length); let pressed = false, mx = 0.5, my = 0.5, t0 = 0, alive = true, done = false, coveredN = 0, lastSample = 0, offPath = 0, ptr = false, raf = 0;
+// ── ENGRAVING: trace the piece's rune ───────────────────────────────────────────────────────────────────────────────────────────────────
+export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeout } = {}) {
+  const [cv, g] = canvas(), RW = 104, RH = 104, RX = (W - RW) / 2, RY = 11, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [], path = dense(pts);
+  const gear = gearArt(itemId, 256), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
+  let pressed = false, armed = false, mx = 0.5, my = 0.5, t0 = 0, alive = true, finished = false, coveredN = 0, lastSample = 0, ptr = false, raf = 0, hint = 0, doneAt = 0, born = performance.now();
   const norm = (e) => { const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H; return [(x - RX) / RW, (y - RY) / RH]; };
   const move = (e) => { [mx, my] = norm(e); ptr = true; };
-  const down = (e) => { e.preventDefault(); cv.setPointerCapture?.(e.pointerId); pressed = true; if (!t0) t0 = performance.now(); move(e); };
+  const down = (e) => {
+    e.preventDefault(); cv.setPointerCapture?.(e.pointerId); move(e); if (performance.now() - born < 500 || finished) return;
+    if (!armed) { if (Math.hypot(mx - s0[0], my - s0[1]) <= 0.13) { armed = true; t0 = performance.now(); } else { hint = 1.6; return; } }
+    pressed = true;
+  };
   const up = () => { pressed = false; };
   cv.addEventListener('pointermove', move); cv.addEventListener('pointerdown', down); cv.addEventListener('pointerup', up); cv.addEventListener('pointerleave', up); cv.addEventListener('pointercancel', up);
-  const onPath = (u, v, r) => { let best = 9; for (const q of dense) best = Math.min(best, Math.hypot(u - q[0], v - q[1])); return best <= r; };
+  const nearPath = (u, v, r) => { for (const q of path) if (Math.hypot(u - q[0], v - q[1]) <= r) return true; return false; };
+  const progress = () => coveredN / path.length;
   function step(now) {
-    if (pressed && t0 && now - lastSample >= 28 && samples.length < 560) {
-      lastSample = now; const ok = onPath(mx, my, tol * 1.6); samples.push([+mx.toFixed(3), +my.toFixed(3), Math.round(now - t0)]); trail.push({ u: mx, v: my, ok, a: 1 });
-      if (!ok) offPath++; for (let i = 0; i < dense.length; i++) if (!covered[i] && Math.hypot(mx - dense[i][0], my - dense[i][1]) <= tol * 1.2) { covered[i] = 1; coveredN++; }
-      if (rnd() < 0.7) sparks.push({ x: RX + mx * RW, y: RY + my * RH, vx: (rnd() - 0.5) * 50, vy: -rnd() * 50, life: 0.3 + rnd() * 0.3, age: 0, c: ok ? '#ffd36a' : '#ff6a4a' });
-      onProgress?.(coveredN / dense.length, offPath);
+    if (pressed && armed && !finished && now - lastSample >= 24 && samples.length < 560) {
+      lastSample = now; const ok = nearPath(mx, my, tol * 1.6); samples.push([+mx.toFixed(3), +my.toFixed(3), Math.round(now - t0)]); trail.push({ u: mx, v: my, ok, a: 1 });
+      for (let i = 0; i < path.length; i++) if (!covered[i] && Math.hypot(mx - path[i][0], my - path[i][1]) <= tol * 1.2) { covered[i] = 1; coveredN++; }
+      if (rnd() < 0.8) sparks.push({ x: RX + mx * RW, y: RY + my * RH, vx: (rnd() - 0.5) * 40, vy: -rnd() * 40, life: 0.35 + rnd() * 0.3, age: 0, c: ok ? '#ffd36a' : '#ff6a4a' });
+      onProgress?.(progress(), samples.length);
+      if (progress() >= 0.95 && Math.hypot(mx - s1[0], my - s1[1]) <= 0.15) { finished = true; doneAt = now; }
     }
+    if (armed && !finished && now - t0 > rune.limit) { finished = true; doneAt = now; onTimeout?.(); }
+    if (finished && doneAt && now - doneAt > 650) { doneAt = 0; onComplete?.(); }
     if (trail.length > 700) trail.splice(0, trail.length - 700);
   }
+  const poly = () => { g.beginPath(); pts.forEach(([u, v], i) => (i ? g.lineTo(RX + u * RW, RY + v * RH) : g.moveTo(RX + u * RW, RY + v * RH))); };
   function draw(now, dt) {
-    table(g, now); g.drawImage(gear, Math.round(W / 2 - gear.width / 2), 14);
-    // darken the surface a little so the rune reads
-    g.fillStyle = 'rgba(10,6,14,.45)'; g.fillRect(RX - 6, RY - 4, RW + 12, RH + 8);
-    // the rune to follow: a dim groove with a bright pulse running along it
-    g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = Math.max(3, tol * RW * 1.1); g.strokeStyle = 'rgba(120,200,255,.28)'; g.beginPath(); pts.forEach(([u, v], i) => (i ? g.lineTo(RX + u * RW, RY + v * RH) : g.moveTo(RX + u * RW, RY + v * RH))); g.stroke();
-    g.lineWidth = 1; g.strokeStyle = `rgba(190,235,255,${0.55 + 0.25 * Math.sin(now / 180)})`; g.stroke();
-    for (let i = 0; i < dense.length; i += 3) if (covered[i]) px(g, RX + dense[i][0] * RW - 1, RY + dense[i][1] * RH - 1, '#ffd36a', 3, 3);
+    table(g, now);
+    // the piece, faint, under the slab
+    g.globalAlpha = 0.28; g.drawImage(gear, W / 2 - 56, 4, 112, 112); g.globalAlpha = 1;
+    g.fillStyle = 'rgba(10,6,14,.55)'; g.beginPath(); g.roundRect(RX - 6, RY - 4, RW + 12, RH + 8, 4); g.fill(); g.strokeStyle = 'rgba(120,200,255,.18)'; g.lineWidth = 0.8; g.stroke();
+    // the groove to follow, with a pulse running along it
+    g.lineWidth = Math.max(3, tol * RW * 2.2); g.strokeStyle = 'rgba(120,200,255,.22)'; poly(); g.stroke(); g.lineWidth = 1.1; g.strokeStyle = `rgba(190,235,255,${0.5 + 0.25 * Math.sin(now / 180)})`; poly(); g.stroke();
+    // engraved so far
+    g.lineWidth = Math.max(2.4, tol * RW * 1.7); for (let i = 0; i < path.length; i += 2) if (covered[i]) { g.fillStyle = 'rgba(255,208,100,.9)'; g.beginPath(); g.arc(RX + path[i][0] * RW, RY + path[i][1] * RH, g.lineWidth / 2, 0, TAU); g.fill(); }
+    for (const p of trail) { p.a *= 0.995; g.fillStyle = p.ok ? `rgba(255,236,170,${0.3 + p.a * 0.4})` : `rgba(255,80,60,${0.25 + p.a * 0.3})`; g.beginPath(); g.arc(RX + p.u * RW, RY + p.v * RH, 1, 0, TAU); g.fill(); }
     // start / end markers
-    const s0 = pts[0], s1 = pts.at(-1); g.strokeStyle = '#8cff9a'; g.lineWidth = 1; g.strokeRect(RX + s0[0] * RW - 5, RY + s0[1] * RH - 5, 10, 10); g.strokeStyle = '#ff9a8c'; g.strokeRect(RX + s1[0] * RW - 5, RY + s1[1] * RH - 5, 10, 10);
-    // the engraved trail
-    for (const p of trail) { p.a *= 0.995; px(g, RX + p.u * RW - 1, RY + p.v * RH - 1, p.ok ? `rgba(255,200,90,${0.35 + p.a * 0.4})` : `rgba(255,80,60,${0.25 + p.a * 0.3})`, 3, 3); }
-    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 120 * dt; s.x += s.vx * dt; s.y += s.vy * dt; px(g, s.x, s.y, s.c, 2, 2); }
-    // the chisel
-    if (ptr) { const cx = RX + mx * RW, cy = RY + my * RH; g.strokeStyle = '#14101c'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 14, cy - 16); g.stroke(); g.strokeStyle = '#9aa3ad'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 8, cy - 9); g.stroke(); g.strokeStyle = '#a67546'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + 8, cy - 9); g.lineTo(cx + 15, cy - 17); g.stroke(); px(g, cx - 1, cy - 1, pressed ? '#fff2b0' : '#c8d0d8', 3, 3); }
-    if (!pressed && !t0) label(g, 'HOLD THE MOUSE AT THE GREEN START', W / 2, 136, { align: 'center' });
+    const pulse = 0.5 + 0.5 * Math.sin(now / 200); const mk = (p, col, txt) => { g.strokeStyle = col; g.lineWidth = 1.4; g.beginPath(); g.arc(RX + p[0] * RW, RY + p[1] * RH, 5 + (armed ? 0 : pulse * 1.8), 0, TAU); g.stroke(); g.fillStyle = col; g.globalAlpha = 0.25; g.fill(); g.globalAlpha = 1; label(g, txt, RX + p[0] * RW, RY + p[1] * RH + (p[1] < 0.5 ? 14 : -7), { align: 'center', color: col, size: 5.5 }); };
+    mk(s0, '#8cff9a', 'START'); mk(s1, '#ff9a8c', 'END');
+    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 110 * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
+    if (ptr && !finished) { const cx = RX + mx * RW, cy = RY + my * RH; g.strokeStyle = OUT; g.lineWidth = 4.4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 12, cy - 14); g.stroke(); g.strokeStyle = '#a8b0ba'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 7, cy - 8.5); g.stroke(); g.strokeStyle = '#b07a44'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + 7, cy - 8.5); g.lineTo(cx + 13, cy - 15); g.stroke(); }
+    // status
+    const p = progress();
+    g.fillStyle = 'rgba(10,6,14,.7)'; g.beginPath(); g.roundRect(8, 134, 224, 7, 3.5); g.fill(); g.fillStyle = finished ? '#8cff9a' : '#ffd36a'; g.beginPath(); g.roundRect(8, 134, Math.max(2, 224 * p), 7, 3.5); g.fill();
+    if (armed && !finished) { const left = Math.max(0, (rune.limit - (now - t0)) / 1000); label(g, `${left.toFixed(0)}s left`, 232, 12, { align: 'right', color: left < 5 ? '#ff8a6a' : '#c8bcd8', size: 6.5 }); }
+    label(g, rune.name ?? 'Rune', 8, 12, { size: 6.5, color: '#c8e8ff' });
+    if (finished) label(g, p >= 0.95 ? 'RUNE COMPLETE' : 'TIME', W / 2, 128, { align: 'center', color: p >= 0.95 ? '#8cff9a' : '#ff9a8c', size: 8 });
+    else if (!armed) { label(g, hint > 0 ? 'Press the GREEN START circle first' : 'Press and hold on the green START, then trace the groove to END', W / 2, 128, { align: 'center', color: hint > 0 ? '#ff9a8c' : '#ffe9a8', size: 6.5 }); hint = Math.max(0, hint - dt); }
+    else if (!pressed) label(g, 'Hold the mouse button down and follow the glow', W / 2, 128, { align: 'center', size: 6.5 });
   }
   let last = performance.now();
   const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - last) / 1000); last = now; step(now); draw(now, dt); };
   raf = requestAnimationFrame(loop);
-  return { el: cv, samples, progress: () => coveredN / dense.length, started: () => !!t0, elapsed: () => (t0 ? performance.now() - t0 : 0), finish() { done = true; return samples.map((s) => s.slice(0, 2)); }, destroy() { alive = false; cancelAnimationFrame(raf); }, get done() { return done; } };
+  return { el: cv, samples, progress, started: () => armed, elapsed: () => (armed ? performance.now() - t0 : 0), get complete() { return finished; }, finish() { return samples.map((s) => s.slice(0, 2)); }, destroy() { alive = false; cancelAnimationFrame(raf); } };
 }
+const OUT = '#14101c';
 
-// ── WHETSTONE: polish in an even rhythm ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ── WHETSTONE: tap along with the stone ─────────────────────────────────────────────────────────────────────────────────────────────────
+// The stone slides back and forth by itself. Tap (click, Space, or an arrow key) every time it reaches an end. Each tap that comes at a
+// steady pace polishes the edge a little more.
 export function createPolishScene(itemId, polish, { onStroke } = {}) {
-  const [cv, g] = canvas(); cv.style.cursor = 'ew-resize';
-  const gear = gearImg(itemId, 9), specks = Array.from({ length: 46 }, () => ({ x: 70 + rnd() * 100, y: 28 + rnd() * 74, s: 2 + Math.floor(rnd() * 3), on: true }));
-  const strokes = []; let sx = 0.5, dir = 0, turnX = 0.5, last = 0, alive = true, good = 0, flashT = 0, lastGood = true, raf = 0, ptr = false; const sparks = [];
-  const mid = (polish.lo + polish.hi) / 2;
-  const registerStroke = (now) => {
-    if (now - last < 180) return; const dt = last ? now - last : mid; last = now; strokes.push(Math.round(now)); const ok = dt >= polish.lo && dt <= polish.hi; lastGood = ok; flashT = 0.35;
-    if (ok) { good++; const n = Math.ceil(specks.length / polish.need); let k = 0; for (const s of specks) if (s.on && k < n) { s.on = false; k++; } for (let i = 0; i < 12; i++) sparks.push({ x: 60 + rnd() * 120, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 60, vy: -rnd() * 40, life: 0.4, age: 0, c: i % 2 ? '#fff2b0' : '#ffd36a' }); }
-    else for (let i = 0; i < 6; i++) sparks.push({ x: 60 + rnd() * 120, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 40, vy: -rnd() * 20, life: 0.3, age: 0, c: '#a08a7a' });
-    onStroke?.({ ok, dt, n: strokes.length, good });
+  const [cv, g] = canvas(); cv.style.cursor = 'pointer';
+  const gear = gearArt(itemId, 256), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
+  const strokes = [], mid = (polish.lo + polish.hi) / 2, sparks = []; let last = 0, alive = true, good = 0, flashT = 0, lastGood = true, raf = 0, msg = '', msgT = 0, started = 0, interacted = false;
+  const beatAt = (now) => { const ph = ((now - started) / mid) % 2; return ph < 1 ? ph : 2 - ph; };   // 0 at one end, 1 at the other
+  const tap = () => {
+    const now = performance.now(); interacted = true; if (!started) started = now;
+    if (now - last < 150) return; const dt = last ? now - last : mid; last = now; strokes.push(Math.round(now)); const ok = dt >= polish.lo && dt <= polish.hi; lastGood = ok; flashT = 0.3;
+    if (ok) { good++; const n = Math.ceil(specks.length / polish.need); let k = 0; for (const s of specks) if (s.on && k < n) { s.on = false; k++; } for (let i = 0; i < 14; i++) sparks.push({ x: 78 + rnd() * 84, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 60, vy: -rnd() * 40, life: 0.45, age: 0, c: i % 2 ? '#fff2b0' : '#ffd36a' }); msg = 'Smooth'; }
+    else { msg = dt < polish.lo ? 'Too fast - wait for the stone' : 'Too slow - tap sooner'; for (let i = 0; i < 6; i++) sparks.push({ x: 78 + rnd() * 84, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 40, vy: -rnd() * 20, life: 0.3, age: 0, c: '#a08a7a' }); }
+    msgT = 0.9; onStroke?.({ ok, dt, n: strokes.length, good });
   };
-  const move = (e) => { const r = cv.getBoundingClientRect(), x = clamp((e.clientX - r.left) / r.width, 0, 1); ptr = true; const d = x - sx; sx = x; if (Math.abs(d) < 1e-4) return; const nd = Math.sign(d); if (!dir) { dir = nd; turnX = x; return; } if (nd === dir) { if ((x - turnX) * dir > 0.34) { /* a full pass */ } } else { if (Math.abs(x - turnX) > 0.34) registerStroke(performance.now()); dir = nd; turnX = x; } };
-  const key = (e) => { if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); if (!e.repeat) registerStroke(performance.now()); sx = e.code === 'ArrowLeft' ? 0.25 : 0.75; ptr = true; } };
-  cv.addEventListener('pointermove', move); cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture?.(e.pointerId); move(e); }); document.addEventListener('keydown', key);
+  const key = (e) => { if (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); if (!e.repeat) tap(); } };
+  cv.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(); }); document.addEventListener('keydown', key);
   function draw(now, dt) {
-    table(g, now); g.fillStyle = '#3a2418'; g.fillRect(40, 20, 160, 100); g.fillStyle = '#4a3020'; g.fillRect(42, 22, 156, 96); g.drawImage(gear, Math.round(W / 2 - gear.width / 2), 28);
-    const bright = good / polish.need; g.globalAlpha = 0.25 * bright; g.fillStyle = '#fff2b0'; g.fillRect(70, 28, 100, 74); g.globalAlpha = 1;
-    for (const s of specks) if (s.on) px(g, s.x, s.y, '#6a4a30', s.s, s.s - 1);
-    // the stone
-    const bx = 40 + sx * 160 - 22; g.fillStyle = '#14101c'; g.fillRect(bx - 1, 76, 46, 18); g.fillStyle = '#8a8f98'; g.fillRect(bx, 77, 44, 16); g.fillStyle = '#b8bec8'; g.fillRect(bx, 77, 44, 3); g.fillStyle = '#6a7078'; g.fillRect(bx, 90, 44, 3);
-    for (let i = 0; i < 6; i++) px(g, bx + 4 + i * 7, 83 + (i % 2) * 3, '#9aa0aa', 3, 1);
-    // rhythm guide: a pulse that swells once per ideal stroke
-    const ph = ((now % mid) / mid), r = 5 + Math.abs(Math.sin(ph * Math.PI)) * 6; g.strokeStyle = flashT > 0 ? (lastGood ? '#8cff9a' : '#ff8a6a') : 'rgba(255,220,140,.7)'; g.lineWidth = 2; g.beginPath(); g.arc(W / 2, 134, r, 0, 6.3); g.stroke();
-    flashT = Math.max(0, flashT - dt);
-    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 100 * dt; s.x += s.vx * dt; s.y += s.vy * dt; px(g, s.x, s.y, s.c, 2, 2); }
-    label(g, `STROKES ${strokes.length} / ${polish.need}  GOOD ${good}`, 4, 12);
-    if (!ptr && !strokes.length) label(g, 'SWEEP LEFT AND RIGHT TO THE PULSE  (or press < >)', W / 2, 110, { align: 'center' });
+    table(g, now);
+    const slab = g.createLinearGradient(0, 18, 0, 118); slab.addColorStop(0, '#4a3020'); slab.addColorStop(1, '#3a2418'); g.fillStyle = slab; g.beginPath(); g.roundRect(40, 18, 160, 100, 4); g.fill();
+    g.drawImage(gear, W / 2 - 52, 20, 104, 104);
+    const bright = good / polish.need; g.globalAlpha = 0.32 * bright; g.fillStyle = '#fff2b0'; g.beginPath(); g.roundRect(66, 28, 108, 78, 8); g.fill(); g.globalAlpha = 1;
+    for (const s of specks) if (s.on) { g.fillStyle = 'rgba(90,60,36,.85)'; g.beginPath(); g.ellipse(s.x, s.y, s.s, s.s * 0.7, 0.4, 0, TAU); g.fill(); }
+    // the stone slides to the beat on its own
+    const b = started ? beatAt(now) : 0.5 + 0.5 * Math.sin(now / 400), ease = b * b * (3 - 2 * b), bx = 58 + ease * 124, atEnd = started && (b < 0.07 || b > 0.93);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(bx, 96, 21, 4, 0, 0, TAU); g.fill();
+    const st = g.createLinearGradient(0, 76, 0, 94); st.addColorStop(0, '#c4cad4'); st.addColorStop(0.5, '#8a909a'); st.addColorStop(1, '#6a7078'); g.fillStyle = st; g.strokeStyle = OUT; g.lineWidth = 1.2; g.beginPath(); g.roundRect(bx - 22, 76, 44, 18, 4); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(bx - 19, 78, 38, 2);
+    for (let i = 0; i < 5; i++) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(bx - 16 + i * 8, 84 + (i % 2) * 3, 4, 1.2); }
+    // end markers: they light up when the stone arrives
+    for (const [ex, on] of [[46, started ? b < 0.07 : false], [194, started ? b > 0.93 : false]]) { g.strokeStyle = on ? '#8cff9a' : 'rgba(255,220,140,.55)'; g.lineWidth = on ? 2.2 : 1.2; g.beginPath(); g.arc(ex, 85, on ? 8 : 6, 0, TAU); g.stroke(); if (on) { g.fillStyle = 'rgba(140,255,154,.25)'; g.fill(); } }
+    flashT = Math.max(0, flashT - dt); if (flashT > 0) { g.strokeStyle = lastGood ? '#8cff9a' : '#ff8a6a'; g.lineWidth = 2; g.globalAlpha = flashT / 0.3; g.beginPath(); g.roundRect(40, 18, 160, 100, 4); g.stroke(); g.globalAlpha = 1; }
+    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 100 * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
+    g.fillStyle = 'rgba(10,6,14,.7)'; g.beginPath(); g.roundRect(8, 134, 224, 7, 3.5); g.fill(); g.fillStyle = '#ffd36a'; g.beginPath(); g.roundRect(8, 134, Math.max(2, 224 * clamp(good / polish.need, 0, 1)), 7, 3.5); g.fill();
+    label(g, `POLISH  ${good} / ${polish.need}`, 8, 12, { size: 6.5, color: '#c8e8ff' });
+    msgT = Math.max(0, msgT - dt); if (msgT > 0) label(g, msg, W / 2, 128, { align: 'center', color: lastGood ? '#8cffa0' : '#ffb08a', size: 7.5 });
+    else label(g, interacted ? 'Tap each time the stone reaches an end' : 'TAP (click / Space) when the stone reaches an end', W / 2, 128, { align: 'center', size: 6.5, color: atEnd ? '#8cff9a' : '#ffe9a8' });
   }
   let lastT = performance.now();
   const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; draw(now, dt); };
@@ -108,31 +133,29 @@ export function createPolishScene(itemId, polish, { onStroke } = {}) {
 
 // ── REVEAL: the odds, the roll, the result ──────────────────────────────────────────────────────────────────────────────────────────────
 export function createRevealScene(itemId, res) {
-  const [cv, g] = canvas(); cv.style.cursor = 'default'; const base = gearImg(itemId, 9), glow = gearImg(itemId, 9, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
+  const [cv, g] = canvas(); cv.style.cursor = 'default';
+  const base = gearArt(itemId, 256), glow = gearArt(itemId, 256, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
   const t0 = performance.now(), sparks = [], rings = []; let alive = true, burst = false, raf = 0; const col = res.ok ? upColor(res.to) : '#8a8090';
   const SWEEP = 1700, HOLD = 500;
   function draw(now, dt) {
     const t = now - t0; table(g, now);
     const settle = clamp((t - SWEEP) / HOLD, 0, 1), roll = clamp(t / SWEEP, 0, 1), marker = res.roll * (1 - Math.pow(1 - roll, 3));   // the marker decelerates onto the roll
-    // the piece
-    const shake = t < SWEEP ? Math.sin(t / 25) * (1 - roll) * 1.2 : 0; g.save(); g.translate(Math.round(shake), 0);
-    if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); g.drawImage(glow, Math.round(W / 2 - base.width / 2), 8); g.globalAlpha = 1; }
-    g.drawImage(settle > 0 && !res.ok ? glow : base, Math.round(W / 2 - base.width / 2), 8);
-    g.restore();
-    if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 60 + (SX - 1) * 45 : 24); i++) sparks.push({ x: W / 2, y: 50, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, a: 1, d: i * 120 }); }
-    for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 90 * dt; r.a -= dt * 1.1; if (r.a <= 0) { rings.splice(i, 1); continue; } g.strokeStyle = `rgba(255,230,150,${r.a})`; g.lineWidth = 2; g.beginPath(); g.arc(W / 2, 50, r.r, 0, 6.3); g.stroke(); }
-    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; px(g, s.x, s.y, s.c, 2, 2); }
+    const shake = t < SWEEP ? Math.sin(t / 25) * (1 - roll) * 1.2 : 0; g.save(); g.translate(shake, 0);
+    if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); g.drawImage(glow, W / 2 - 39, 2, 78, 78); g.globalAlpha = 1; }
+    g.drawImage(settle > 0 && !res.ok ? glow : base, W / 2 - 39, 2, 78, 78); g.restore();
+    if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 60 + (SX - 1) * 45 : 24); i++) sparks.push({ x: W / 2, y: 40, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, a: 0.9, d: i * 140 }); }
+    for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 90 * dt; r.a -= dt * 1.1; if (r.a <= 0) { rings.splice(i, 1); continue; } g.strokeStyle = `rgba(255,230,150,${r.a})`; g.lineWidth = 1.4; g.beginPath(); g.arc(W / 2, 40, r.r, 0, TAU); g.stroke(); }
+    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
     // the chance bar and the roll marker
-    const bx = 30, bw = 180, by = 112; g.fillStyle = '#14101c'; g.fillRect(bx - 2, by - 2, bw + 4, 16); g.fillStyle = '#5a2a30'; g.fillRect(bx, by, bw, 12); g.fillStyle = '#3d9a4e'; g.fillRect(bx, by, bw * res.chance, 12); g.fillStyle = '#8cffa0'; g.fillRect(bx, by, bw * res.chance, 2);
-    for (let i = 1; i < 10; i++) px(g, bx + (bw * i) / 10, by + 8, 'rgba(0,0,0,.35)', 1, 4);
-    const mxp = bx + bw * marker; g.fillStyle = '#ffffff'; g.fillRect(Math.round(mxp) - 1, by - 5, 3, 22); g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(mxp - 4, by - 7); g.lineTo(mxp + 4, by - 7); g.lineTo(mxp, by - 1); g.fill();
-    label(g, `SUCCESS ${(res.chance * 100).toFixed(res.chance < 0.1 ? 1 : 0)}%`, bx, by - 8, { size: 8 }); label(g, `ROLL ${(marker * 100).toFixed(0)}`, bx + bw, by - 8, { size: 8, align: 'right', color: '#c8bcd8' });
-    if (settle >= 1) { g.textAlign = 'center'; g.font = 'bold 18px monospace'; g.fillStyle = '#14101c'; g.fillText(res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED', W / 2 + 1, 99); g.fillStyle = col; g.fillText(res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED', W / 2, 98); g.textAlign = 'left'; }
-    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) { const w = res.steps === 2 ? 'CRITICAL FORGE  x2' : 'CRITICAL FORGE  x3'; label(g, w, W / 2, 30 + Math.round(Math.sin(t / 120) * 2), { align: 'center', color: res.steps === 3 ? '#ff9aff' : '#ffe36b', size: 9 }); }
-    // cracks for a failure
-    if (!res.ok && settle > 0) { g.strokeStyle = `rgba(0,0,0,${0.7 * settle})`; g.lineWidth = 2; g.beginPath(); g.moveTo(W / 2 - 14, 22); g.lineTo(W / 2 - 4, 40); g.lineTo(W / 2 - 12, 58); g.moveTo(W / 2 - 4, 40); g.lineTo(W / 2 + 12, 52); g.stroke(); }
+    const bx = 30, bw = 180, by = 114; g.fillStyle = '#14101c'; g.beginPath(); g.roundRect(bx - 2, by - 2, bw + 4, 16, 4); g.fill(); g.fillStyle = '#5a2a30'; g.beginPath(); g.roundRect(bx, by, bw, 12, 3); g.fill();
+    g.fillStyle = '#3d9a4e'; g.beginPath(); g.roundRect(bx, by, Math.max(1, bw * res.chance), 12, 3); g.fill(); g.fillStyle = '#8cffa0'; g.fillRect(bx + 1, by + 0.8, Math.max(0, bw * res.chance - 2), 1.6);
+    g.fillStyle = 'rgba(0,0,0,.3)'; for (let i = 1; i < 10; i++) g.fillRect(bx + (bw * i) / 10 - 0.3, by + 8, 0.6, 4);
+    const mxp = bx + bw * marker; g.fillStyle = '#ffffff'; g.fillRect(mxp - 1, by - 5, 2, 22); g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(mxp - 4, by - 8); g.lineTo(mxp + 4, by - 8); g.lineTo(mxp, by - 2); g.closePath(); g.fill();
+    label(g, `SUCCESS ${(res.chance * 100).toFixed(res.chance < 0.1 ? 1 : 0)}%`, bx, by - 9, { size: 7.5 }); label(g, `ROLL ${(marker * 100).toFixed(0)}`, bx + bw, by - 9, { size: 7.5, align: 'right', color: '#c8bcd8' });
+    if (settle >= 1) { const txt = res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED'; g.textAlign = 'center'; g.font = `800 20px ${FONT}`; g.lineWidth = 3; g.strokeStyle = '#14101c'; g.strokeText(txt, W / 2, 99); g.fillStyle = col; g.fillText(txt, W / 2, 99); g.textAlign = 'left'; }
+    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) { const w = res.steps === 2 ? 'CRITICAL FORGE  x2' : 'CRITICAL FORGE  x3'; label(g, w, W / 2, 26 + Math.sin(t / 120) * 1.6, { align: 'center', color: res.steps === 3 ? '#ff9aff' : '#ffe36b', size: 8.5 }); }
+    if (!res.ok && settle > 0) { g.strokeStyle = `rgba(0,0,0,${0.7 * settle})`; g.lineWidth = 1.6; g.beginPath(); g.moveTo(W / 2 - 14, 18); g.lineTo(W / 2 - 4, 36); g.lineTo(W / 2 - 12, 54); g.moveTo(W / 2 - 4, 36); g.lineTo(W / 2 + 12, 48); g.stroke(); }
   }
   let last = performance.now(); const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - last) / 1000); last = now; draw(now, dt); }; raf = requestAnimationFrame(loop);
   return { el: cv, duration: SWEEP + HOLD, destroy() { alive = false; cancelAnimationFrame(raf); } };
 }
-void shade;

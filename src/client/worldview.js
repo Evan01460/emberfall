@@ -283,7 +283,7 @@ export class WorldView {
     blit(g, shadowSprite(12), X, foot);
     if (p.sl) g.globalAlpha = 0.4; if (self && this.dash) g.globalAlpha = 0.6;
     const bob = !moving && Math.floor(t / 650 + seed) % 2 ? 0 : (!moving ? -C / 2 : 0);
-    blit(g, personSprite(p.c, dir, frame, seed, c.color), X, foot + bob); g.globalAlpha = 1; drawSwing(g, p.id, X, foot);
+    blit(g, personSprite(p.c, dir, frame, seed, c.color, p.lk ? { look: p.lk } : undefined), X, foot + bob); g.globalAlpha = 1; drawSwing(g, p.id, X, foot);
     const foe = G.guild?.war && p.gl && p.gl.toLowerCase() === G.guild.war.foe.toLowerCase(), hostile = !self && ((p.pv && G.pvp) || foe) && !partyMate, flagged = self ? !!G.pvp : !!p.pv;
     if (self || partyMate || p.dl || hostile || flagged) { const col = hostile || p.dl ? '#ff6a5a' : self && flagged ? '#ff9a5a' : self ? '#ffe9a8' : flagged ? '#c8a06a' : '#8fe0a8'; cellAt(g, X - 8, foot + 2, col); cellAt(g, X + 6, foot + 2, col); }
     if (p.gd) { pring(g, X, foot - 14, 22, C, '#7fb8ff'); pring(g, X, foot - 14, 18, C, 'rgba(127,184,255,.5)'); }

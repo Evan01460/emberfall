@@ -25,7 +25,8 @@ test('advancements: three tiers per path (35/55/80), one distinct skill each, al
 });
 
 test('every advancement skill can be cast, damages what it should, and cleans up after itself', () => {
-  for (const sk of scripts) {
+  const realRandom = Math.random; let seed = 987654321; Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);   // placement of falling things is random: make the run repeatable
+  try { for (const sk of scripts) {
     const clock = { t: 1_000_000 }, srv = new GameServer({ seed: 5, now: () => clock.t }), conn = { msgs: [], send(m) { this.msgs.push(m); }, session: null };
     assert.ok(srv.join(conn, { name: 'Caster', create: { classId: sk.cls[0] } }).ok); const S = conn.session; S.P.level = 85; srv.recalc(S); S.hp = S.rt.maxHp; S.mp = S.rt.maxMp; S.immuneUntil = 0;
     const map = 'greenmeadow', m = getMap(map); srv.mobs = srv.mobs.filter((x) => x.map !== map); const sp = m.spawn; srv.travel(S, map, sp.x, sp.y);
@@ -37,5 +38,5 @@ test('every advancement skill can be cast, damages what it should, and cleans up
     if (dmg) assert.ok(dealt > 0, `${sk.id} hurt the enemies (${dealt})`);
     assert.equal(srv.pz.filter((z) => z.owner === S.id).length, 0, `${sk.id} left no effects behind`); assert.equal(srv.pets.filter((z) => z.owner === S.id).length, 0, `${sk.id} left no familiars behind`);
     assert.ok(conn.msgs.some((x) => x.t === 'snap') || true);
-  }
+  } } finally { Math.random = realRandom; }
 });

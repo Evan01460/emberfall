@@ -13,6 +13,7 @@ import { prop } from './sprites.js';
 import { skillsTab, ascendTab, deedsLog } from './skillsui.js';
 import { createForgeStage } from './forgecanvas.js';
 import { tradingTab, pendingForMe } from './tradeui.js';
+import { paperDoll, bagPanel, betterCount } from './gearui.js';
 import { browser, statChips, fitIcons } from './browse.js';
 import { startTutorial } from './tutorial.js';
 import { ACTIONS, keyOf, keyLabel, setKey, resetKeys, RESERVED } from './keys.js';
@@ -48,8 +49,9 @@ export const gearLabel = (g) => { const gr = gradeOf(g.q), af = g.affix && AFFIX
 // "What should I wear?" — derived from the same table that decides the +10% class-fit bonus.
 function gearAdvice(me) {
   const g = classGear(me.classId), list = (a) => a.length ? a.join(', ') : '—';
-  return h('div', { class: 'card', style: { margin: '8px 0', padding: '8px 12px' } }, h('b', {}, `Gear made for a ${CLASSES[me.classId].name}`), h('div', { style: { fontSize: '13px', marginTop: '3px' } }, `Weapons: ${list(g.weapon)}  ·  Armour: ${list(g.armor)}  ·  Charms: ${list(g.charm)}`),
-    h('div', { class: 'dim', style: { fontSize: '12px' } }, `Gear made for your class gives +${Math.round(FIT_BONUS * 100)}% to its stats. Anything can be equipped — the bonus is the only difference. Metal tiers rise: Iron → Steel → Shadowsteel → Sunsteel → Moonsilver → Cinderforged → Aetherium.`));
+  return h('div', { class: 'card', style: { margin: '8px 0', padding: '8px 12px' } }, h('b', {}, `Gear made for a ${CLASSES[me.classId].name}`),
+    h('div', { style: { fontSize: '13px', marginTop: '3px' } }, `Weapons: ${list(g.weapon)}  ·  Armour: ${list([...new Set([...g.chest, ...g.head, ...g.legs, ...g.feet])])}  ·  Rings: ${list(g.ring)}  ·  Charms: ${list(g.charm)}`),
+    h('div', { class: 'dim', style: { fontSize: '12px' } }, `Gear made for your class gives +${Math.round(FIT_BONUS * 100)}% to its stats. Anything can be equipped — the bonus is the only difference. Seven slots: weapon, helmet, chestplate, leggings, boots, ring and charm. Metal tiers rise: Iron → Steel → Shadowsteel → Sunsteel → Moonsilver → Cinderforged → Aetherium → and beyond.`));
 }
 let recAll = false;
 // "better or worse than what I am wearing": the stat difference against the equipped piece in the same slot
@@ -63,7 +65,7 @@ export function gearStatText(g) {
   const it = ITEMS[g.id], m = qualityStatMult(g.q) * upMult(g.up), out = [];
   if (g.up > 0) out.push(`Tempered +${g.up} (stats x${upMult(g.up).toFixed(2)})`);
   if (it.atk) out.push(`ATK +${(it.atk * m).toFixed(1)}`); if (it.def) out.push(`DEF +${(it.def * m).toFixed(1)}`); if (it.hp) out.push(`HP +${Math.round(it.hp * m * HP_SCALE)}`);
-  if (it.mp) out.push(`MP +${Math.round(it.mp * m)}`); if (it.spd) out.push(`Speed +${Math.floor(it.spd * m)}`); if (it.wtype) out.push(`${it.wtype} (+10% dmg)`);
+  if (it.mp) out.push(`MP +${Math.round(it.mp * m)}`); if (it.spd) out.push(`Speed +${Math.floor(it.spd * m)}`); if (it.crit) out.push(`Crit +${Math.round(it.crit * 100)}%`); if (it.wtype) out.push(`${it.wtype} (+10% dmg)`);
   const af = g.affix && AFFIXES.find((a) => a.id === g.affix); if (af) out.push(`${af.name}: ${scaledText(af.text, g.id)}`);
   out.push(...gearFxLines(g));
   const fl = fitsOf(g.id); if (fl.length) out.push(`Made for: ${fl.map((c) => CLASSES[c]?.name ?? c).join(', ')}${G.me && fl.includes(G.me.classId) ? ` — SUITS YOUR CLASS (+${Math.round(FIT_BONUS * 100)}% stats)` : ''}`);
@@ -72,24 +74,25 @@ export function gearStatText(g) {
 
 // ── character ───────────────────────────────────────────────────────────────
 let charTab = 'overview';
+const DOLL = { gearLabel: (g) => gearLabel(g), gearStatText: (g) => gearStatText(g), cmpRow: (g, me) => cmpRow(g, me), onChange: () => refreshWindow('character') };
 export function openCharacter(tab) {
   if (tab) charTab = tab;
   openWindow('character', 'Character', () => {
     const me = G.me, cls = CLASSES[me.classId], u = me.unit;
-    const tabs = h('div', { class: 'row', style: { marginBottom: '10px' } }, [['overview', 'Overview'], ['bag', 'Bag & Gear'], ['skills', 'Skills'], ['ascend', cls.mythic ? 'Mythic' : 'Ascension'], ['trading', pendingForMe() ? `Trading (${pendingForMe()} new)` : 'Trading'], ['guild', 'Guild'], ['journal', 'Journal']].map(([id, l]) => h('button', { class: `btn small ${charTab === id ? 'gold' : ''}`, onclick: () => { charTab = id; refreshWindow('character'); } }, l)));
+    const tabs = h('div', { class: 'row', style: { marginBottom: '10px' } }, [['overview', 'Overview'], ['bag', betterCount(me) ? `Bag & Gear (${betterCount(me)} ▲)` : 'Bag & Gear'], ['skills', 'Skills'], ['ascend', cls.mythic ? 'Mythic' : 'Ascension'], ['trading', pendingForMe() ? `Trading (${pendingForMe()} new)` : 'Trading'], ['guild', 'Guild'], ['journal', 'Journal']].map(([id, l]) => h('button', { class: `btn small ${charTab === id ? 'gold' : ''}`, onclick: () => { charTab = id; refreshWindow('character'); } }, l)));
     let body;
     if (charTab === 'overview') {
       body = h('div', {}, h('div', { class: 'row sb' }, h('h2', { class: 'row' }, I.cls(me.classId, 32), `${me.name} - ${cls.name}${cls.hidden ? ' (hidden)' : ''}`), h('span', { class: 'tag g' }, `Level ${me.level}`)),
         h('div', { class: 'bar xp', style: { margin: '4px 0 10px' } }, h('i', { style: { width: `${me.xpNeed ? (me.xp / me.xpNeed) * 100 : 100}%` } })),
         h('div', { class: 'row' }, h('span', { class: 'tag g' }, `HP ${u.maxHp}`), h('span', { class: 'tag' }, `MP ${u.maxMp}`), h('span', { class: 'tag' }, `ATK ${Math.round(u.atk)}`), h('span', { class: 'tag' }, `DEF ${Math.round(u.def)}`), h('span', { class: 'tag' }, `Speed x${u.move.toFixed(2)}`), h('span', { class: 'tag' }, `Damage x${u.dmgMult.toFixed(2)}`)),
+        h('div', { style: { margin: '10px 0' } }, paperDoll(me, DOLL).el),
         h('p', { class: 'dim' }, cls.desc), gearAdvice(me), cls.role ? h('p', {}, h('b', {}, 'Your place in the economy: '), cls.role) : null,
         isCrafter(me) ? h('p', { class: 'gold', style: { fontSize: '13px' } }, 'Crafter rule: you cannot list your creations on the Exchange or sell them to the vendor. Sell them to a Merchant, or fill a commission (Orders tab).') : null,
         cls.group === 'trade' && !isCrafter(me) ? h('p', { class: 'gold', style: { fontSize: '13px' } }, 'Merchant rule: post wholesale buy orders for crafters\' goods at the price you choose, then resell on the Exchange at any price.') : null,
         !cls.hidden ? h('p', { class: 'dim' }, 'Hidden classes exist. Nobody will tell you how to find them.') : null,
-        h('div', { class: 'grid g2', style: { marginTop: '10px' } }, ...['weapon', 'armor', 'charm'].map((slot) => { const g = me.gear.find((x) => x.uid === me.equip[slot]); return h('div', { class: 'card' }, h('span', { class: 'tag' }, slot), ' ', g ? gearLabel(g) : h('span', { class: 'dim' }, 'empty'), g ? h('div', { class: 'dim', style: { fontSize: '11px' } }, gearStatText(g)) : null, g ? h('div', {}, h('button', { class: 'btn small ghost', onclick: () => send({ t: 'inv.unequip', slot }) }, 'Unequip')) : null); })));
+        );
     } else if (charTab === 'bag') {
-      const bag = me.gear.filter((g) => !Object.values(me.equip).includes(g.uid));
-      body = h('div', {}, h('div', { class: 'row sb' }, h('h3', {}, 'Gear'), h('button', { class: 'btn small gold', title: 'Wear the strongest piece in every slot', onclick: () => send({ t: 'inv.best' }) }, 'Equip best')), bag.length ? bag.map((g) => h('div', { class: 'row sb', style: { margin: '4px 0' } }, h('div', {}, gearLabel(g), h('div', { class: 'dim', style: { fontSize: '11px' } }, gearStatText(g)), cmpRow(g, me)), h('span', { class: 'row', style: { gap: '4px' } }, h('button', { class: 'btn small ghost', title: 'Upgrade this piece (+1 to +99)', onclick: () => G.openUpgrade?.(g.uid) }, 'Upgrade'), h('button', { class: 'btn small', onclick: () => send({ t: 'inv.equip', uid: g.uid }) }, 'Equip')))) : h('p', { class: 'dim' }, 'No spare gear. Smiths forge it; the Exchange sells it.'),
+      body = h('div', {}, paperDoll(me, DOLL).el, h('div', { style: { height: '6px' } }), bagPanel(me, DOLL),
         (me.flasks ?? []).length ? h('div', {}, h('h3', { style: { marginTop: '12px' } }, 'Custom potions'), me.flasks.map((f) => h('div', { class: 'row sb', style: { margin: '4px 0' } }, h('div', { class: 'row' }, I.iconEl(I.flaskIcon(f.form), 26), h('div', {}, h('b', {}, `${f.n}× ${f.name}`), ' ', h('span', { class: `tag ${f.form === 'essence' ? 'v' : 'g'}` }, f.form), f.by ? h('span', { class: 'tag g', title: `Brewed by ${f.by}` }, `brewed by ${f.by}`) : null, h('div', { class: 'dim', style: { fontSize: '11px' } }, flaskText(f)))), f.form === 'essence' ? h('span', { class: 'dim', style: { fontSize: '12px' } }, 'take to a Blacksmith') : h('span', { class: 'row' }, h('button', { class: 'btn small', onclick: () => send({ t: 'flask.use', uid: f.uid, a: 0 }) }, f.form === 'draught' ? 'Drink' : 'Throw'), h('button', { class: `btn small ${me.quickFlask === f.uid ? 'gold' : 'ghost'}`, title: 'Bind to hotkey 7', onclick: () => send({ t: 'flask.quick', uid: f.uid }) }, 'Key 7'))))) : null,
         h('h3', { style: { marginTop: '12px' } }, 'Satchel'), h('div', { class: 'row' }, Object.entries(me.items).map(([id, n]) => h('span', { class: 'tag item', title: ITEMS[id].desc ?? '' }, I.item(id, 18), ` ${ITEMS[id].n} x${n}`, ITEMS[id].skill ? h('button', { class: 'btn small gold', style: { marginLeft: '6px' }, onclick: () => send({ t: 'tome.read', id }) }, 'Read') : null, lockedStack(me, id) ? h('span', { class: 'gold' }, ` (${lockedStack(me, id)} yours)`) : null))));
     } else if (charTab === 'skills') {
@@ -216,13 +219,13 @@ export function startForge(m) {
     }; raf = requestAnimationFrame(loop);
   }
   // 2 · HAMMER ─ strike when the marker crosses the zone; the smith swings for real
-  let n = 0, center = spec.centers[0], lastStrike = -999;
+  let n = 0, center = spec.centers[0], lastStrike = -999, shown = 0;   // `shown` = the time of the frame on screen: a blow is judged exactly where the marker was drawn
   function startHammer() {
     phase = 'hammer'; t0 = performance.now(); arm(600); stage.textContent = '2 / 3 · HAMMER'; stage.style.color = '#d8cdbd'; msg.textContent = 'Strike when the marker crosses the zone! (Space / click)'; msg.style.color = ''; act.textContent = 'STRIKE!'; fbar.style.display = ''; place(center, spec.half); mark.style.background = '#fff'; timeBar.firstChild.style.width = '0%';
-    const loop = (now) => { mark.style.left = `${Math.round(markerPos(spec, now - t0) * 50) * 2}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
+    shown = 0; const loop = (now) => { shown = now - t0; mark.style.left = `${markerPos(spec, shown) * 100}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
   }
   function strike() {
-    const t = performance.now() - t0; if (t - lastStrike < 320) return; lastStrike = t;
+    const t = shown; if (t - lastStrike < 320) return; lastStrike = t;
     const pos = markerPos(spec, t), sc = strikeScore(pos, center, spec.half); times.push(Math.round(t)); n++;
     stageCv.strike(sc); setTimeout(() => sfx('anvil', 60), 125);
     for (let i = 0; i < 10; i++) { const sp = h('div', { class: 'spark', style: { left: `${pos * 100}%`, top: '50%', '--dx': `${Math.round((rnd() - 0.5) * 30) * 4}px`, '--dy': `${Math.round((rnd() - 0.7) * 18) * 4}px` } }); fbar.append(sp); setTimeout(() => sp.remove(), 650); }
@@ -238,10 +241,10 @@ export function startForge(m) {
   }
   function pick(id) {
     medium = id; phase = 'quench'; arm(500); body.replaceChildren(); fbar.style.display = ''; act.style.display = ''; act.textContent = 'DUNK!'; t0 = performance.now(); place(spec.quench.center, spec.quench.half * QUENCH[id].half); mark.style.background = '#7fd8ff'; msg.textContent = `Dunk it in the ${QUENCH[id].name.toLowerCase()} when the marker is in the zone!`;
-    const loop = (now) => { mark.style.left = `${Math.round(markerPos(spec.quench, now - t0) * 50) * 2}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
+    shown = 0; const loop = (now) => { shown = now - t0; mark.style.left = `${markerPos(spec.quench, shown) * 100}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
   }
   function dunk() {
-    sfx('hiss', 100); const t = performance.now() - t0; quenchMs = Math.round(t); cancelAnimationFrame(raf); phase = 'done'; act.disabled = true;
+    sfx('hiss', 100); const t = shown; quenchMs = Math.round(t); cancelAnimationFrame(raf); phase = 'done'; act.disabled = true;
     const sc = strikeScore(markerPos(spec.quench, t), spec.quench.center, spec.quench.half * QUENCH[medium].half); stageCv.quench(sc > 0.4); msg.textContent = sc >= 0.9 ? 'Hiss! A perfect quench.' : sc > 0.4 ? 'It holds.' : 'Cracked… it may have lost something.'; msg.style.color = sc > 0.4 ? '#7fd8ff' : '#e0645a';
     setTimeout(() => send({ t: 'craft.finish', times, heat: holds, quench: quenchMs, medium }), 700);
   }

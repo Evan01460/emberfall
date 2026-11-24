@@ -44,12 +44,13 @@ function arena(cls, level = 95) {
 }
 
 test('all 50 hidden/mythic skills can be cast, damage enemies, and leave nothing behind', () => {
-  for (const sk of ALL) {
+  const realRandom = Math.random; let seed = 123456789; Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);   // random placement made repeatable
+  try { for (const sk of ALL) {
     const cls = sk.cls[0], A = arena(cls), hp0 = A.hp(); A.S.cds = {}; A.srv.cast(A.S, sk, 0, A.sp.x + 4, A.sp.y); A.run(26000);
     const dealt = hp0 - A.hp(), needsHit = sk.steps.some((s) => s.power > 0 && !['buff', 'heal'].includes(s.t));
     if (needsHit) assert.ok(dealt > 0, `${sk.id} hurt the enemies (${dealt})`);
     assert.equal(A.srv.pz.filter((z) => z.owner === A.S.id).length, 0, `${sk.id} left no effects behind`); assert.equal(A.srv.pets.filter((z) => z.owner === A.S.id).length, 0, `${sk.id} left no familiars behind`);
-  }
+  } } finally { Math.random = realRandom; }
 });
 
 test('the signature mechanics do what they say', () => {

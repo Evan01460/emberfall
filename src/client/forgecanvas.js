@@ -10,7 +10,7 @@ const rnd = Math.random;
 export function createForgeStage(opts = {}) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'forge-stage'; cv.style.cssText = 'width:100%;max-width:528px;image-rendering:pixelated;display:block;margin:0 auto;background:#120a14;box-shadow:inset 0 0 0 3px #3a2d52,0 0 0 3px #0c0814';
   const g = cv.getContext('2d'); cv.__st = null; g.imageSmoothingEnabled = false;
-  const tmp = document.createElement('canvas'); tmp.width = tmp.height = 32; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = false;
+  const tmp = document.createElement('canvas'); tmp.width = tmp.height = 32; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = !!(opts.icon && opts.icon.width > 32); tg.imageSmoothingQuality = 'high';   // big artwork is averaged down; a small icon stays crisp
   const st = { heat: 0.2, fire: 0.4, swing: null, sparks: [], steam: [], flatten: 0, shake: 0, flash: 0, dip: 0, alive: true, t0: performance.now(), lastScore: 1 };
   cv.__st = st;
   const ANV = { x: 57, y: 62 }, BIL = { x: 58, y: 69 }, SM = { x: 70, y: 42 };   // BIL.y is the anvil's top face: the billet rests ON it

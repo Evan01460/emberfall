@@ -9,6 +9,7 @@ import { h, fmt } from '../ui-lib.js';
 import * as I from './icons.js';
 import { openWindow, closeWindow, refreshWindow, isOpen } from './panels.js';
 import { createForgeStage } from './forgecanvas.js';
+import { gearArt } from './gearart.js';
 import { createRuneScene, createPolishScene, createRevealScene } from './upgradescenes.js';
 import { heatStart, heatStep, heatBand, markerPos, strikeScore, QUENCH, gearName } from '../rules.js';
 import { upMult, baseChance, finalChance, QUICK_SCORE, upColor, MAX_UP, upLevel } from '../upgrade.js';
@@ -75,7 +76,7 @@ function detail(g, info, me) {
 // ── the minigame ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function startUpgrade(tk) {
   closeWindow('upstation'); closeWindow('upgrade');
-  const spec = tk.spec, g0 = tk.gear, icon = I.itemIcon(g0.id), L = tk.L;
+  const spec = tk.spec, g0 = tk.gear, icon = gearArt(g0.id, 96), L = tk.L;
   const forge = createForgeStage({ icon });
   let phase = 'heat', raf = 0, t0 = performance.now(), finished = false, scene = null, locked = false;
   const data = { heat: [], folds: [[], [], []], rune: [], quench: 0, medium: null, polish: [] };
@@ -113,33 +114,34 @@ export function startUpgrade(tk) {
       const el = heatGo ? now - t0 : 0; while (stepT < el && stepT < hs.dur) { heatStep(hs, st, holding, stepT); stepT += 20; }
       const pos = st.pos, d = Math.abs(pos - hs.center), band = heatBand(hs, pos);
       tmark.style.bottom = `${pos * 100}%`; tmark.style.opacity = heatGo ? 1 : 0.5 + 0.5 * Math.sin(now / 220); tmark.style.background = band === 1 ? '#fff2b0' : band >= 0.75 ? '#ffd36a' : pos < hs.center ? '#6a9aff' : '#ff4a3a';
-      forge.setHeat(0.25 + 0.75 * Math.max(0, 1 - d / (hs.half * 3))); forge.setFire(holding ? 1 : 0.35); timeBar.firstChild.style.width = `${Math.min(100, Math.round((el / hs.dur) * 25) * 4)}%`;
+      forge.setHeat(0.25 + 0.75 * Math.max(0, 1 - d / (hs.half * 3))); forge.setFire(holding ? 1 : 0.35); timeBar.firstChild.style.width = `${Math.min(100, (el / hs.dur) * 100)}%`;
       if (heatGo && el >= hs.dur) { release(); cancelAnimationFrame(raf); thermo.style.display = 'none'; tmark.style.opacity = 1; startFold(0); return; } raf = requestAnimationFrame(loop);
     }; raf = requestAnimationFrame(loop);
   }
   // 2 · FOLD — three rounds, each four blows; every round the marker is faster and the steel has twice the layers
-  let round = 0, n = 0, center = 0, lastStrike = -999;
+  let round = 0, n = 0, center = 0, lastStrike = -999, shown = 0;   // `shown`: the time of the frame on screen, so the blow is judged exactly where the marker was drawn
   function startFold(r) {
     round = r; n = 0; phase = 'fold'; t0 = performance.now(); arm(600); const f = spec.folds[r]; center = f.centers[0]; setStage(1, '#d8cdbd');
     msg.textContent = r === 0 ? 'Fold the steel: strike when the marker crosses the zone! (Space / click) Three rounds, each faster.' : `Round ${r + 1} of 3 — the steel has ${2 ** (r + 3)} layers now. Faster!`; msg.style.color = ''; act.textContent = 'STRIKE!'; fbar.style.display = ''; place(center, f.half); mark.style.background = '#ffd36a'; hits.replaceChildren(); timeBar.firstChild.style.width = `${(r / 3) * 100}%`;
-    cancelAnimationFrame(raf); const loop = (now) => { mark.style.left = `${Math.round(markerPos(f, now - t0) * 50) * 2}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
+    cancelAnimationFrame(raf); shown = 0; const loop = (now) => { shown = now - t0; mark.style.left = `${markerPos(f, shown) * 100}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
   }
   function strike() {
-    const f = spec.folds[round], t = performance.now() - t0; if (t - lastStrike < 320) return; lastStrike = t; const pos = markerPos(f, t), sc = strikeScore(pos, center, f.half); data.folds[round].push(Math.round(t)); n++;
+    const f = spec.folds[round], t = shown; if (t - lastStrike < 320) return; lastStrike = t; const pos = markerPos(f, t), sc = strikeScore(pos, center, f.half); data.folds[round].push(Math.round(t)); n++;
     forge.strike(sc); setTimeout(() => sfx('anvil', 60), 125);
     const label = sc >= 1 ? ['PERFECT!', '#ffd36a'] : sc > 0.6 ? ['Good', '#6fc08b'] : sc > 0.2 ? ['Weak', '#d8cdbd'] : ['Miss...', '#e0645a']; msg.textContent = label[0]; msg.style.color = label[1]; hits.append(h('span', { class: 'tag', style: { color: label[1] } }, `${Math.round(sc * 100)}%`));
     if (n >= f.strikes) { cancelAnimationFrame(raf); phase = 'wait'; lastStrike = -999; setTimeout(() => (round + 1 < spec.folds.length ? startFold(round + 1) : startRune()), 750); return; }
     center = f.centers[n]; place(center, f.half);
   }
-  // 3 · RUNE
+  // 3 · RUNE — the rune is a drawing of the piece itself. The clock only starts when you press the green START; the step ends when you reach the red END
+  // having followed the groove, when you press DONE, or when the (visible) time runs out. Nothing can end it by accident.
   function startRune() {
     phase = 'rune'; setStage(2, '#9adfff'); stageHolder.style.display = 'none'; fbar.style.display = 'none'; hits.replaceChildren(); act.textContent = 'DONE ENGRAVING'; act.disabled = false; timeBar.firstChild.style.width = '0%';
-    msg.textContent = 'Engrave the rune. Hold the mouse button at the green start and follow the glowing groove to the red end. Stay on the line: scratches off it cost you.'; msg.style.color = '';
-    scene = createRuneScene(g0.id, spec.rune, { onProgress: (p) => { timeBar.firstChild.style.width = `${Math.round(p * 25) * 4}%`; } }); sceneHolder.replaceChildren(scene.el); sceneHolder.style.display = '';
-    const limit = spec.rune.limit; const tick = () => { if (phase !== 'rune') return; if (scene.started() && (scene.progress() >= 0.97 || scene.elapsed() > limit)) return endRune(); raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick);
-    act.onclick = () => { if (phase === 'rune' && scene.started()) endRune(); };
+    msg.textContent = `${spec.rune.name ?? 'Engrave the rune'}: press and hold the mouse on the green START, then follow the glowing groove all the way to the red END. Stay on the line.`; msg.style.color = '';
+    const born = performance.now();
+    scene = createRuneScene(g0.id, spec.rune, { onProgress: (p) => { timeBar.firstChild.style.width = `${Math.min(100, p * 100)}%`; }, onComplete: () => endRune(), onTimeout: () => endRune() }); sceneHolder.replaceChildren(scene.el); sceneHolder.style.display = '';
+    act.onclick = () => { if (phase === 'rune' && scene.started() && performance.now() - born > 800) endRune(); };
   }
-  function endRune() { if (phase !== 'rune') return; phase = 'wait'; cancelAnimationFrame(raf); data.rune = scene.finish(); const p = scene.progress(); scene.destroy(); scene = null; sceneHolder.style.display = 'none'; act.onclick = null; msg.textContent = p > 0.85 ? 'A clean rune.' : p > 0.5 ? 'It will hold.' : 'The rune is patchy…'; setTimeout(startQuench, 600); }
+  function endRune() { if (phase !== 'rune') return; phase = 'wait'; cancelAnimationFrame(raf); data.rune = scene.finish(); const p = scene.progress(); scene.destroy(); scene = null; sceneHolder.style.display = 'none'; act.onclick = null; msg.textContent = p > 0.85 ? 'A clean rune.' : p > 0.5 ? 'It will hold.' : 'The rune is patchy…'; setTimeout(startQuench, 700); }
   // 4 · QUENCH
   function startQuench() {
     phase = 'choose'; setStage(3, '#7fd8ff'); stageHolder.style.display = ''; msg.textContent = 'Choose the bath. It decides what the metal becomes.'; msg.style.color = ''; act.style.display = 'none'; fbar.style.display = 'none'; timeBar.style.display = 'none'; hits.replaceChildren(); thermo.style.display = 'none';
@@ -147,17 +149,17 @@ export function startUpgrade(tk) {
   }
   function pickBath(id) {
     data.medium = id; phase = 'quench'; arm(500); body.replaceChildren(); fbar.style.display = ''; act.style.display = ''; act.disabled = false; act.textContent = 'DUNK!'; t0 = performance.now(); place(spec.quench.center, spec.quench.half * QUENCH[id].half); mark.style.background = '#7fd8ff'; msg.textContent = `Dunk it in the ${QUENCH[id].name.toLowerCase()} when the marker is in the zone!`;
-    forge.setHeat(0.85); const loop = (now) => { mark.style.left = `${Math.round(markerPos(spec.quench, now - t0) * 50) * 2}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
+    forge.setHeat(0.85); shown = 0; const loop = (now) => { shown = now - t0; mark.style.left = `${markerPos(spec.quench, shown) * 100}%`; raf = requestAnimationFrame(loop); }; raf = requestAnimationFrame(loop);
   }
   function dunk() {
-    sfx('hiss', 100); const t = performance.now() - t0; data.quench = Math.round(t); cancelAnimationFrame(raf); phase = 'wait'; act.disabled = true; const sc = strikeScore(markerPos(spec.quench, t), spec.quench.center, spec.quench.half * QUENCH[data.medium].half);
+    sfx('hiss', 100); const t = shown; data.quench = Math.round(t); cancelAnimationFrame(raf); phase = 'wait'; act.disabled = true; const sc = strikeScore(markerPos(spec.quench, t), spec.quench.center, spec.quench.half * QUENCH[data.medium].half);
     forge.quench(sc > 0.4); msg.textContent = sc >= 0.9 ? 'Hiss! A perfect quench.' : sc > 0.4 ? 'It holds.' : 'A crack runs through it…'; msg.style.color = sc > 0.4 ? '#7fd8ff' : '#e0645a'; setTimeout(startPolish, 1100);
   }
-  // 5 · POLISH
+  // 5 · POLISH — the stone slides by itself; tap (click / Space) each time it reaches an end of the slab.
   function startPolish() {
     phase = 'polish'; setStage(4, '#ffe9a8'); stageHolder.style.display = 'none'; fbar.style.display = 'none'; act.style.display = ''; act.disabled = false; act.textContent = 'FINISH POLISHING'; timeBar.style.display = ''; timeBar.firstChild.style.width = '0%'; msg.style.color = '';
-    msg.textContent = `Polish the edge: sweep the whetstone left and right, one pass per pulse of the ring. ${spec.polish.need} strokes in an even rhythm.`;
-    scene = createPolishScene(g0.id, spec.polish, { onStroke: ({ ok, n, good }) => { timeBar.firstChild.style.width = `${Math.min(100, Math.round((n / spec.polish.need) * 25) * 4)}%`; msg.textContent = ok ? `Smooth. (${good} good strokes)` : 'Too fast or too slow — keep to the pulse.'; msg.style.color = ok ? '#8cffa0' : '#e0a070'; if (n >= spec.polish.need) setTimeout(endPolish, 450); } });
+    msg.textContent = `Polish the edge: the whetstone slides back and forth on its own. TAP (click or Space) every time it reaches an end - ${spec.polish.need} good taps. Any steady pace works.`;
+    scene = createPolishScene(g0.id, spec.polish, { onStroke: ({ ok, n, good }) => { timeBar.firstChild.style.width = `${Math.min(100, (good / spec.polish.need) * 100)}%`; msg.textContent = ok ? `Smooth. (${good} of ${spec.polish.need})` : 'Keep a steady pace - not too fast, not too slow.'; msg.style.color = ok ? '#8cffa0' : '#e0a070'; if (good >= spec.polish.need) setTimeout(endPolish, 500); } });
     sceneHolder.replaceChildren(scene.el); sceneHolder.style.display = ''; act.onclick = () => { if (phase === 'polish') endPolish(); };
   }
   function endPolish() { if (phase !== 'polish') return; phase = 'done'; const base = scene.strokes[0] ?? 0; data.polish = scene.strokes.map((s) => s - base + 1000); scene.destroy(); scene = null; act.onclick = null; act.disabled = true; locked = true; msg.textContent = 'The piece goes back on the anvil…'; msg.style.color = ''; finished = true; send({ t: 'upgrade.finish', data }); }

@@ -11,31 +11,31 @@ import { masteryOf, pathOf, isMythic } from './loadout.js';
 // mods: per-unit stats added to gear. keys: atk def hp mp spd dmg(+fraction) power crit(+chance) ls(lifesteal) thorns regen(hp frac/s) mpOnHit slowOnHit(ms) stun(+chance)
 export const GEAR_FX = {
   // tier 1 — level 5+
-  keen: { name: 'Keen', tier: 1, slots: ['weapon', 'charm'], cost: { coal: 2 }, mods: { dmg: 0.06 }, text: '+6% damage' },
+  keen: { name: 'Keen', tier: 1, slots: ['weapon', 'charm', 'ring'], cost: { coal: 2 }, mods: { dmg: 0.06 }, text: '+6% damage' },
   honed: { name: 'Honed', tier: 1, slots: ['weapon'], cost: { iron_ingot: 1 }, mods: { atk: 2.5 }, text: '+2.5 attack' },
-  sturdy: { name: 'Sturdy', tier: 1, slots: ['armor', 'charm'], cost: { iron_ingot: 1 }, mods: { def: 2.5 }, text: '+2.5 defence' },
-  vital: { name: 'Vital', tier: 1, slots: ['weapon', 'armor', 'charm'], cost: { herb: 3 }, mods: { hp: 16 }, text: '+160 max HP' },
-  wellspring: { name: 'Wellspring', tier: 1, slots: ['weapon', 'armor', 'charm'], cost: { ink: 2 }, mods: { mp: 14 }, text: '+14 max mana' },
-  fleet: { name: 'Fleet', tier: 1, slots: ['armor', 'charm'], cost: { hide: 3 }, mods: { spd: 1 }, text: '+1 speed' },
+  sturdy: { name: 'Sturdy', tier: 1, slots: ['head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { iron_ingot: 1 }, mods: { def: 2.5 }, text: '+2.5 defence' },
+  vital: { name: 'Vital', tier: 1, slots: ['weapon', 'head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { herb: 3 }, mods: { hp: 16 }, text: '+160 max HP' },
+  wellspring: { name: 'Wellspring', tier: 1, slots: ['weapon', 'head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { ink: 2 }, mods: { mp: 14 }, text: '+14 max mana' },
+  fleet: { name: 'Fleet', tier: 1, slots: ['head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { hide: 3 }, mods: { spd: 1 }, text: '+1 speed' },
   // tier 2 — level 12+
   vampiric: { name: 'Vampiric', tier: 2, slots: ['weapon'], cost: { ink: 3, herb: 3 }, mods: { ls: 0.03 }, text: '3% lifesteal' },
-  precise: { name: 'Precise', tier: 2, slots: ['weapon', 'charm'], cost: { steel_ingot: 1 }, mods: { crit: 0.05 }, text: '+5% crit chance' },
-  thorned: { name: 'Thorned', tier: 2, slots: ['armor'], cost: { steel_ingot: 1 }, mods: { thorns: 0.08 }, text: 'reflect 8% of damage taken' },
-  regenerative: { name: 'Regenerative', tier: 2, slots: ['armor', 'charm'], cost: { herb: 6 }, mods: { regen: 0.006 }, text: 'regenerate 0.6% HP per second' },
-  siphoning: { name: 'Siphoning', tier: 2, slots: ['weapon', 'charm'], cost: { ink: 4 }, mods: { mpOnHit: 1 }, text: '+1 mana per hit' },
+  precise: { name: 'Precise', tier: 2, slots: ['weapon', 'charm', 'ring'], cost: { steel_ingot: 1 }, mods: { crit: 0.05 }, text: '+5% crit chance' },
+  thorned: { name: 'Thorned', tier: 2, slots: ['head', 'chest', 'legs', 'feet'], cost: { steel_ingot: 1 }, mods: { thorns: 0.08 }, text: 'reflect 8% of damage taken' },
+  regenerative: { name: 'Regenerative', tier: 2, slots: ['head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { herb: 6 }, mods: { regen: 0.006 }, text: 'regenerate 0.6% HP per second' },
+  siphoning: { name: 'Siphoning', tier: 2, slots: ['weapon', 'charm', 'ring'], cost: { ink: 4 }, mods: { mpOnHit: 1 }, text: '+1 mana per hit' },
   chilling: { name: 'Chilling', tier: 2, slots: ['weapon'], cost: { frostbloom: 2 }, mods: { slowOnHit: 1200 }, text: 'hits slow enemies' },
   stunning: { name: 'Stunning', tier: 2, slots: ['weapon'], cost: { sunsteel_ore: 2 }, mods: { stun: 0.05 }, text: '5% chance to stun on hit' },
-  warding: { name: 'Warding', tier: 2, slots: ['armor'], cost: { steel_ingot: 2 }, mods: { def: 5 }, text: '+5 defence' },
+  warding: { name: 'Warding', tier: 2, slots: ['head', 'chest', 'legs', 'feet'], cost: { steel_ingot: 2 }, mods: { def: 5 }, text: '+5 defence' },
   // tier 3 — level 20+
   soulthirst: { name: 'Soulthirst', tier: 3, slots: ['weapon'], cost: { hollow_ingot: 1, echo_shard: 1 }, mods: { ls: 0.06 }, text: '6% lifesteal' },
   vorpal: { name: 'Vorpal', tier: 3, slots: ['weapon'], cost: { sunsteel_ingot: 1 }, mods: { crit: 0.1, dmg: 0.08 }, text: '+10% crit, +8% damage' },
-  dragonhide: { name: 'Dragonhide', tier: 3, slots: ['armor'], cost: { sunsteel_ingot: 2 }, mods: { def: 9, hp: 50 }, text: '+9 defence, +500 HP' },
+  dragonhide: { name: 'Dragonhide', tier: 3, slots: ['head', 'chest', 'legs', 'feet'], cost: { sunsteel_ingot: 2 }, mods: { def: 9, hp: 50 }, text: '+9 defence, +500 HP' },
   titanic: { name: 'Titanic', tier: 3, slots: ['weapon'], cost: { hollow_ingot: 2 }, mods: { atk: 8 }, text: '+8 attack' },
-  archmage: { name: 'Archmage', tier: 3, slots: ['weapon', 'charm'], cost: { echo_shard: 3 }, mods: { mp: 50, mpOnHit: 2 }, text: '+50 mana, +2 mana per hit' },
-  evergreen: { name: 'Evergreen', tier: 3, slots: ['armor', 'charm'], cost: { ghostbloom: 3 }, mods: { regen: 0.012 }, text: 'regenerate 1.2% HP per second' },
+  archmage: { name: 'Archmage', tier: 3, slots: ['weapon', 'charm', 'ring'], cost: { echo_shard: 3 }, mods: { mp: 50, mpOnHit: 2 }, text: '+50 mana, +2 mana per hit' },
+  evergreen: { name: 'Evergreen', tier: 3, slots: ['head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { ghostbloom: 3 }, mods: { regen: 0.012 }, text: 'regenerate 1.2% HP per second' },
   // tier 4 — only with a Mastery (or a mythic class), level 20+
-  starforged: { name: 'Starforged', tier: 4, slots: ['weapon', 'armor', 'charm'], cost: { starmetal: 1, sunsteel_ingot: 2 }, mods: { atk: 8, def: 6, hp: 40, dmg: 0.08 }, text: '+8 ATK, +6 DEF, +400 HP, +8% damage' },
-  oathkeeper: { name: 'Oathkeeper', tier: 4, slots: ['armor'], cost: { starmetal: 1, hollow_ingot: 2 }, mods: { thorns: 0.15, ls: 0.05 }, text: 'reflect 15%, 5% lifesteal' },
+  starforged: { name: 'Starforged', tier: 4, slots: ['weapon', 'head', 'chest', 'legs', 'feet', 'charm', 'ring'], cost: { starmetal: 1, sunsteel_ingot: 2 }, mods: { atk: 8, def: 6, hp: 40, dmg: 0.08 }, text: '+8 ATK, +6 DEF, +400 HP, +8% damage' },
+  oathkeeper: { name: 'Oathkeeper', tier: 4, slots: ['head', 'chest', 'legs', 'feet'], cost: { starmetal: 1, hollow_ingot: 2 }, mods: { thorns: 0.15, ls: 0.05 }, text: 'reflect 15%, 5% lifesteal' },
   worldbreaker: { name: 'Worldbreaker', tier: 4, slots: ['weapon'], cost: { starmetal: 2 }, mods: { dmg: 0.18, stun: 0.08 }, text: '+18% damage, 8% stun chance' },
 };
 

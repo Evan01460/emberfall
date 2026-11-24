@@ -133,7 +133,7 @@ test('requests: customised / effect-bearing pieces of the asked-for item all cou
 import { ITEMS, RECIPES, CLASSES, classGear, ALL_CLASSES, FIT_BONUS, TIERS } from '../src/data.js';
 import { rtStats } from '../src/units.js';
 test('gear: every class — hidden and mythic too — has weapons and armour made for it, fit gives +10%, and top tiers cost what they are worth', () => {
-  for (const c of ALL_CLASSES) { const g = classGear(c); assert.ok(CLASSES[c], c); assert.ok(g.weapon.length && g.armor.length, `${c} has weapons and armour made for it`); }
+  for (const c of ALL_CLASSES) { const g = classGear(c); assert.ok(CLASSES[c], c); assert.ok(g.weapon.length && g.chest.length && g.head.length && g.legs.length && g.feet.length && g.ring.length, `${c} has weapons and armour made for it`); }
   const P = R.newPlayer({ id: 'g1', name: 'Fit', classId: 'archer' }); P.level = 10; const sword = R.addGear(P, { id: 'iron_sword', q: 0.5 }), bow = R.addGear(P, { id: 'short_bow', q: 0.5 });
   P.equip.weapon = sword.uid; const a0 = rtStats(P).atk; P.equip.weapon = bow.uid; const a1 = rtStats(P).atk;
   assert.ok(a1 >= a0 - 1e-9, 'an archer is at least as strong with the bow made for them as with an equal sword');

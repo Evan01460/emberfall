@@ -52,5 +52,5 @@ test('equip best picks the strongest piece for every slot', () => {
   const { srv, S } = world(); const P = S.P; P.level = 30; srv.recalc(S);
   const a = R.addGear(P, { id: 'iron_sword', q: 0.5 }), b = R.addGear(P, { id: 'sun_blade', q: 0.8 }), c = R.addGear(P, { id: 'moon_sword', q: 0.8, up: 5 }); R.equip(P, a.uid);
   srv.on_inv_best(S); assert.equal(P.equip.weapon, c.uid, 'the best weapon is worn'); void b;
-  const arm = R.addGear(P, { id: 'iron_mail', q: 0.5 }), plate = R.addGear(P, { id: 'steel_plate', q: 0.9 }); void arm; srv.on_inv_best(S); assert.equal(P.equip.armor, plate.uid);
+  const arm = R.addGear(P, { id: 'iron_mail', q: 0.5 }), plate = R.addGear(P, { id: 'steel_plate', q: 0.9 }); void arm; srv.on_inv_best(S); assert.equal(P.equip.chest, plate.uid);
 });

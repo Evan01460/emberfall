@@ -4,6 +4,7 @@ import { ZONES, ITEMS, TOMES, fits } from '../data.js';
 import { getMap, dist, regionOf, WORLD_POS } from '../world.js';
 import { adventureGoals, POI_KINDS } from '../adventure.js';
 import { eligibleTomes } from '../loadout.js';
+import { SLOTS } from '../gearsets.js';
 import { upMult } from '../upgrade.js';
 import { qualityStatMult, FIT_BONUS } from '../data.js';
 import { RAID_ARENA_IDS } from '../raids.js';
@@ -72,8 +73,8 @@ export const adventureMethods = {
   // ── equip the best piece in every slot ──
   on_inv_best(S) {
     if (S.dead || this.inCombat(S)) return this.toast(S, 'Not in the heat of battle.', 'bad'); const P = S.P, changed = [];
-    const score = (g) => { const it = ITEMS[g.id], f = fits(g.id, P.classId) ? 1 + FIT_BONUS : 1, m = qualityStatMult(g.q) * upMult(g.up) * f; return (it.atk ?? 0) * m + (it.def ?? 0) * m * 1.2 + (it.hp ?? 0) * m * 0.2 + ((it.mp ?? 0) * qualityStatMult(g.q) * f) * 0.2 + (it.crit ?? 0) * 100 + (g.fx?.length ?? 0) * 3; };
-    for (const slot of ['weapon', 'armor', 'charm']) {
+    const score = (g) => { const it = ITEMS[g.id], f = fits(g.id, P.classId) ? 1 + FIT_BONUS : 1, m = qualityStatMult(g.q) * upMult(g.up) * f; return (it.atk ?? 0) * m + (it.def ?? 0) * m * 1.2 + (it.hp ?? 0) * m * 0.2 + ((it.mp ?? 0) * qualityStatMult(g.q) * f) * 0.2 + (it.crit ?? 0) * 100 + (it.spd ?? 0) * 2 + (g.fx?.length ?? 0) * 3; };
+    for (const slot of SLOTS) {
       const cands = P.gear.filter((g) => ITEMS[g.id].slot === slot); if (!cands.length) continue; const best = cands.reduce((a, b) => (score(b) > score(a) ? b : a)), cur = P.gear.find((g) => g.uid === P.equip[slot]);
       if (best.uid !== P.equip[slot] && (!cur || score(best) > score(cur) + 1e-6)) { R.equip(P, best.uid); changed.push(R.gearName(best)); }
     }

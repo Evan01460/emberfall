@@ -5,6 +5,8 @@ import { T } from '../world.js';
 import { CLASSES } from '../data.js';
 import { EXP_TIERS } from '../expansion.js';
 import { MON2 } from './sprites2.js';
+import { styleColor, METAL } from './icons.js';
+import { parseLook } from '../look.js';
 
 const cache = new Map();
 const memo = (key, fn) => { let v = cache.get(key); if (!v) { v = fn(); cache.set(key, v); } return v; };
@@ -258,13 +260,15 @@ export const nodeSprite = (type, depleted) => memo(`n:${type}:${depleted}`, () =
 // ── people (16 × 26): class gear, 4 directions, 4 walk frames ───────────────
 const SKIN = ['#f0c8a0', '#e0b088', '#c89068', '#9a6a48'], HAIR = ['#2b1d12', '#6b3d1c', '#d6b25a', '#9a9aa6', '#a33030', '#1c1c2a', '#e8e0d0'];
 export const PERSON_W = 13, PERSON_H = 21;       // people are drawn at ~80% of the 16×26 master art
+// Armour worn on the body (see look.js): the colour of each piece comes from its style (cloth / leather / chain / plate) and its metal tier.
+const armCol = (pc) => styleColor(pc.t, pc.s);
 function person(cls, dir, frame, seed, color, opts = {}) {
-  return memo(`P:${cls}:${dir}:${frame}:${seed}:${color}:${opts.glow ?? ''}:${opts.noGear ?? ''}`, () => {
+  return memo(`P:${cls}:${dir}:${frame}:${seed}:${color}:${opts.glow ?? ''}:${opts.noGear ?? ''}:${opts.look ?? ''}`, () => {
     if (dir === 'l') return flipped(person(cls, 'r', frame, seed, color, opts));
     return shrink(sprite(16, 26, (p) => {
-      const skin = SKIN[seed % 4], hair = HAIR[(seed >> 2) % HAIR.length], main = color, dk = shade(color, 0.62), lt = tint(color, '#ffffff', 0.3);
+      const LK = parseLook(opts.look), skin = SKIN[seed % 4], hair = HAIR[(seed >> 2) % HAIR.length], main = LK.chest ? armCol(LK.chest) : color, dk = shade(main, 0.62), lt = tint(main, '#ffffff', 0.3);
       const side = dir === 'r', back = dir === 'u', oy = 2 + (frame === 1 || frame === 3 ? -1 : 0), step = frame === 1 ? 1 : frame === 3 ? -1 : 0;
-      const pants = '#3a3550', boot = '#251c2c', trim = '#e0b24a';
+      const pants = LK.legs ? shade(armCol(LK.legs), LK.legs.s === 'robe' || LK.legs.s === 'coat' ? 0.9 : 0.8) : '#3a3550', boot = LK.feet ? shade(armCol(LK.feet), LK.feet.s === 'plate' || LK.feet.s === 'mail' ? 0.85 : 0.7) : '#251c2c', trim = '#e0b24a';
       // legs + boots
       const leg = (x, y0, len) => { p.r(x, y0, 3, len, pants); p.r(x, y0 + len, 3, 2, boot); p.p(x, y0 + len, '#4a3a58'); };
       if (side) { leg(6 - step, 17 + 2, 5 - Math.abs(step)); leg(7 + step, 17 + 2, 5 - Math.abs(step)); } else { leg(5, 19 - (step > 0 ? 1 : 0), 4 + (step > 0 ? 1 : 0)); leg(8, 19 - (step < 0 ? 1 : 0), 4 + (step < 0 ? 1 : 0)); }
@@ -275,16 +279,46 @@ function person(cls, dir, frame, seed, color, opts = {}) {
       // arms
       const arm = (x) => { p.r(x, oy + 9, 2, 6, main); p.r(x, oy + 9, 2, 1, lt); p.r(x, oy + 15, 2, 2, skin); };
       if (side) arm(7 + (step ? step : 0) * 0); else { arm(2); arm(12); }
+      if (LK.chest) chestDetail(p, LK.chest, tx, tw, oy, side, back, main, lt, dk);
+      if (LK.legs) legsDetail(p, LK.legs, side, step, pants);
+      if (LK.feet) feetDetail(p, LK.feet, side, step, boot);
       // head
       const hx = side ? 5 : 4;
       p.r(hx, oy, 8, 8, skin); p.r(hx, oy + 7, 8, 1, shade(skin, 0.88));
       if (back) { p.r(hx, oy - 1, 8, 8, hair); p.r(hx + 1, oy + 7, 6, 1, hair); }
       else if (side) { p.r(hx, oy - 1, 8, 4, hair); p.r(hx, oy + 2, 3, 5, hair); p.p(hx + 6, oy + 4, '#1c1224'); p.p(hx + 7, oy + 5, shade(skin, 0.8)); }
       else { p.r(hx, oy - 1, 8, 3, hair); p.r(hx, oy + 2, 1, 3, hair); p.r(hx + 7, oy + 2, 1, 3, hair); p.p(hx + 1, oy - 1, tint(hair, '#ffffff', 0.25)); p.p(hx + 2, oy + 4, '#1c1224'); p.p(hx + 5, oy + 4, '#1c1224'); p.p(hx + 3, oy + 6, shade(skin, 0.75)); p.p(hx + 4, oy + 6, shade(skin, 0.75)); }
-      if (opts.noGear) return;
-      gear(p, cls, dir, oy, hx, skin, main, lt, trim, opts);
+      if (opts.noGear) { if (LK.head) helmDetail(p, LK.head, side, back, hx, oy, skin); return; }
+      // a worn helmet replaces the class's own hat: its drawing is kept off the head, and the helmet goes on top
+      gear(LK.head ? clipHead(p, hx, oy) : p, cls, dir, oy, hx, skin, main, lt, trim, opts);
+      if (LK.head) helmDetail(p, LK.head, side, back, hx, oy, skin);
     }, { outline: null }), PERSON_W, PERSON_H);
   });
+}
+
+// ── worn armour on the 16×26 body ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+function clipHead(p, hx, oy) {   // a pen that drops whatever the class hat would paint above the eyes (its weapon hand is outside these columns)
+  const keep = (x, y, w = 1, h = 1) => !(y + h <= oy + 3 && x >= hx - 2 && x + w <= hx + 10);
+  return { p: (x, y, c) => keep(x, y) && p.p(x, y, c), r: (x, y, w, h, c) => keep(x, y, w, h) && p.r(x, y, w, h, c), disc: (cx, cy, r, c) => (cy + r <= oy + 3 && cx >= hx - 2 && cx <= hx + 10 ? 0 : p.disc(cx, cy, r, c)), ell: (...a) => p.ell(...a), line: (x0, y0, x1, y1, c) => p.line(x0, y0, x1, y1, c) };
+}
+function chestDetail(p, pc, tx, tw, oy, side, back, main, lt, dk) {
+  const m = METAL[pc.t] ?? METAL.iron;
+  if (pc.s === 'robe') { p.r(tx - 1, oy + 16, tw + 2, 4, main); p.r(tx - 1, oy + 19, tw + 2, 1, dk); p.r(tx - 1, oy + 16, tw + 2, 1, '#e0b24a'); }
+  else if (pc.s === 'coat') { p.r(tx, oy + 15, tw, 1, '#3a2418'); if (!side && !back) for (const y of [oy + 10, oy + 12]) { p.p(tx + 3, y, '#e0b24a'); p.p(tx + 4, y, '#e0b24a'); } }
+  else if (pc.s === 'mail') { for (let y = oy + 9; y < oy + 15; y += 2) for (let x = tx + 1; x < tx + tw - 1; x += 2) p.p(x + (y % 4 ? 1 : 0), y, lt); p.r(tx, oy + 15, tw, 1, '#3a2418'); }
+  else { p.r(tx, oy + 8, tw, 2, m[1]); if (!side && !back) { p.r(tx + 2, oy + 10, 4, 4, m[1]); p.r(tx + 3, oy + 11, 2, 2, '#ff5a4a'); } p.r(tx - 2, oy + 8, 3, 3, m[1]); p.r(tx + tw - 1, oy + 8, 3, 3, m[1]); p.r(tx - 2, oy + 10, 3, 1, m[2]); p.r(tx + tw - 1, oy + 10, 3, 1, m[2]); }
+}
+function legsDetail(p, pc, side, step, pants) {
+  const m = METAL[pc.t] ?? METAL.iron, hi = tint(pants, '#ffffff', 0.3);
+  if (pc.s === 'plate' || pc.s === 'mail') { if (side) { p.p(6 - step, 20, m[1]); p.p(7 + step, 20, m[1]); } else { p.p(5, 20, m[1]); p.p(8, 20, m[1]); p.p(6, 21, m[1]); p.p(9, 21, m[1]); } } else { p.p(side ? 6 : 5, 19, hi); p.p(side ? 8 : 9, 19, hi); }
+}
+function feetDetail(p, pc, side, step, boot) { const m = METAL[pc.t] ?? METAL.iron, y = 23; if (pc.s === 'plate') { p.r(side ? 6 - step : 5, y - 1, 3, 1, m[1]); p.r(side ? 7 + step : 8, y - 1, 3, 1, m[1]); } else { p.r(side ? 6 - step : 5, y - 1, 3, 1, tint(boot, '#ffffff', 0.25)); p.r(side ? 7 + step : 8, y - 1, 3, 1, tint(boot, '#ffffff', 0.25)); } }
+function helmDetail(p, pc, side, back, hx, oy, skin) {
+  const m = METAL[pc.t] ?? METAL.iron, c = armCol(pc), d = shade(c, 0.6), l = tint(c, '#ffffff', 0.35);
+  if (pc.s === 'robe') { p.r(hx - 1, oy - 2, 10, 5, c); p.r(hx, oy - 3, 8, 1, c); p.r(hx - 1, oy + 3, 2, 6, c); p.r(hx + 7, oy + 3, 2, 6, c); p.r(hx, oy - 2, 8, 1, l); if (!back) { p.r(hx + 1, oy + 3, 6, 5, skin); p.r(hx + 1, oy + 3, 6, 1, d); if (!side) { p.p(hx + 2, oy + 4, '#1c1224'); p.p(hx + 5, oy + 4, '#1c1224'); } else p.p(hx + 5, oy + 4, '#1c1224'); } p.p(hx + 4, oy - 3, '#ffe36b'); }
+  else if (pc.s === 'coat') { p.r(hx, oy - 2, 8, 4, c); p.r(hx - 1, oy + 1, 10, 2, d); p.r(hx, oy - 2, 8, 1, l); p.p(hx + 5, oy - 4, '#efe8d8'); p.p(hx + 6, oy - 3, '#efe8d8'); }
+  else if (pc.s === 'mail') { p.r(hx - 1, oy - 2, 10, 5, c); p.r(hx, oy - 3, 8, 1, c); p.r(hx - 1, oy + 3, 2, 5, d); p.r(hx + 7, oy + 3, 2, 5, d); p.r(hx, oy - 2, 8, 1, l); if (!back) { p.r(hx + 3, oy - 1, 2, 5, d); p.p(hx + 2, oy + 3, '#14101c'); p.p(hx + 5, oy + 3, '#14101c'); } for (let x = hx; x < hx + 8; x += 2) p.p(x, oy + 1, l); }
+  else { p.r(hx - 1, oy - 3, 10, 10, c); p.r(hx, oy - 4, 8, 1, c); p.r(hx - 1, oy - 3, 10, 1, l); p.r(hx - 1, oy - 3, 1, 10, l); p.r(hx + 8, oy - 3, 1, 10, d); if (!back) { p.r(hx, oy + 2, 8, 2, '#14101c'); p.r(hx, oy + 2, 8, 1, '#3a2a40'); } p.r(hx + 3, oy - 6, 2, 3, m[1]); p.p(hx + 3, oy - 7, m[1]); p.r(hx + 3, oy - 4, 2, 1, '#ffffff'); p.r(hx, oy + 5, 8, 2, d); }
 }
 function gear(p, cls, dir, oy, hx, skin, main, lt, trim, opts) {
   const side = dir === 'r', back = dir === 'u', wx = side ? 11 : 13;     // weapon hand x

@@ -22,7 +22,7 @@ export const gearView = (g) => ({ uid: g.uid ?? null, id: g.id, q: g.q, affix: g
 // the smith's own skill adds to the odds
 export function smithBonus(P, slot) {
   const pk = perkOf(P) ?? {};
-  return 0.0015 * P.level + (slot === 'weapon' ? pk.weaponQ ?? 0 : slot === 'armor' ? pk.armorQ ?? 0 : 0) * 0.5 + (['soulsmith', 'titan_forgemaster'].includes(P.classId) ? 0.05 : 0);
+  return 0.0015 * P.level + (slot === 'weapon' ? pk.weaponQ ?? 0 : ['head', 'chest', 'legs', 'feet'].includes(slot) ? pk.armorQ ?? 0 : slot === 'charm' || slot === 'ring' ? pk.charmQ ?? 0 : 0) * 0.5 + (['soulsmith', 'titan_forgemaster'].includes(P.classId) ? 0.05 : 0);
 }
 const densify = (pts, step) => { const out = []; for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1], [bx, by] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / step)); for (let k = 0; k <= n; k++) out.push([ax + (bx - ax) * (k / n), ay + (by - ay) * (k / n)]); } return out; };
 export function scoreRune(rune, samples) {
@@ -77,7 +77,7 @@ export const upgradeMethods = {
 
   // start the minigame (or resolve at once for a quick forge)
   beginUpgrade(S, job, quick) {
-    const nw = this.now(), spec = upgradeSpec(job.L, S.P.level, this.rng);
+    const nw = this.now(), spec = upgradeSpec(job.L, S.P.level, this.rng, job.gear.id);
     { const st = this.stationFor(S, 'blacksmith'); if (st) this.emit(S.map, { t: 'work', k: 'blacksmith', x: st.x, y: st.y, ms: 6000 }); }
     S.upTicket = { job, spec, startAt: nw, expires: nw + UPG.ticketMs };
     if (quick) return this.finishUpgrade(S, null, true);

@@ -64,13 +64,15 @@ input, select { background: #0e0a18; color: var(--txt); border: 0; padding: 5px 
 
 /* minigames */
 .fbar { position: relative; height: 46px; background: var(--ink); box-shadow: inset 0 0 0 4px #3a2d52; margin: 18px 0; overflow: hidden; }
-.fzone { position: absolute; top: 4px; bottom: 4px; background-image: repeating-linear-gradient(90deg, #b88a2c 0 4px, #e0b24a 4px 8px); opacity: .85; box-shadow: 0 0 0 2px var(--gold); }
-.fzone::after { content: ''; position: absolute; left: 35%; right: 35%; top: 0; bottom: 0; background: #fff6c0; opacity: .6; }
-.fmark { position: absolute; top: 0; bottom: 0; width: 6px; background: #fff; margin-left: -3px; box-shadow: 0 0 0 2px #ff6b57; }
+.fzone { position: absolute; top: 4px; bottom: 4px; background: linear-gradient(#a8741c, #d8a43a 45%, #a8741c); box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px rgba(255,240,180,.35); opacity: .92; }
+/* the bright centre is EXACTLY the perfect band: strikeScore() gives full marks within 35% of the zone's width, centred */
+.fzone::after { content: ''; position: absolute; left: 32.5%; right: 32.5%; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(255,250,200,.55), #fff8c8 30%, #fff8c8 70%, rgba(255,250,200,.55)); box-shadow: 0 0 6px 1px rgba(255,246,190,.75); }
+.fmark { position: absolute; top: 0; bottom: 0; width: 4px; background: #fff; margin-left: -2px; box-shadow: 0 0 0 2px #ff6b57, 0 0 8px 1px rgba(255,107,87,.6); will-change: left; }
 .anvil { display: flex; align-items: flex-end; justify-content: center; height: 110px; } .hammer { margin-right: -14px; } .hammer.hit { animation: hammer .25s steps(5); }
 @keyframes hammer { 0% { transform: translateY(-24px); } 60% { transform: translateY(8px); } 100% { transform: none; } }
 .fb-msg { text-align: center; min-height: 56px; font-size: 17px; margin: 8px 0; } .spark { position: absolute; width: 6px; height: 6px; background: #ffb84a; animation: spark .6s steps(6) forwards; pointer-events: none; } @keyframes spark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
 .cauldron { text-align: center; } .cauldron.burst { animation: shake .5s steps(5); } @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.up-head ~ .meter i { transition: width .14s linear; background-image: none; background: linear-gradient(#ffd36a, #e0a030); }
 .meter { height: 18px; background: var(--ink); box-shadow: inset 0 0 0 2px #3a2d52; overflow: hidden; } .meter i { display: block; height: 100%; transition: width .3s steps(6); background-image: repeating-linear-gradient(90deg, #4f8a64 0 8px, #6fc08b 8px 16px); }
 .dice-big { display: flex; gap: 22px; justify-content: center; align-items: center; margin: 14px 0; }
 .die { width: 64px; height: 64px; background: #17101f; box-shadow: inset 0 0 0 4px #6a5a92; display: flex; align-items: center; justify-content: center; font: 700 28px var(--font); } .die.rolling { animation: tumble .3s steps(4) infinite; } .die.win { box-shadow: inset 0 0 0 4px var(--gold); color: var(--gold); } .die.lose { opacity: .55; }
@@ -122,7 +124,10 @@ body:not(.ingame) #app { position: relative; z-index: 1; }
 
 .forge-row { display: flex; gap: 14px; align-items: stretch; justify-content: center; }
 .thermo { position: relative; width: 56px; min-height: 210px; background: #0e0a18; box-shadow: inset 0 0 0 3px #3a2d52; flex: none; overflow: hidden; }
-.tzone { position: absolute; left: 4px; right: 4px; background-image: repeating-linear-gradient(0deg, #b88a2c 0 4px, #e0b24a 4px 8px); box-shadow: 0 0 0 2px var(--gold); opacity: .9; }
+.tzone { position: absolute; left: 4px; right: 4px; background: linear-gradient(90deg, #a8741c, #d8a43a 50%, #a8741c); box-shadow: 0 0 0 2px var(--gold); opacity: .92; }
+/* three bands, as the heat score reads them: the faint halo is partial credit, the gold zone is good, the bright core is perfect */
+.tzone::before { content: ''; position: absolute; left: -4px; right: -4px; top: -40%; bottom: -40%; background: rgba(224,178,74,.2); }
+.tzone::after { content: ''; position: absolute; left: 0; right: 0; top: 30%; bottom: 30%; background: #fff8c8; opacity: .85; box-shadow: 0 0 6px 1px rgba(255,246,190,.7); }
 .tmark { position: absolute; left: 0; right: 0; height: 8px; margin-bottom: -4px; background: #ffd36a; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000; }
 .tlbl { position: absolute; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--dim); } .t1 { top: 2px; color: #ff8a6a; } .t2 { bottom: 2px; color: #6a9aff; }
 
@@ -203,3 +208,29 @@ body:not(.ingame) #app { position: relative; z-index: 1; }
 .recall-bar { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); background: rgba(16,10,26,.9); border: 2px solid #7fe0ff; padding: 8px 18px; text-align: center; z-index: 60; color: #bfeaff; }
 .advregion.mastered { border-left: 3px solid #ffd36a; }
 .upcrit { font-size: 12px; margin: 4px 0; padding: 4px 8px; border-left: 3px solid #ffe36b; background: rgba(255,227,107,.07); color: #ffe9a8; }
+
+/* ── gear screens: paper doll + bag (src/client/gearui.js) ──────────────────────────────────────────────────────────────────────────── */
+.doll-wrap { margin: 4px 0; }
+.doll { display: grid; grid-template-columns: 84px 1fr 84px; gap: 8px; align-items: stretch; max-width: 460px; margin: 0 auto; }
+.doll-col { display: flex; flex-direction: column; gap: 6px; }
+.doll-mid { display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 60%, #3a2c5a 0%, #1a1228 70%); box-shadow: inset 0 0 0 3px #3a2d52; padding: 8px 4px; min-height: 250px; }
+.doll-me { height: 170px; width: auto; image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(0,0,0,.35)); }
+.doll-totals { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 8px; }
+.dslot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 2px 4px; background: #1a1228; border: 3px solid #3a2d52; color: inherit; font: inherit; cursor: pointer; min-height: 58px; }
+.dslot:hover { background: #2a2040; } .dslot.sel { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(255,211,106,.4); }
+.dslot.empty { border-style: dashed; opacity: .8; }
+.dslot-name { position: absolute; top: 1px; left: 0; right: 0; font-size: 9px; text-align: center; color: #9a8fb0; letter-spacing: .5px; text-transform: uppercase; }
+.dslot-empty { font-size: 22px; color: #4a3d62; line-height: 40px; } .dslot-n { font-size: 10px; min-height: 12px; }
+.dslot-up { position: absolute; top: 12px; right: 3px; color: #8cffa0; font-style: normal; font-size: 11px; text-shadow: 0 0 4px #000; animation: dslotpulse 1.2s ease-in-out infinite; }
+@keyframes dslotpulse { 50% { opacity: .35; } }
+.doll-detail { margin-top: 8px; padding: 8px 12px; }
+.bag2 { margin-top: 4px; } .bagbar .chips { margin-bottom: 2px; }
+.bag-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.bcard2 { display: flex; gap: 10px; align-items: center; padding: 6px 8px; background: #1a1228; box-shadow: inset 0 0 0 2px #3a2d52; }
+.bcard2.better { box-shadow: inset 0 0 0 2px #3a8a52; background: #1a2a22; }
+.bc-main { flex: 1; min-width: 0; } .bc-btns { display: flex; gap: 4px; flex: none; }
+.gstats .sc { margin-right: 6px; font-size: 11px; }
+@media (max-width: 560px) { .doll { grid-template-columns: 70px 1fr 70px; } .doll-me { height: 130px; } .bcard2 { flex-wrap: wrap; } .bc-btns { width: 100%; justify-content: flex-end; } }
+
+/* the pixel font's 'fi' ligature is a wrong glyph ("first" read "Arst"): letters are always drawn one by one */
+body, button, input, select, textarea, canvas { font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'clig' 0, 'calt' 0; }

@@ -11,6 +11,7 @@ import { HP_SCALE } from '../data.js';
 import { loadoutOf, basicOf, comboOf, perkOf } from '../loadout.js';
 import { DRAUGHT_FX, FLASK_FX } from '../custom.js';
 import * as R from '../rules.js';
+import { lookOf } from '../look.js';
 
 const MOB_DMG = 1.3, DROP_DIST = 32, MOB_HEAL_DELAY = 10000, MOB_HEAL_RATE = 0.02, MOB_TICK = 0.05, DEAD_MS = 4000, REGEN_DELAY = 6000;   // enemies give up only when you are DROP_DIST tiles away; they heal 2%/s after 10 s unhurt
 const RADIUS = { kraken: 1.2, titan: 1.1, myconid: 1.0, wyrmlord: 1.3, seraph: 1.0, minotaur: 0.65, tortoise: 0.55, wyvern: 0.6, automaton: 0.5, mushroom: 0.45, brute: 0.6, warden: 0.95, unwritten: 1.05, husk: 0.55, stag: 0.55, hound: 0.4, worm: 0.55 };
@@ -27,11 +28,11 @@ export const combatMethods = {
   later(ms, fn) { if (ms <= 0) return fn(); this.timers.push({ at: this.now() + ms, fn }); },
 
   initPlayerCombat(S) {
-    S.rt = rtStats(S.P); S.hp = S.rt.maxHp; S.mp = S.rt.maxMp;
+    S.rt = rtStats(S.P); S.look = lookOf(S.P); S.hp = S.rt.maxHp; S.mp = S.rt.maxMp;
     Object.assign(S, { cds: {}, dead: false, deadUntil: 0, stunUntil: 0, iframeUntil: 0, guardUntil: 0, guardRed: 0, guardReflect: 0, shield: 0, shieldUntil: 0, stealthUntil: 0, tauntRed: 0, tauntUntil: 0, lastHurt: 0, lastAct: 0, aim: 0, dashLock: 0, duel: null, pvp: false, pvpTag: 0, critAll: 0, combo: null, buff: null, voidStacks: 0, lastKillAt: 0, reviveAt: 0, auraNext: 0 });
   },
   recalc(S) {
-    const old = S.rt; S.rt = rtStats(S.P);
+    const old = S.rt; S.rt = rtStats(S.P); S.look = lookOf(S.P);
     if (!old || old.maxHp !== S.rt.maxHp) { const f = old ? S.hp / old.maxHp : 1; S.hp = Math.min(S.rt.maxHp, Math.max(1, Math.round(S.rt.maxHp * f))); }
     S.mp = Math.min(S.mp, S.rt.maxMp);
   },
@@ -72,7 +73,9 @@ export const combatMethods = {
       S.combo = { n, at: now };
       cd = b.cd * (st.cd / combo.steps[0].cd);
       sk = { ...sk, power: b.power * st.power, range: b.range * st.range, arc: Math.min(300, b.arc * st.arc), step: n, dir: st.dir, hit: st.hit, fx: { ...(b.fx ?? {}), ...(st.knock ? { knock: st.knock } : {}) }, stun: st.stun };
-      this.lunge(S, +m.a || 0, st.lunge * (b.range > 2 ? 0.7 : 1));
+      // The step into a swing only happens when you are standing still. While you run, the swing never takes over your legs: it plays on top of your
+      // movement, so it can neither pull you backwards nor stall you for the length of the lunge.
+      if (!S.moving) this.lunge(S, +m.a || 0, st.lunge * (b.range > 2 ? 0.7 : 1));
     }
     S.cds[key] = now + cd; this.cast(S, sk, +m.a || 0, +m.tx, +m.ty);
   },

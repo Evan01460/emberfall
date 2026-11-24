@@ -8,6 +8,7 @@
 //   failure  the materials are lost; from +10 the piece may drop 1 level (2 from +40); it is never destroyed
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 import { TIERS, tierOf } from './gearsets.js';
+import { runePoints } from './runes.js';
 
 export const MAX_UP = 99;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -42,18 +43,15 @@ export const upColor = (up) => (up >= 99 ? '#ff5ad2' : up >= 80 ? '#ff6a4a' : up
 // ── the forging minigame (spec made by the server, played on the client, re-scored by the server) ─────────────────────────────────────────
 // Stage 1 HEAT keep the billet in the glowing band; 2 FOLD three rounds of hammer strikes on a moving marker; 3 RUNE trace the rune with the
 // cursor; 4 QUENCH one dunk at the right moment; 5 POLISH strokes of the whetstone in an even rhythm.
-export function upgradeSpec(L, smithLevel, rng) {
+export function upgradeSpec(L, smithLevel, rng, itemId = 'iron_sword') {
   const hard = clamp(L / MAX_UP, 0, 1), lv = smithLevel ?? 1;
-  const nPts = 5 + Math.floor(hard * 5), pts = [];
-  // a rune: a zig-zag of straight strokes inside the unit square, so it is a real shape, never a straight line
-  for (let i = 0; i < nPts; i++) { const x = 0.12 + (i / (nPts - 1)) * 0.76, y = i % 2 ? rng.range(0.14, 0.34) : rng.range(0.62, 0.86); pts.push([+(x).toFixed(3), +y.toFixed(3)]); }
-  if (rng.chance(0.5)) pts.forEach((p) => { p[1] = +(1 - p[1]).toFixed(3); });
+  const rune = runePoints(itemId, rng);   // the rune is a drawing of the piece itself: a blade, a crown, a shield, a ring ...
   return {
     heat: { dur: 6000, center: 0.5, half: clamp(0.1 - hard * 0.05 + lv * 0.0006, 0.04, 0.13), up: 0.55, down: 0.42, tau: 0.09, drift: 0.05 + hard * 0.12, dp: 2.2 + rng.range(0, 1.2), dph: rng.range(0, 6.28) },
     folds: Array.from({ length: 3 }, (_, r) => ({ strikes: 4, half: clamp(0.11 - hard * 0.05 + lv * 0.0007, 0.04, 0.14), speed: 0.65 + hard * 0.8 + r * 0.14, centers: Array.from({ length: 4 }, () => +rng.range(0.2, 0.8).toFixed(3)) })),
-    rune: { pts, tol: +clamp(0.07 - hard * 0.03 + lv * 0.0002, 0.035, 0.085).toFixed(3), limit: 14000 },
+    rune: { pts: rune.pts, key: rune.key, name: rune.name, tol: +clamp(0.07 - hard * 0.03 + lv * 0.0002, 0.04, 0.09).toFixed(3), limit: 24000 },
     quench: { center: +rng.range(0.3, 0.7).toFixed(3), half: clamp(0.15 - hard * 0.08 + lv * 0.0008, 0.05, 0.22), speed: 0.8 + hard * 0.6 },
-    polish: { need: 8 + Math.floor(hard * 6), lo: 330, hi: 720 },
+    polish: { need: 6 + Math.floor(hard * 4), lo: 300, hi: 800 },
   };
 }
 

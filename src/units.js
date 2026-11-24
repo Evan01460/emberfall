@@ -5,6 +5,7 @@ import { modsOf, statusOf } from './loadout.js';
 import { sumGearFx } from './custom.js';
 import { flatScale } from './gearscale.js';
 import { upMult } from './upgrade.js';
+import { SLOTS } from './gearsets.js';
 
 export { MAX_LEVEL, HP_SCALE };
 // Beyond level 30 each level takes progressively longer, so the road to 100 is a real journey.
@@ -26,7 +27,7 @@ export function gearBonuses(gearList, classId = null) {
   }
   return b;
 }
-export const equippedGear = (P) => ['weapon', 'armor', 'charm'].map((s) => P.gear.find((g) => g.uid === P.equip[s]) ?? null);
+export const equippedGear = (P) => SLOTS.map((s) => P.gear.find((g) => g.uid === P.equip[s]) ?? null);
 
 // Everything the real-time simulation needs to know about a player's combat strength.
 export function rtStats(P) {

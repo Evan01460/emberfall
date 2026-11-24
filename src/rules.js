@@ -3,6 +3,7 @@
 // game server. No DOM, no I/O. All randomness comes from the Rng passed in.
 // ─────────────────────────────────────────────────────────────────────────────
 import { clamp } from './rng.js';
+import { SLOTS } from './gearsets.js';
 import { ITEMS, RECIPES, CLASSES, HINTS, AFFIXES, NODE_TYPES, COMBAT_CLASSES, MAX_LEVEL, gradeOf, ENEMIES } from './data.js';
 import { valueOf, vendorBuyPrice, vendorSellPrice } from './economy.js';
 import { xpForLevel, rtStats } from './units.js';
@@ -13,7 +14,7 @@ export function newPlayer({ id, name, classId = 'warrior' }) {
   const P = {
     id, name, classId, level: 1, xp: 0, gilt: 150, created: Date.now(),
     items: { iron_ore: 6, coal: 4, hide: 4, herb: 4, heal_potion: 2, calm_tonic: 1 },
-    gear: [], nextUid: 1, equip: { weapon: null, armor: null, charm: null },
+    gear: [], nextUid: 1, equip: Object.fromEntries(SLOTS.map((k) => [k, null])),
     map: 'town', x: 26.5, y: 19.5,
     stats: { kills: 0, battles: 0, wins: 0, clashWins: 0, lowSpWins: 0, pagesFound: 0, ingots: 0, profit: 0, haggleWins: 0, masterworks: 0, crafted: 0, perfectBrews: 0, starmetalFound: 0, hollowVisits: 0, reflectionsSlain: 0, ichor: 0, gathered: 0, duelWins: 0, duelLosses: 0, distance: 0 },
     flags: {}, journal: [], rumorsHeard: 0, pendingGilt: 0, cooldowns: {}, crafted: {},
@@ -21,8 +22,8 @@ export function newPlayer({ id, name, classId = 'warrior' }) {
   };
   const starter = { warrior: 'iron_sword', mage: 'focus_rod', archer: 'short_bow', blacksmith: 'iron_mace', alchemist: 'focus_rod', merchant: 'hunting_spear' }[classId] ?? 'iron_sword';
   const w = addGear(P, { id: starter, q: 0.4 }), a = addGear(P, { id: 'leather_coat', q: 0.4 });
-  P.equip.weapon = w.uid; P.equip.armor = a.uid;
-  ensureSkillState(P);
+  P.equip.weapon = w.uid; P.equip.chest = a.uid;
+  ensureSkillState(P); normalizeGear(P);
   return P;
 }
 
@@ -54,6 +55,14 @@ export function addGear(P, g) { const o = { uid: P.nextUid++, id: g.id, q: g.q, 
 export function gearName(g) {
   const af = g.affix && AFFIXES.find((a) => a.id === g.affix);
   return `${g.up > 0 ? `+${g.up} ` : ''}${customName(`${af ? af.name + ' ' : ''}${ITEMS[g.id].n}`, g.fx, g.cname)}`;
+}
+// Old characters wore 'armor' (now the chestplate) and had no helmet, leggings, boots or ring: bring their record up to date.
+export function normalizeGear(P) {
+  P.equip ??= {}; if ('armor' in P.equip) { if (P.equip.armor != null && P.equip.chest == null) P.equip.chest = P.equip.armor; delete P.equip.armor; }
+  for (const k of SLOTS) P.equip[k] ??= null;
+  for (const k of Object.keys(P.equip)) if (!SLOTS.includes(k)) delete P.equip[k];
+  for (const k of SLOTS) if (P.equip[k] != null) { const g = P.gear?.find((x) => x.uid === P.equip[k]); if (!g || ITEMS[g.id]?.slot !== k) P.equip[k] = null; }   // a piece that no longer fits its slot goes back to the bag
+  return P;
 }
 export const isEquipped = (P, uid) => Object.values(P.equip).includes(uid);
 export function equip(P, uid) {
@@ -98,7 +107,7 @@ export function forgeSpec(P, r, rng) {
 export const markerPos = (spec, tMs) => tri((tMs / 1000) * spec.speed);
 export function strikeScore(pos, center, half) {
   const e = Math.abs(pos - center);
-  if (e <= half * 0.35) return 1;
+  if (e <= half * 0.35 + 1e-9) return 1;
   return clamp(1 - (e - half * 0.35) / (half * 2.4), 0, 1) * 0.9;
 }
 // Heating is a hold-to-rise gauge. The billet's heat rises while Space is held and sinks when it is released — a direct, slightly eased
@@ -147,7 +156,7 @@ export function finishForge(P, r, q, rng, extra = {}) {
   const it = ITEMS[r.out], soul = P.classId === 'soulsmith', st = statusOf(P), pk = perkOf(P);
   if (soul) q = Math.max(q, 0.45);
   if (st?.forgeQ) q = Math.min(1, q + st.forgeQ);
-  if (it.k === 'gear') q = Math.min(1, q + ({ weapon: pk.weaponQ, armor: pk.armorQ, charm: pk.charmQ }[it.slot] ?? 0));
+  if (it.k === 'gear') q = Math.min(1, q + ({ weapon: pk.weaponQ, head: pk.armorQ, chest: pk.armorQ, legs: pk.armorQ, feet: pk.armorQ, charm: pk.charmQ, ring: pk.charmQ }[it.slot] ?? 0));
   const grade = gradeOf(q);
   const out = { grade, q, items: [], levelUps: [] };
   if (it.k === 'gear') {

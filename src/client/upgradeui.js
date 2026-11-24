@@ -9,7 +9,6 @@ import { h, fmt } from '../ui-lib.js';
 import * as I from './icons.js';
 import { openWindow, closeWindow, refreshWindow, isOpen } from './panels.js';
 import { createForgeStage } from './forgecanvas.js';
-import { gearPixel } from './gearpix.js';
 import { createRuneScene, createPolishScene, createRevealScene } from './upgradescenes.js';
 import { heatStart, heatStep, heatBand, markerPos, strikeScore, QUENCH, gearName } from '../rules.js';
 import { upMult, baseChance, finalChance, QUICK_SCORE, upColor, MAX_UP, upLevel } from '../upgrade.js';
@@ -59,7 +58,7 @@ export function openUpgradeStation(preUid = null) {
 function detail(g, info, me) {
   if (!info || info.uid !== g.uid) return h('p', { class: 'dim' }, 'Reading the metal…');
   const L = info.up, smith = !!info.smith, short = info.mats.some((m) => m.have < m.n), lowLvl = info.myLvl < info.needLvl;
-  const head = h('div', { class: 'row', style: { gap: '12px', alignItems: 'center' } }, h('div', { class: 'upicon', style: { boxShadow: `0 0 18px ${upColor(L)}` } }, I.item(g.id, 56)), h('div', {}, h('h3', { style: { margin: 0 } }, upName(g)), h('div', { class: 'dim', style: { fontSize: '12px' } }, `${info.tier} · quality ${Math.round(g.q * 100)}%`), h('div', { style: { fontSize: '13px' } }, `Step ${L >= MAX_UP ? 'maxed' : `+${L} → +${L + 1}`}`)));
+  const head = h('div', { class: 'row', style: { gap: '12px', alignItems: 'center' } }, h('div', { class: 'upicon', style: { boxShadow: `0 0 18px ${upColor(L)}` } }, I.item(g.id, 54)), h('div', {}, h('h3', { style: { margin: 0 } }, upName(g)), h('div', { class: 'dim', style: { fontSize: '12px' } }, `${info.tier} · quality ${Math.round(g.q * 100)}%`), h('div', { style: { fontSize: '13px' } }, `Step ${L >= MAX_UP ? 'maxed' : `+${L} → +${L + 1}`}`)));
   if (info.maxed) return h('div', {}, head, h('p', { class: 'gold' }, 'This piece is fully tempered: +99.'));
   const ready = smith && !short && !lowLvl;
   return h('div', {}, head, statRow(g),
@@ -76,7 +75,7 @@ function detail(g, info, me) {
 // ── the minigame ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function startUpgrade(tk) {
   closeWindow('upstation'); closeWindow('upgrade');
-  const spec = tk.spec, g0 = tk.gear, icon = gearPixel(g0.id), L = tk.L;
+  const spec = tk.spec, g0 = tk.gear, icon = I.itemIcon(g0.id), L = tk.L;
   const forge = createForgeStage({ icon });
   let phase = 'heat', raf = 0, t0 = performance.now(), finished = false, scene = null, locked = false;
   const data = { heat: [], folds: [[], [], []], rune: [], quench: 0, medium: null, polish: [] };

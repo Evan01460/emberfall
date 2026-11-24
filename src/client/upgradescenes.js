@@ -1,39 +1,44 @@
 // Scenes for the gear-upgrade minigame: the ENGRAVING table (trace the piece's own rune with a chisel), the WHETSTONE (tap along with the stone)
-// and the REVEAL (the odds, the roll, and the piece flaring up or going dull). Each returns { el, ... } with a destroy().
+// and the REVEAL (the odds, the roll, and the piece flaring up or going dull).
 //
-// Everything is drawn at 4× the logical 240×150 size and scaled down by the browser, with smooth shapes and the large vector artwork of the piece
-// (gearpix.js, hand-drawn at 32 pixels) — never a 16-pixel icon blown up into blocks — and text that stays sharp.
-import { gearPixel } from './gearpix.js';
+// They are drawn exactly like the rest of the game — and exactly like the forge scene that comes before them: ONE art pixel is 2 canvas pixels, the
+// canvas is shown at a whole-number multiple with hard pixels, every shape is made of pixels from the game's own primitives (no smooth curves, no
+// gradients, no anti-aliasing), text is the game's 3×5 bitmap font, and the piece itself is its normal pixel icon at its normal size.
+import { itemIcon } from './icons.js';
+import { prop } from './sprites.js';
+import { C, q, drawText, drawTag, pdisc, pring, pline, prect } from './px.js';
 import { upColor } from '../upgrade.js';
 
-const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), TAU = Math.PI * 2;
-const W = 240, H = 150, S = 4, FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
+const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const W = 176, H = 150, INK = '#0c0814';
 function canvas() {
-  const cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
-  cv.style.cssText = 'width:100%;max-width:720px;display:block;margin:0 auto;background:#120a14;border:3px solid #3a2a40;border-radius:4px;touch-action:none;cursor:crosshair;box-sizing:border-box;';
-  const g = cv.getContext('2d'); g.setTransform(S, 0, 0, S, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.lineJoin = 'round'; g.lineCap = 'round'; return [cv, g];
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'forge-stage';
+  cv.style.cssText = 'width:100%;max-width:528px;image-rendering:pixelated;display:block;margin:0 auto;background:#120a14;box-shadow:inset 0 0 0 3px #3a2d52,0 0 0 3px #0c0814;touch-action:none;cursor:crosshair';
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; return [cv, g];
 }
-// a small caption with its own plate, sized to the text
-function label(g, text, x, y, { align = 'left', color = '#ffe9a8', size = 7, weight = 700 } = {}) {
-  g.font = `${weight} ${size}px ${FONT}`; g.textBaseline = 'alphabetic'; const w = g.measureText(text).width + 9, bx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-  g.fillStyle = 'rgba(10,6,14,.72)'; g.beginPath(); g.roundRect(bx, y - size - 2.5, w, size + 6, 2.5); g.fill(); g.fillStyle = color; g.textAlign = 'left'; g.fillText(text, bx + 4.5, y);
+const px = (g, x, y, c, w = C, h = C) => { g.fillStyle = c; g.fillRect(q(x), q(y), w, h); };
+const icon = (g, id, x, y, tintCol = null, a = 0) => {                      // the piece: its normal icon at the game's normal scale (1 art pixel = 2 canvas pixels)
+  const ic = itemIcon(id), w = ic.width * C, h = ic.height * C;
+  if (tintCol && a > 0) { const t = document.createElement('canvas'); t.width = ic.width; t.height = ic.height; const tg = t.getContext('2d'); tg.drawImage(ic, 0, 0); tg.globalCompositeOperation = 'source-atop'; tg.globalAlpha = a; tg.fillStyle = tintCol; tg.fillRect(0, 0, t.width, t.height); g.drawImage(t, q(x), q(y), w, h); }
+  else g.drawImage(ic, q(x), q(y), w, h);
+};
+// brick wall lit by a lamp, and the work bench — the same wall as the forge scene
+function room(g, t, top = 96) {
+  g.fillStyle = '#1a1018'; g.fillRect(0, 0, W, H);
+  for (let y = 0; y < top; y += 6) for (let x = ((y / 6) % 2) * 8 - 8; x < W; x += 16) { const d = Math.hypot(x + 8 - W / 2, y - 40) / 90, warm = Math.max(0, 1 - d); px(g, x, y, warm > 0.55 ? '#4a2a28' : warm > 0.25 ? '#3a2428' : '#2a1c2a', 15, 5); px(g, x, y, warm > 0.55 ? '#6a3a2c' : '#3a2a3c', 15, 1); }
+  g.fillStyle = '#34202a'; g.fillRect(0, top, W, H - top); for (let x = 0; x < W; x += 8) px(g, x, top, '#4e3038', 7, 2); prect(g, 0, top + 2, W, 2, '#2a1a20');
+  pdisc(g, W / 2, 34, 54, 'rgba(255,170,90,.07)', 1); pdisc(g, W / 2, 34, 34, 'rgba(255,190,110,.09)', 1);               // lamp light, dithered
+  px(g, W / 2 - 1, 0, '#6a4a2a', 2, 12); px(g, W / 2 - 5, 12, '#c8a050', 10, 4); px(g, W / 2 - 3, 16, Math.floor(t / 160) % 2 ? '#ffd890' : '#ffb860', 6, 2);   // the lamp
 }
-function table(g, t) {
-  const wall = g.createLinearGradient(0, 0, 0, 118); wall.addColorStop(0, '#1a1020'); wall.addColorStop(1, '#2a1a24'); g.fillStyle = wall; g.fillRect(0, 0, W, H);
-  g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 0.6; for (let y = 6; y < 118; y += 6) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); for (let x = ((y / 6) % 2) * 9; x < W; x += 18) { g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x, y); g.stroke(); } }
-  const bench = g.createLinearGradient(0, 118, 0, H); bench.addColorStop(0, '#4a2e22'); bench.addColorStop(1, '#2a1a16'); g.fillStyle = bench; g.fillRect(0, 118, W, 32); g.fillStyle = 'rgba(255,200,150,.14)'; g.fillRect(0, 118, W, 1.2);
-  const lamp = g.createRadialGradient(W / 2, 56, 4, W / 2, 56, 130); lamp.addColorStop(0, 'rgba(255,190,110,.26)'); lamp.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = lamp; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#6a4a2a'; g.fillRect(W / 2 - 0.6, 0, 1.2, 11); g.fillStyle = '#c8a050'; g.beginPath(); g.roundRect(W / 2 - 5, 11, 10, 3.2, 1); g.fill(); g.fillStyle = `rgba(255,224,150,${0.75 + 0.25 * Math.sin(t / 160)})`; g.beginPath(); g.roundRect(W / 2 - 3, 14, 6, 1.4, 0.7); g.fill();
-}
-// pixel-art sprites are drawn with hard edges, at whole-number multiples of their own pixels
-const sprite = (g, spr, x, y, size) => { const k = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false; g.drawImage(spr, Math.round(x), Math.round(y), size * (spr.width / (spr.width - 2)), size * (spr.height / (spr.height - 2))); g.imageSmoothingEnabled = k; };
-const spark = (g, s) => { g.globalAlpha = clamp(1 - s.age / s.life, 0, 1); g.fillStyle = s.c; g.beginPath(); g.arc(s.x, s.y, 1.1, 0, TAU); g.fill(); g.globalAlpha = 1; };
+const bar = (g, x, y, w, h, frac, fill, back = '#1a1224', edge = '#3a2d52') => { px(g, x - 2, y - 2, edge, w + 4, h + 4); px(g, x, y, back, w, h); const fw = q(clamp(frac, 0, 1) * w); if (fw > 0) { px(g, x, y, fill, fw, h); px(g, x, y, 'rgba(255,255,255,.35)', fw, C); } };
+const spark = (g, s) => { if (s.age > s.life) return; px(g, s.x, s.y, s.c, C, C); };
 const dense = (pts, step = 0.02) => { const out = []; for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1], [bx, by] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / step)); for (let k = 0; k <= n; k++) out.push([ax + (bx - ax) * (k / n), ay + (by - ay) * (k / n)]); } return out; };
+const stoneTex = (g, x, y, w, h, base, lite, dark) => { px(g, x, y, base, w, h); for (let j = 0; j < h; j += C) for (let i = 0; i < w; i += C) { const r = Math.sin((i + 3) * 12.9898 + (j + 7) * 78.233) * 43758.5453, f = r - Math.floor(r); if (f < 0.1) px(g, x + i, y + j, dark); else if (f > 0.93) px(g, x + i, y + j, lite); } px(g, x, y, lite, w, C); px(g, x, y, lite, C, h); px(g, x, y + h - C, dark, w, C); px(g, x + w - C, y, dark, C, h); };
 
 // ── ENGRAVING: trace the piece's rune ───────────────────────────────────────────────────────────────────────────────────────────────────
 export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeout } = {}) {
-  const [cv, g] = canvas(), RW = 104, RH = 104, RX = (W - RW) / 2, RY = 11, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [], path = dense(pts);
-  const gear = gearPixel(itemId), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
+  const [cv, g] = canvas(), RW = 88, RH = 88, RX = 66, RY = 4, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [], path = dense(pts);
+  const s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length), at = ([u, v]) => [RX + u * RW, RY + v * RH];
   let pressed = false, armed = false, mx = 0.5, my = 0.5, t0 = 0, alive = true, finished = false, coveredN = 0, lastSample = 0, ptr = false, raf = 0, hint = 0, doneAt = 0, born = performance.now();
   const norm = (e) => { const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H; return [(x - RX) / RW, (y - RY) / RH]; };
   const move = (e) => { [mx, my] = norm(e); ptr = true; };
@@ -44,88 +49,82 @@ export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeou
   };
   const up = () => { pressed = false; };
   cv.addEventListener('pointermove', move); cv.addEventListener('pointerdown', down); cv.addEventListener('pointerup', up); cv.addEventListener('pointerleave', up); cv.addEventListener('pointercancel', up);
-  const nearPath = (u, v, r) => { for (const q of path) if (Math.hypot(u - q[0], v - q[1]) <= r) return true; return false; };
+  const nearPath = (u, v, r) => { for (const p of path) if (Math.hypot(u - p[0], v - p[1]) <= r) return true; return false; };
   const progress = () => coveredN / path.length;
   function step(now) {
     if (pressed && armed && !finished && now - lastSample >= 24 && samples.length < 560) {
-      lastSample = now; const ok = nearPath(mx, my, tol * 1.6); samples.push([+mx.toFixed(3), +my.toFixed(3), Math.round(now - t0)]); trail.push({ u: mx, v: my, ok, a: 1 });
+      lastSample = now; const ok = nearPath(mx, my, tol * 1.6); samples.push([+mx.toFixed(3), +my.toFixed(3), Math.round(now - t0)]); trail.push({ u: mx, v: my, ok });
       for (let i = 0; i < path.length; i++) if (!covered[i] && Math.hypot(mx - path[i][0], my - path[i][1]) <= tol * 1.2) { covered[i] = 1; coveredN++; }
-      if (rnd() < 0.8) sparks.push({ x: RX + mx * RW, y: RY + my * RH, vx: (rnd() - 0.5) * 40, vy: -rnd() * 40, life: 0.35 + rnd() * 0.3, age: 0, c: ok ? '#ffd36a' : '#ff6a4a' });
+      if (rnd() < 0.8) { const [x, y] = at([mx, my]); sparks.push({ x, y, vx: (rnd() - 0.5) * 40, vy: -rnd() * 40, life: 0.35 + rnd() * 0.3, age: 0, c: ok ? '#ffd36a' : '#ff6a4a' }); }
       onProgress?.(progress(), samples.length);
       if (progress() >= 0.95 && Math.hypot(mx - s1[0], my - s1[1]) <= 0.15) { finished = true; doneAt = now; }
     }
     if (armed && !finished && now - t0 > rune.limit) { finished = true; doneAt = now; onTimeout?.(); }
     if (finished && doneAt && now - doneAt > 650) { doneAt = 0; onComplete?.(); }
-    if (trail.length > 700) trail.splice(0, trail.length - 700);
+    if (trail.length > 500) trail.splice(0, trail.length - 500);
   }
-  const poly = () => { g.beginPath(); pts.forEach(([u, v], i) => (i ? g.lineTo(RX + u * RW, RY + v * RH) : g.moveTo(RX + u * RW, RY + v * RH))); };
   function draw(now, dt) {
-    table(g, now);
-    // the piece, faint, under the slab
-    g.globalAlpha = 0.3; sprite(g, gear, W / 2 - 52, 6, 104); g.globalAlpha = 1;
-    g.fillStyle = 'rgba(10,6,14,.55)'; g.beginPath(); g.roundRect(RX - 6, RY - 4, RW + 12, RH + 8, 4); g.fill(); g.strokeStyle = 'rgba(120,200,255,.18)'; g.lineWidth = 0.8; g.stroke();
-    // the groove to follow, with a pulse running along it
-    g.lineWidth = Math.max(3, tol * RW * 2.2); g.strokeStyle = 'rgba(120,200,255,.22)'; poly(); g.stroke(); g.lineWidth = 1.1; g.strokeStyle = `rgba(190,235,255,${0.5 + 0.25 * Math.sin(now / 180)})`; poly(); g.stroke();
-    // engraved so far
-    g.lineWidth = Math.max(2.4, tol * RW * 1.7); for (let i = 0; i < path.length; i += 2) if (covered[i]) { g.fillStyle = 'rgba(255,208,100,.9)'; g.beginPath(); g.arc(RX + path[i][0] * RW, RY + path[i][1] * RH, g.lineWidth / 2, 0, TAU); g.fill(); }
-    for (const p of trail) { p.a *= 0.995; g.fillStyle = p.ok ? `rgba(255,236,170,${0.3 + p.a * 0.4})` : `rgba(255,80,60,${0.25 + p.a * 0.3})`; g.beginPath(); g.arc(RX + p.u * RW, RY + p.v * RH, 1, 0, TAU); g.fill(); }
-    // start / end markers
-    const pulse = 0.5 + 0.5 * Math.sin(now / 200); const mk = (p, col, txt) => { g.strokeStyle = col; g.lineWidth = 1.4; g.beginPath(); g.arc(RX + p[0] * RW, RY + p[1] * RH, 5 + (armed ? 0 : pulse * 1.8), 0, TAU); g.stroke(); g.fillStyle = col; g.globalAlpha = 0.25; g.fill(); g.globalAlpha = 1; label(g, txt, RX + p[0] * RW, RY + p[1] * RH + (p[1] < 0.5 ? 14 : -7), { align: 'center', color: col, size: 5.5 }); };
-    mk(s0, '#8cff9a', 'START'); mk(s1, '#ff9a8c', 'END');
+    room(g, now);
+    stoneTex(g, RX - 6, RY - 2, RW + 12, RH + 4, '#2e2638', '#4a4058', '#1c1626');                                          // the slab
+    // the groove: a thick pixel line along the rune, with a pulse of light running along it
+    const gc = pts.map(at); for (let i = 1; i < gc.length; i++) pline(g, gc[i - 1][0] - C, gc[i - 1][1] - C, gc[i][0] - C, gc[i][1] - C, '#161022', 3);
+    for (let i = 1; i < gc.length; i++) pline(g, gc[i - 1][0], gc[i - 1][1], gc[i][0], gc[i][1], Math.floor(now / 220) % 2 ? '#5aa0d0' : '#4a88b8', 1);
+    for (let i = 0; i < path.length; i += 2) if (covered[i]) { const [x, y] = at(path[i]); px(g, x - C, y - C, '#ffd36a', 4, 4); px(g, x - C, y - C, '#fff2b0', C, C); }
+    for (const t of trail) if (!t.ok) { const [x, y] = at([t.u, t.v]); px(g, x, y, '#e0502e', C, C); }
+    const pulse = Math.floor(now / 250) % 2, mk = (p, col, txt) => { const [x, y] = at(p); pdisc(g, x, y, 7, '#161022'); pring(g, x, y, armed ? 7 : 8 + pulse * 2, 2, col); drawText(g, txt, x + 1, y - 5, col, { align: 'center', outline: null }); };
+    mk(s0, '#8cff9a', 'S'); mk(s1, '#ff9a8c', 'E');
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 110 * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
-    if (ptr && !finished) { const cx = RX + mx * RW, cy = RY + my * RH; g.strokeStyle = OUT; g.lineWidth = 4.4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 12, cy - 14); g.stroke(); g.strokeStyle = '#a8b0ba'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 7, cy - 8.5); g.stroke(); g.strokeStyle = '#b07a44'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + 7, cy - 8.5); g.lineTo(cx + 13, cy - 15); g.stroke(); }
-    // status
-    const p = progress();
-    g.fillStyle = 'rgba(10,6,14,.7)'; g.beginPath(); g.roundRect(8, 134, 224, 7, 3.5); g.fill(); g.fillStyle = finished ? '#8cff9a' : '#ffd36a'; g.beginPath(); g.roundRect(8, 134, Math.max(2, 224 * p), 7, 3.5); g.fill();
-    if (armed && !finished) { const left = Math.max(0, (rune.limit - (now - t0)) / 1000); label(g, `${left.toFixed(0)}s left`, 232, 12, { align: 'right', color: left < 5 ? '#ff8a6a' : '#c8bcd8', size: 6.5 }); }
-    label(g, rune.name ?? 'Rune', 8, 12, { size: 6.5, color: '#c8e8ff' });
-    if (finished) label(g, p >= 0.95 ? 'RUNE COMPLETE' : 'TIME', W / 2, 128, { align: 'center', color: p >= 0.95 ? '#8cff9a' : '#ff9a8c', size: 8 });
-    else if (!armed) { label(g, hint > 0 ? 'Press the GREEN START circle first' : 'Press and hold on the green START, then trace the groove to END', W / 2, 128, { align: 'center', color: hint > 0 ? '#ff9a8c' : '#ffe9a8', size: 6.5 }); hint = Math.max(0, hint - dt); }
-    else if (!pressed) label(g, 'Hold the mouse button down and follow the glow', W / 2, 128, { align: 'center', size: 6.5 });
+    if (ptr && !finished) { const [cx, cy] = at([mx, my]); pline(g, cx, cy, cx + 12, cy - 14, '#14101c', 3); pline(g, cx + 1, cy - 1, cx + 8, cy - 9, '#b8c0ca', 1); pline(g, cx + 8, cy - 9, cx + 13, cy - 15, '#b07a44', 1); }
+    // the piece, and progress
+    px(g, 6, 26, '#1c1220', 40, 40); px(g, 6, 26, '#3a2d52', 40, C); icon(g, itemId, 8, 28);          // the icon is 36×36 (16 + its outline, at 2×): a 40×40 box leaves 2px all round
+    bar(g, 6, 78, 40, 6, progress(), finished ? '#6adf8a' : '#e0b24a');
+    const p = progress(); drawText(g, `${Math.round(p * 100)}%`, 6, 88, '#ffd36a');
+    if (armed && !finished) { const left = Math.max(0, (rune.limit - (now - t0)) / 1000); drawText(g, `${left.toFixed(0)}S`, W - 6, 6, left < 5 ? '#ff8a6a' : '#c8bcd8', { align: 'right' }); }
+    drawText(g, (rune.name ?? 'RUNE'), W / 2, 102, '#9adfff', { align: 'center' });
+    if (finished) drawText(g, p >= 0.95 ? 'RUNE COMPLETE' : 'TIME', W / 2, 118, p >= 0.95 ? '#8cff9a' : '#ff9a8c', { align: 'center' });
+    else if (!armed) { drawText(g, hint > 0 ? 'PRESS GREEN S FIRST' : 'HOLD ON GREEN S', W / 2, 118, hint > 0 ? '#ff9a8c' : '#ffe9a8', { align: 'center' }); hint = Math.max(0, hint - dt); }
+    else if (!pressed) drawText(g, 'FOLLOW THE GLOW', W / 2, 118, '#ffe9a8', { align: 'center' });
   }
   let last = performance.now();
   const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - last) / 1000); last = now; step(now); draw(now, dt); };
   raf = requestAnimationFrame(loop);
   return { el: cv, samples, progress, started: () => armed, elapsed: () => (armed ? performance.now() - t0 : 0), get complete() { return finished; }, finish() { return samples.map((s) => s.slice(0, 2)); }, destroy() { alive = false; cancelAnimationFrame(raf); } };
 }
-const OUT = '#14101c';
 
 // ── WHETSTONE: tap along with the stone ─────────────────────────────────────────────────────────────────────────────────────────────────
 // The stone slides back and forth by itself. Tap (click, Space, or an arrow key) every time it reaches an end. Each tap that comes at a
 // steady pace polishes the edge a little more.
 export function createPolishScene(itemId, polish, { onStroke } = {}) {
   const [cv, g] = canvas(); cv.style.cursor = 'pointer';
-  const gear = gearPixel(itemId), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
+  const specks = Array.from({ length: 36 }, () => ({ x: 62 + rnd() * 52, y: 22 + rnd() * 34, on: true }));
   const strokes = [], mid = (polish.lo + polish.hi) / 2, sparks = []; let last = 0, alive = true, good = 0, flashT = 0, lastGood = true, raf = 0, msg = '', msgT = 0, started = 0, interacted = false;
   const beatAt = (now) => { const ph = ((now - started) / mid) % 2; return ph < 1 ? ph : 2 - ph; };   // 0 at one end, 1 at the other
   const tap = () => {
     const now = performance.now(); interacted = true; if (!started) started = now;
     if (now - last < 150) return; const dt = last ? now - last : mid; last = now; strokes.push(Math.round(now)); const ok = dt >= polish.lo && dt <= polish.hi; lastGood = ok; flashT = 0.3;
-    if (ok) { good++; const n = Math.ceil(specks.length / polish.need); let k = 0; for (const s of specks) if (s.on && k < n) { s.on = false; k++; } for (let i = 0; i < 14; i++) sparks.push({ x: 78 + rnd() * 84, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 60, vy: -rnd() * 40, life: 0.45, age: 0, c: i % 2 ? '#fff2b0' : '#ffd36a' }); msg = 'Smooth'; }
-    else { msg = dt < polish.lo ? 'Too fast - wait for the stone' : 'Too slow - tap sooner'; for (let i = 0; i < 6; i++) sparks.push({ x: 78 + rnd() * 84, y: 70 + rnd() * 20, vx: (rnd() - 0.5) * 40, vy: -rnd() * 20, life: 0.3, age: 0, c: '#a08a7a' }); }
+    if (ok) { good++; const n = Math.ceil(specks.length / polish.need); let k = 0; for (const s of specks) if (s.on && k < n) { s.on = false; k++; } for (let i = 0; i < 14; i++) sparks.push({ x: 62 + rnd() * 52, y: 44 + rnd() * 10, vx: (rnd() - 0.5) * 60, vy: -rnd() * 40, life: 0.45, age: 0, c: i % 2 ? '#fff2b0' : '#ffd36a' }); msg = 'SMOOTH'; }
+    else { msg = dt < polish.lo ? 'TOO FAST' : 'TOO SLOW'; for (let i = 0; i < 6; i++) sparks.push({ x: 62 + rnd() * 52, y: 44 + rnd() * 10, vx: (rnd() - 0.5) * 40, vy: -rnd() * 20, life: 0.3, age: 0, c: '#a08a7a' }); }
     msgT = 0.9; onStroke?.({ ok, dt, n: strokes.length, good });
   };
   const key = (e) => { if (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); if (!e.repeat) tap(); } };
   cv.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(); }); document.addEventListener('keydown', key);
   function draw(now, dt) {
-    table(g, now);
-    const slab = g.createLinearGradient(0, 18, 0, 118); slab.addColorStop(0, '#4a3020'); slab.addColorStop(1, '#3a2418'); g.fillStyle = slab; g.beginPath(); g.roundRect(40, 18, 160, 100, 4); g.fill();
-    sprite(g, gear, W / 2 - 48, 24, 96);
-    const bright = good / polish.need; g.globalAlpha = 0.32 * bright; g.fillStyle = '#fff2b0'; g.beginPath(); g.roundRect(66, 28, 108, 78, 8); g.fill(); g.globalAlpha = 1;
-    for (const s of specks) if (s.on) { g.fillStyle = 'rgba(90,60,36,.85)'; g.beginPath(); g.ellipse(s.x, s.y, s.s, s.s * 0.7, 0.4, 0, TAU); g.fill(); }
+    room(g, now);
+    stoneTex(g, 24, 8, 128, 80, '#4a3020', '#6a4a30', '#2e1c12');                                                          // the work slab
+    icon(g, itemId, 70, 24);                                                                                              // the piece on the slab, its normal size
+    const bright = good / polish.need; if (bright > 0) pdisc(g, 88, 42, 20 + 6 * bright, 'rgba(255,242,176,.5)', 1);
+    for (const s of specks) if (s.on) { px(g, s.x, s.y, '#5a3a24', 4, 2); px(g, s.x, s.y, '#7a5236', 2, 2); }
     // the stone slides to the beat on its own
-    const b = started ? beatAt(now) : 0.5 + 0.5 * Math.sin(now / 400), ease = b * b * (3 - 2 * b), bx = 58 + ease * 124, atEnd = started && (b < 0.07 || b > 0.93);
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(bx, 96, 21, 4, 0, 0, TAU); g.fill();
-    const st = g.createLinearGradient(0, 76, 0, 94); st.addColorStop(0, '#c4cad4'); st.addColorStop(0.5, '#8a909a'); st.addColorStop(1, '#6a7078'); g.fillStyle = st; g.strokeStyle = OUT; g.lineWidth = 1.2; g.beginPath(); g.roundRect(bx - 22, 76, 44, 18, 4); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(bx - 19, 78, 38, 2);
-    for (let i = 0; i < 5; i++) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(bx - 16 + i * 8, 84 + (i % 2) * 3, 4, 1.2); }
-    // end markers: they light up when the stone arrives
-    for (const [ex, on] of [[46, started ? b < 0.07 : false], [194, started ? b > 0.93 : false]]) { g.strokeStyle = on ? '#8cff9a' : 'rgba(255,220,140,.55)'; g.lineWidth = on ? 2.2 : 1.2; g.beginPath(); g.arc(ex, 85, on ? 8 : 6, 0, TAU); g.stroke(); if (on) { g.fillStyle = 'rgba(140,255,154,.25)'; g.fill(); } }
-    flashT = Math.max(0, flashT - dt); if (flashT > 0) { g.strokeStyle = lastGood ? '#8cff9a' : '#ff8a6a'; g.lineWidth = 2; g.globalAlpha = flashT / 0.3; g.beginPath(); g.roundRect(40, 18, 160, 100, 4); g.stroke(); g.globalAlpha = 1; }
+    const b = started ? beatAt(now) : 0.5 + 0.5 * Math.sin(now / 400), bx = 28 + q(b * 84), atEnd = started && (b < 0.07 || b > 0.93);
+    px(g, bx - 2, 66, '#14101c', 48, 22); px(g, bx, 68, '#7a808a', 44, 18); px(g, bx, 68, '#c4cad4', 44, 4); px(g, bx, 82, '#5a6068', 44, 4); px(g, bx, 72, '#9aa0aa', 44, 10);
+    for (let i = 0; i < 5; i++) px(g, bx + 6 + i * 8, 76 + (i % 2) * 4, '#7a808a', 4, 2);
+    for (const [ex, on] of [[24, started && b < 0.07], [152, started && b > 0.93]]) pring(g, ex, 76, on ? 10 : 8, on ? 4 : 2, on ? '#8cff9a' : 'rgba(255,220,140,.7)');
+    flashT = Math.max(0, flashT - dt); if (flashT > 0) { const c = lastGood ? '#8cff9a' : '#ff8a6a'; px(g, 24, 8, c, 128, 2); px(g, 24, 86, c, 128, 2); px(g, 24, 8, c, 2, 80); px(g, 150, 8, c, 2, 80); }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 100 * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
-    g.fillStyle = 'rgba(10,6,14,.7)'; g.beginPath(); g.roundRect(8, 134, 224, 7, 3.5); g.fill(); g.fillStyle = '#ffd36a'; g.beginPath(); g.roundRect(8, 134, Math.max(2, 224 * clamp(good / polish.need, 0, 1)), 7, 3.5); g.fill();
-    label(g, `POLISH  ${good} / ${polish.need}`, 8, 12, { size: 6.5, color: '#c8e8ff' });
-    msgT = Math.max(0, msgT - dt); if (msgT > 0) label(g, msg, W / 2, 128, { align: 'center', color: lastGood ? '#8cffa0' : '#ffb08a', size: 7.5 });
-    else label(g, interacted ? 'Tap each time the stone reaches an end' : 'TAP (click / Space) when the stone reaches an end', W / 2, 128, { align: 'center', size: 6.5, color: atEnd ? '#8cff9a' : '#ffe9a8' });
+    bar(g, 8, 106, 160, 6, good / polish.need, '#e0b24a');
+    drawText(g, `POLISH ${good} / ${polish.need}`, 8, 6, '#c8e8ff', { outline: INK });
+    msgT = Math.max(0, msgT - dt); if (msgT > 0) drawText(g, msg, W / 2, 122, lastGood ? '#8cffa0' : '#ffb08a', { align: 'center' });
+    else drawText(g, interacted ? 'TAP AT EITHER END' : 'CLICK AT AN END', W / 2, 122, atEnd ? '#8cff9a' : '#ffe9a8', { align: 'center' });
   }
   let lastT = performance.now();
   const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; draw(now, dt); };
@@ -136,27 +135,26 @@ export function createPolishScene(itemId, polish, { onStroke } = {}) {
 // ── REVEAL: the odds, the roll, the result ──────────────────────────────────────────────────────────────────────────────────────────────
 export function createRevealScene(itemId, res) {
   const [cv, g] = canvas(); cv.style.cursor = 'default';
-  const base = gearPixel(itemId), glow = gearPixel(itemId, 32, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
   const t0 = performance.now(), sparks = [], rings = []; let alive = true, burst = false, raf = 0; const col = res.ok ? upColor(res.to) : '#8a8090';
-  const SWEEP = 1700, HOLD = 500;
+  const SWEEP = 1700, HOLD = 500, an = prop('anvil', 0);
   function draw(now, dt) {
-    const t = now - t0; table(g, now);
+    const t = now - t0; room(g, now);
     const settle = clamp((t - SWEEP) / HOLD, 0, 1), roll = clamp(t / SWEEP, 0, 1), marker = res.roll * (1 - Math.pow(1 - roll, 3));   // the marker decelerates onto the roll
-    const shake = t < SWEEP ? Math.sin(t / 25) * (1 - roll) * 1.2 : 0; g.save(); g.translate(shake, 0);
-    if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); sprite(g, glow, W / 2 - 40, 2, 80); g.globalAlpha = 1; }
-    sprite(g, settle > 0 && !res.ok ? glow : base, W / 2 - 40, 2, 80); g.restore();
-    if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 60 + (SX - 1) * 45 : 24); i++) sparks.push({ x: W / 2, y: 40, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, a: 0.9, d: i * 140 }); }
-    for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 90 * dt; r.a -= dt * 1.1; if (r.a <= 0) { rings.splice(i, 1); continue; } g.strokeStyle = `rgba(255,230,150,${r.a})`; g.lineWidth = 1.4; g.beginPath(); g.arc(W / 2, 40, r.r, 0, TAU); g.stroke(); }
+    const cx = W / 2, shake = t < SWEEP ? Math.round(Math.sin(t / 25) * (1 - roll) * 2) : 0;
+    g.drawImage(an, q(cx - an.width), q(36), an.width * C, an.height * C);                                              // the anvil, 2×, like the forge scene
+    if (res.ok && settle > 0) pdisc(g, cx, 22, 24 + Math.sin(t / 140) * 3, 'rgba(255,230,150,.5)', 1);
+    icon(g, itemId, cx - 18 + shake, 4, settle > 0 ? (res.ok ? '#fff2b0' : '#000000') : null, settle > 0 ? 0.5 : 0);
+    if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 50 + (SX - 1) * 40 : 20); i++) sparks.push({ x: cx, y: 20, vx: (rnd() - 0.5) * 150, vy: -30 - rnd() * 100, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, d: i * 140 }); }
+    for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 80 * dt; if (r.r > 70) { rings.splice(i, 1); continue; } pring(g, cx, 20, r.r, 2, r.r < 40 ? '#ffe9a8' : '#a8884a'); }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
+    if (!res.ok && settle > 0) { pline(g, cx - 8, 8, cx - 2, 20, '#0c0814', 1); pline(g, cx - 2, 20, cx - 8, 32, '#0c0814', 1); pline(g, cx - 2, 20, cx + 8, 28, '#0c0814', 1); }
+    if (settle >= 1) { drawText(g, res.ok ? `+${res.to}` : 'FAILED', cx, 70, res.ok ? col : '#ff9a8c', { scale: 2, align: 'center' }); if (!res.ok) drawText(g, res.dropped ? `DOWN TO +${res.to}` : 'NO CHANGE', cx, 93, '#c8bcd8', { align: 'center' }); }
+    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) drawTag(g, res.steps === 2 ? 'CRITICAL FORGE X2' : 'CRITICAL FORGE X3', cx, 93 + (Math.floor(t / 160) % 2) * 2, res.steps === 3 ? '#ff9aff' : '#ffe36b', { scale: 1 });
     // the chance bar and the roll marker
-    const bx = 30, bw = 180, by = 114; g.fillStyle = '#14101c'; g.beginPath(); g.roundRect(bx - 2, by - 2, bw + 4, 16, 4); g.fill(); g.fillStyle = '#5a2a30'; g.beginPath(); g.roundRect(bx, by, bw, 12, 3); g.fill();
-    g.fillStyle = '#3d9a4e'; g.beginPath(); g.roundRect(bx, by, Math.max(1, bw * res.chance), 12, 3); g.fill(); g.fillStyle = '#8cffa0'; g.fillRect(bx + 1, by + 0.8, Math.max(0, bw * res.chance - 2), 1.6);
-    g.fillStyle = 'rgba(0,0,0,.3)'; for (let i = 1; i < 10; i++) g.fillRect(bx + (bw * i) / 10 - 0.3, by + 8, 0.6, 4);
-    const mxp = bx + bw * marker; g.fillStyle = '#ffffff'; g.fillRect(mxp - 1, by - 5, 2, 22); g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(mxp - 4, by - 8); g.lineTo(mxp + 4, by - 8); g.lineTo(mxp, by - 2); g.closePath(); g.fill();
-    label(g, `SUCCESS ${(res.chance * 100).toFixed(res.chance < 0.1 ? 1 : 0)}%`, bx, by - 9, { size: 7.5 }); label(g, `ROLL ${(marker * 100).toFixed(0)}`, bx + bw, by - 9, { size: 7.5, align: 'right', color: '#c8bcd8' });
-    if (settle >= 1) { const txt = res.ok ? `+${res.to}` : res.dropped ? `+${res.to}  (fell ${res.dropped})` : 'FAILED'; g.textAlign = 'center'; g.font = `800 20px ${FONT}`; g.lineWidth = 3; g.strokeStyle = '#14101c'; g.strokeText(txt, W / 2, 99); g.fillStyle = col; g.fillText(txt, W / 2, 99); g.textAlign = 'left'; }
-    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) { const w = res.steps === 2 ? 'CRITICAL FORGE  x2' : 'CRITICAL FORGE  x3'; label(g, w, W / 2, 26 + Math.sin(t / 120) * 1.6, { align: 'center', color: res.steps === 3 ? '#ff9aff' : '#ffe36b', size: 8.5 }); }
-    if (!res.ok && settle > 0) { g.strokeStyle = `rgba(0,0,0,${0.7 * settle})`; g.lineWidth = 1.6; g.beginPath(); g.moveTo(W / 2 - 14, 18); g.lineTo(W / 2 - 4, 36); g.lineTo(W / 2 - 12, 54); g.moveTo(W / 2 - 4, 36); g.lineTo(W / 2 + 12, 48); g.stroke(); }
+    const bx = 14, bw = 148, by = 128; px(g, bx - 2, by - 2, '#3a2d52', bw + 4, 14); px(g, bx, by, '#5a2a30', bw, 10); px(g, bx, by, '#3d9a4e', q(bw * res.chance), 10); px(g, bx, by, '#8cffa0', q(bw * res.chance), C);
+    for (let i = 1; i < 10; i++) px(g, bx + q((bw * i) / 10), by + 6, 'rgba(0,0,0,.4)', C, 4);
+    const mxp = bx + q(bw * marker); px(g, mxp - 1, by - 5, '#ffffff', C, 20); px(g, mxp - 3, by - 8, '#ffe36b', 6, C); px(g, mxp - 1, by - 6, '#ffe36b', C, C);
+    drawText(g, `SUCCESS ${(res.chance * 100).toFixed(res.chance < 0.1 ? 1 : 0)}%`, bx, by - 14, '#ffe9a8', { outline: INK }); drawText(g, `ROLL ${(marker * 100).toFixed(0)}`, bx + bw, by - 14, '#c8bcd8', { align: 'right', outline: INK });
   }
   let last = performance.now(); const loop = (now) => { if (!alive) return; raf = requestAnimationFrame(loop); const dt = Math.min(0.05, (now - last) / 1000); last = now; draw(now, dt); }; raf = requestAnimationFrame(loop);
   return { el: cv, duration: SWEEP + HOLD, destroy() { alive = false; cancelAnimationFrame(raf); } };

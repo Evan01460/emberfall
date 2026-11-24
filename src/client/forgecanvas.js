@@ -10,7 +10,7 @@ const rnd = Math.random;
 export function createForgeStage(opts = {}) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'forge-stage'; cv.style.cssText = 'width:100%;max-width:528px;image-rendering:pixelated;display:block;margin:0 auto;background:#120a14;box-shadow:inset 0 0 0 3px #3a2d52,0 0 0 3px #0c0814';
   const g = cv.getContext('2d'); cv.__st = null; g.imageSmoothingEnabled = false;
-  const tmp = document.createElement('canvas'); tmp.width = tmp.height = 32; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = !!(opts.icon && opts.icon.width > 32); tg.imageSmoothingQuality = 'high';   // big artwork is averaged down; a small icon stays crisp
+  const tmp = document.createElement('canvas'); tmp.width = tmp.height = 32; const tg = tmp.getContext('2d'); tg.imageSmoothingEnabled = false;
   const st = { heat: 0.2, fire: 0.4, swing: null, sparks: [], steam: [], flatten: 0, shake: 0, flash: 0, dip: 0, alive: true, t0: performance.now(), lastScore: 1 };
   cv.__st = st;
   const ANV = { x: 57, y: 62 }, BIL = { x: 58, y: 69 }, SM = { x: 70, y: 42 };   // BIL.y is the anvil's top face: the billet rests ON it
@@ -54,7 +54,7 @@ export function createForgeStage(opts = {}) {
     // anvil (2x) with the billet on top
     const an = prop('anvil', 0); g.drawImage(an, ANV.x - an.width, ANV.y - 6, an.width * 2, an.height * 2);
     if (opts.icon) {   // an upgrade: the piece itself lies on the anvil, glowing with its heat
-      tg.clearRect(0, 0, 32, 32); tg.drawImage(opts.icon, 0, 0, 32, 32); tg.globalCompositeOperation = 'source-atop'; tg.globalAlpha = Math.min(0.85, st.heat * 0.9); tg.fillStyle = hotColor(st.heat); tg.fillRect(0, 0, 32, 32); tg.globalAlpha = 1; tg.globalCompositeOperation = 'source-over';
+      tg.clearRect(0, 0, 32, 32); tg.drawImage(opts.icon, 0, 0, 32, 32);   // the piece's own 32-pixel sprite (gearPixel): pixel for pixel tg.globalCompositeOperation = 'source-atop'; tg.globalAlpha = Math.min(0.85, st.heat * 0.9); tg.fillStyle = hotColor(st.heat); tg.fillRect(0, 0, 32, 32); tg.globalAlpha = 1; tg.globalCompositeOperation = 'source-over';
       g.globalAlpha = 0.25 + st.heat * 0.35; g.fillStyle = hotColor(st.heat); g.beginPath(); g.ellipse(BIL.x, BIL.y - 1, 18, 4, 0, 0, 6.3); g.fill(); g.globalAlpha = 1; g.drawImage(tmp, Math.round(BIL.x - 16), Math.round(BIL.y - 30 + st.flatten * 0.3), 32, 32);
     } else {
     const len = 22 + st.flatten * 1.6, th = Math.max(2, 5 - Math.floor(st.flatten * 0.45)), bx = BIL.x - len / 2, by = BIL.y - th;

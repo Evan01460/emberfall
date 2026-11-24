@@ -3,7 +3,7 @@
 //
 // Everything is drawn at 4× the logical 240×150 size and scaled down by the browser, with smooth shapes and the large vector artwork of the piece
 // (gearart.js) — never a 16-pixel icon blown up into blocks, and text that stays sharp.
-import { gearArt } from './gearart.js';
+import { gearPixel } from './gearart.js';
 import { upColor } from '../upgrade.js';
 
 const rnd = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), TAU = Math.PI * 2;
@@ -25,13 +25,15 @@ function table(g, t) {
   const lamp = g.createRadialGradient(W / 2, 56, 4, W / 2, 56, 130); lamp.addColorStop(0, 'rgba(255,190,110,.26)'); lamp.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = lamp; g.fillRect(0, 0, W, H);
   g.fillStyle = '#6a4a2a'; g.fillRect(W / 2 - 0.6, 0, 1.2, 11); g.fillStyle = '#c8a050'; g.beginPath(); g.roundRect(W / 2 - 5, 11, 10, 3.2, 1); g.fill(); g.fillStyle = `rgba(255,224,150,${0.75 + 0.25 * Math.sin(t / 160)})`; g.beginPath(); g.roundRect(W / 2 - 3, 14, 6, 1.4, 0.7); g.fill();
 }
+// pixel-art sprites are drawn with hard edges, at whole-number multiples of their own pixels
+const sprite = (g, spr, x, y, size) => { const k = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false; g.drawImage(spr, Math.round(x), Math.round(y), size * (spr.width / (spr.width - 2)), size * (spr.height / (spr.height - 2))); g.imageSmoothingEnabled = k; };
 const spark = (g, s) => { g.globalAlpha = clamp(1 - s.age / s.life, 0, 1); g.fillStyle = s.c; g.beginPath(); g.arc(s.x, s.y, 1.1, 0, TAU); g.fill(); g.globalAlpha = 1; };
 const dense = (pts, step = 0.02) => { const out = []; for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1], [bx, by] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / step)); for (let k = 0; k <= n; k++) out.push([ax + (bx - ax) * (k / n), ay + (by - ay) * (k / n)]); } return out; };
 
 // ── ENGRAVING: trace the piece's rune ───────────────────────────────────────────────────────────────────────────────────────────────────
 export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeout } = {}) {
   const [cv, g] = canvas(), RW = 104, RH = 104, RX = (W - RW) / 2, RY = 11, tol = rune.tol, pts = rune.pts, samples = [], trail = [], sparks = [], path = dense(pts);
-  const gear = gearArt(itemId, 256), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
+  const gear = gearPixel(itemId, 48), s0 = pts[0], s1 = pts.at(-1), covered = new Uint8Array(path.length);
   let pressed = false, armed = false, mx = 0.5, my = 0.5, t0 = 0, alive = true, finished = false, coveredN = 0, lastSample = 0, ptr = false, raf = 0, hint = 0, doneAt = 0, born = performance.now();
   const norm = (e) => { const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H; return [(x - RX) / RW, (y - RY) / RH]; };
   const move = (e) => { [mx, my] = norm(e); ptr = true; };
@@ -60,7 +62,7 @@ export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeou
   function draw(now, dt) {
     table(g, now);
     // the piece, faint, under the slab
-    g.globalAlpha = 0.28; g.drawImage(gear, W / 2 - 56, 4, 112, 112); g.globalAlpha = 1;
+    g.globalAlpha = 0.3; sprite(g, gear, W / 2 - 52, 6, 104); g.globalAlpha = 1;
     g.fillStyle = 'rgba(10,6,14,.55)'; g.beginPath(); g.roundRect(RX - 6, RY - 4, RW + 12, RH + 8, 4); g.fill(); g.strokeStyle = 'rgba(120,200,255,.18)'; g.lineWidth = 0.8; g.stroke();
     // the groove to follow, with a pulse running along it
     g.lineWidth = Math.max(3, tol * RW * 2.2); g.strokeStyle = 'rgba(120,200,255,.22)'; poly(); g.stroke(); g.lineWidth = 1.1; g.strokeStyle = `rgba(190,235,255,${0.5 + 0.25 * Math.sin(now / 180)})`; poly(); g.stroke();
@@ -93,7 +95,7 @@ const OUT = '#14101c';
 // steady pace polishes the edge a little more.
 export function createPolishScene(itemId, polish, { onStroke } = {}) {
   const [cv, g] = canvas(); cv.style.cursor = 'pointer';
-  const gear = gearArt(itemId, 256), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
+  const gear = gearPixel(itemId, 48), specks = Array.from({ length: 40 }, () => ({ x: 74 + rnd() * 92, y: 30 + rnd() * 66, s: 1.4 + rnd() * 2, on: true }));
   const strokes = [], mid = (polish.lo + polish.hi) / 2, sparks = []; let last = 0, alive = true, good = 0, flashT = 0, lastGood = true, raf = 0, msg = '', msgT = 0, started = 0, interacted = false;
   const beatAt = (now) => { const ph = ((now - started) / mid) % 2; return ph < 1 ? ph : 2 - ph; };   // 0 at one end, 1 at the other
   const tap = () => {
@@ -108,7 +110,7 @@ export function createPolishScene(itemId, polish, { onStroke } = {}) {
   function draw(now, dt) {
     table(g, now);
     const slab = g.createLinearGradient(0, 18, 0, 118); slab.addColorStop(0, '#4a3020'); slab.addColorStop(1, '#3a2418'); g.fillStyle = slab; g.beginPath(); g.roundRect(40, 18, 160, 100, 4); g.fill();
-    g.drawImage(gear, W / 2 - 52, 20, 104, 104);
+    sprite(g, gear, W / 2 - 48, 24, 96);
     const bright = good / polish.need; g.globalAlpha = 0.32 * bright; g.fillStyle = '#fff2b0'; g.beginPath(); g.roundRect(66, 28, 108, 78, 8); g.fill(); g.globalAlpha = 1;
     for (const s of specks) if (s.on) { g.fillStyle = 'rgba(90,60,36,.85)'; g.beginPath(); g.ellipse(s.x, s.y, s.s, s.s * 0.7, 0.4, 0, TAU); g.fill(); }
     // the stone slides to the beat on its own
@@ -134,15 +136,15 @@ export function createPolishScene(itemId, polish, { onStroke } = {}) {
 // ── REVEAL: the odds, the roll, the result ──────────────────────────────────────────────────────────────────────────────────────────────
 export function createRevealScene(itemId, res) {
   const [cv, g] = canvas(); cv.style.cursor = 'default';
-  const base = gearArt(itemId, 256), glow = gearArt(itemId, 256, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
+  const base = gearPixel(itemId, 48), glow = gearPixel(itemId, 48, res.ok ? '#fff2b0' : '#000000', res.ok ? 0.55 : 0.5);
   const t0 = performance.now(), sparks = [], rings = []; let alive = true, burst = false, raf = 0; const col = res.ok ? upColor(res.to) : '#8a8090';
   const SWEEP = 1700, HOLD = 500;
   function draw(now, dt) {
     const t = now - t0; table(g, now);
     const settle = clamp((t - SWEEP) / HOLD, 0, 1), roll = clamp(t / SWEEP, 0, 1), marker = res.roll * (1 - Math.pow(1 - roll, 3));   // the marker decelerates onto the roll
     const shake = t < SWEEP ? Math.sin(t / 25) * (1 - roll) * 1.2 : 0; g.save(); g.translate(shake, 0);
-    if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); g.drawImage(glow, W / 2 - 39, 2, 78, 78); g.globalAlpha = 1; }
-    g.drawImage(settle > 0 && !res.ok ? glow : base, W / 2 - 39, 2, 78, 78); g.restore();
+    if (res.ok && settle > 0) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t / 140); sprite(g, glow, W / 2 - 40, 2, 80); g.globalAlpha = 1; }
+    sprite(g, settle > 0 && !res.ok ? glow : base, W / 2 - 40, 2, 80); g.restore();
     if (settle >= 1 && !burst) { burst = true; const SX = res.steps ?? 1; for (let i = 0; i < (res.ok ? 60 + (SX - 1) * 45 : 24); i++) sparks.push({ x: W / 2, y: 40, vx: (rnd() - 0.5) * 160, vy: -30 - rnd() * 110, life: 0.8 + rnd() * 0.7, age: 0, c: res.ok ? (i % 3 ? '#ffd36a' : '#ffffff') : '#6a6072', g: res.ok ? 150 : 40 }); if (res.ok) for (let i = 0; i < 3 + (SX - 1) * 3; i++) rings.push({ r: 4, a: 0.9, d: i * 140 }); }
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 90 * dt; r.a -= dt * 1.1; if (r.a <= 0) { rings.splice(i, 1); continue; } g.strokeStyle = `rgba(255,230,150,${r.a})`; g.lineWidth = 1.4; g.beginPath(); g.arc(W / 2, 40, r.r, 0, TAU); g.stroke(); }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }

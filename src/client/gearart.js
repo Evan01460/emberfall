@@ -6,6 +6,7 @@
 // at a different angle than its handle.
 import { ITEMS, archOf, ARCH } from '../data.js';
 import { gearPalette } from './icons.js';
+import { shrink } from './px.js';
 
 const TAU = Math.PI * 2, OUT = '#14101c';
 const cache = new Map();
@@ -139,17 +140,33 @@ function shadeHex(h, k) { const n = parseInt(String(h).replace('#', '').slice(0,
 function tintHex(h, t) { const s = String(h); const n = s.startsWith('rgb') ? s.match(/\d+/g).map(Number) : [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)]; return `rgb(${n.map((v) => Math.round(v + (255 - v) * t)).join(',')})`; }
 
 // A piece of gear as a canvas, `px` pixels square. Optionally washed with a colour (heat, a glow, a dull shade): tint = colour, tintA = strength.
-export function gearArt(id, px = 256, tint = null, tintA = 0) {
-  const key = `${id}:${px}:${tint}:${tintA}`; let c = cache.get(key); if (c) return c;
+export function gearArt(id, px = 256, tint = null, tintA = 0, shadow = true) {
+  const key = `${id}:${px}:${tint}:${tintA}:${shadow}`; let c = cache.get(key); if (c) return c;
   const it = ITEMS[id]; const ak = archOf(id) ?? '', style = ARCH[ak]?.style ?? ak; const pal = gearPalette(id), slot = it?.slot ?? 'weapon';
   c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
   g.translate(px / 2, px / 2); const k = px / 112; g.scale(k, k); g.lineJoin = 'round'; g.lineCap = 'round';
   // soft ground shadow
-  g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 52, 34, 5, 0, 0, TAU); g.fill();
+  if (shadow) { g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 52, 34, 5, 0, 0, TAU); g.fill(); }
   if (slot === 'weapon') {
     const wk = W[ak] ? ak : it?.wtype === 'slash' ? 'sword' : it?.wtype === 'pierce' ? 'spear' : it?.wtype === 'blunt' ? 'mace' : 'staff';
     g.save(); if (TILT[wk]) { g.rotate(Math.PI / 4); g.scale(1.0, 1.0); g.translate(0, 0); } W[wk](g, pal.m, pal.accent); g.restore();
   } else (A[slot] ?? A.charm)(g, pal.m, pal.cloth(style), style, ak);
   if (tint && tintA > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = tintA; g.fillStyle = tint; g.fillRect(0, 0, px, px); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
   cache.set(key, c); return c;
+}
+
+// ── PIXEL ART version ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// The game is pixel art, so large gear is too: the shaded drawing above is averaged down onto a small grid (hard edges, no blur), its colours are
+// banded into a handful of tones and it gets the same dark outline as every other sprite. The result is a `size`×`size` art-pixel sprite (default
+// 48 — three times the detail of an inventory icon) that is shown at whole-number scales. Because it comes from the same drawing, a head is always
+// at the same angle as its handle.
+const pixCache = new Map();
+export function gearPixel(id, size = 48, tint = null, tintA = 0) {
+  const key = `${id}:${size}:${tint}:${tintA}`; let c = pixCache.get(key); if (c) return c;
+  const big = gearArt(id, size * 4, null, 0, false), spr = shrink(big, size, size, 1);
+  const g = spr.getContext('2d'), im = g.getImageData(0, 0, spr.width, spr.height), D = im.data, STEP = 32;
+  for (let i = 0; i < D.length; i += 4) { if (!D[i + 3]) continue; if (D[i] < 40 && D[i + 1] < 36 && D[i + 2] < 50) continue; for (let k = 0; k < 3; k++) D[i + k] = Math.min(255, Math.round(D[i + k] / STEP) * STEP); }   // tone banding (the outline colour is kept)
+  g.putImageData(im, 0, 0);
+  if (tint && tintA > 0) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = tintA; g.fillStyle = tint; g.fillRect(0, 0, spr.width, spr.height); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+  pixCache.set(key, spr); return spr;
 }

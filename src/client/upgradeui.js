@@ -9,7 +9,7 @@ import { h, fmt } from '../ui-lib.js';
 import * as I from './icons.js';
 import { openWindow, closeWindow, refreshWindow, isOpen } from './panels.js';
 import { createForgeStage } from './forgecanvas.js';
-import { gearArt } from './gearart.js';
+import { gearPixel } from './gearart.js';
 import { createRuneScene, createPolishScene, createRevealScene } from './upgradescenes.js';
 import { heatStart, heatStep, heatBand, markerPos, strikeScore, QUENCH, gearName } from '../rules.js';
 import { upMult, baseChance, finalChance, QUICK_SCORE, upColor, MAX_UP, upLevel } from '../upgrade.js';
@@ -76,7 +76,7 @@ function detail(g, info, me) {
 // ── the minigame ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function startUpgrade(tk) {
   closeWindow('upstation'); closeWindow('upgrade');
-  const spec = tk.spec, g0 = tk.gear, icon = gearArt(g0.id, 96), L = tk.L;
+  const spec = tk.spec, g0 = tk.gear, icon = gearPixel(g0.id, 32), L = tk.L;
   const forge = createForgeStage({ icon });
   let phase = 'heat', raf = 0, t0 = performance.now(), finished = false, scene = null, locked = false;
   const data = { heat: [], folds: [[], [], []], rune: [], quench: 0, medium: null, polish: [] };

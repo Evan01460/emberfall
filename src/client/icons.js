@@ -13,20 +13,26 @@ const tier = (id) => { const td = tierOf(id); if (td) return td === 'hollow' ? '
 const tierByPrefix = (id) => (id.startsWith('hollow_') ? 'shadow' : id.startsWith('steel_') || id === 'steel_plate' ? 'steel' : id.startsWith('sun_') ? 'sun' : id.startsWith('moon_') ? 'moon' : id.startsWith('cinder_') ? 'cinder' : id.startsWith('aether_') ? 'aether' : 'iron');
 const wd = ['#8f633a', '#a67546', '#6a4528'];
 
-const sword = (p, m) => { p.line(3, 13, 12, 3, m[0]); p.line(4, 13, 13, 3, m[1]); p.line(2, 14, 4, 12, '#6a4528'); p.r(2, 10, 1, 1, '#e0b24a'); p.line(3, 11, 6, 14, '#e0b24a'); p.p(13, 2, '#ffffff'); };
-// Diagonal weapons: the handle runs bottom-left → top-right, so the head is built in the SAME rotated frame (u along the handle, v across it).
-// A head drawn as an upright rectangle on a slanted pole is what made hammers and spears look broken.
+const sword = (p, m) => { for (let x = 2; x <= 4; x++) p.p(x, 15 - x, x % 2 ? wd[0] : wd[1]); p.p(1, 14, '#e0b24a');   // pommel and grip
+  for (let k = -2; k <= 2; k++) p.p(5 + k, 10 + k, Math.abs(k) === 2 ? '#a07a1e' : '#e0b24a');                                  // the cross-guard, square to the blade
+  for (let x = 6; x <= 13; x++) { p.p(x, 15 - x, m[0]); if (x <= 12) { p.p(x, 14 - x, m[1]); p.p(x, 16 - x, m[2]); } } p.p(14, 1, '#ffffff'); };   // a 3-wide blade: light edge, body, dark edge
+// Diagonal weapons. On a pixel grid only a ONE-pixel-wide diagonal (the line x+y = 15, the icon's own anti-diagonal) has a true centre line, so the
+// handle is that single line (the outline makes it look 3 wide) and every head is built in the same rotated frame (u along the handle, v across it)
+// around a centre ON that line - hx+hy = 16 - so the head is an exact mirror image either side of the handle and nothing is clipped by the canvas.
 const diag = (p, cx, cy, u0, u1, halfW, col) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, u = (dx - dy) / Math.SQRT2, v = (dx + dy) / Math.SQRT2, t = (u - u0) / (u1 - u0); if (t < 0 || t > 1) continue; const hw = typeof halfW === 'function' ? halfW(t) : halfW; if (Math.abs(v) <= hw) { const c = col(t, v / Math.max(0.01, hw), u); if (c) p.p(x, y, c); } } };
-const spear = (p, m) => { p.line(1, 14, 10, 5, wd[0]); p.line(2, 14, 11, 5, wd[1]);
-  diag(p, 12, 4.5, 0, 6.4, (t) => 2.5 * Math.min(1, (1 - t) * 2.2) * (t < 0.12 ? 0.6 : 1), (t, k) => (k < -0.35 ? m[1] : k > 0.4 ? m[2] : m[0]));
-  diag(p, 12, 4.5, -0.8, 0.2, 1.7, () => '#e0b24a'); p.p(14, 1, '#ffffff'); };
+const shaft = (p, x1) => { for (let x = 1; x <= x1; x++) p.p(x, 15 - x, x % 2 ? wd[0] : wd[1]); p.p(0, 15, wd[2]); p.p(1, 14, wd[2]); };
+const spear = (p, m) => { shaft(p, 8);
+  diag(p, 9.5, 6.5, 0, 7.6, (t) => 2.9 * Math.min(1, (1 - t) * 2.2) * (t < 0.12 ? 0.6 : 1), (t, k) => (k < -0.35 ? m[1] : k > 0.35 ? m[2] : m[0]));
+  diag(p, 9.5, 6.5, -1, 0.1, 1.9, () => '#e0b24a'); p.p(13, 2, '#ffffff'); };
 const bow = (p, m) => { p.line(9, 1, 5, 4, wd[0]); p.line(5, 4, 4, 8, wd[0]); p.line(4, 8, 5, 12, wd[0]); p.line(5, 12, 9, 15, wd[0]); p.line(10, 1, 6, 4, wd[1]); p.line(6, 4, 5, 8, wd[1]); p.line(5, 8, 6, 12, wd[1]); p.line(6, 12, 10, 15, wd[1]); p.line(10, 1, 10, 15, '#e8e0d0'); p.line(3, 8, 14, 8, wd[2]); p.r(13, 7, 2, 3, m[0]); p.p(14, 8, '#ffffff'); p.r(2, 7, 2, 1, '#c8d0d8'); p.r(2, 9, 2, 1, '#c8d0d8'); p.p(9, 1, m[1]); p.p(9, 15, m[1]); };
-const hammer = (p, m) => { p.line(1, 14, 9, 6, wd[0]); p.line(2, 14, 10, 6, wd[1]);
-  diag(p, 11.5, 5, -2.2, 2.2, 4.4, (t, k, u) => (u > 0.6 ? m[1] : u < -0.8 ? m[2] : k < -0.6 ? m[1] : k > 0.65 ? m[2] : m[0]));
-  diag(p, 11.5, 5, -2.8, -2.2, 3.2, () => '#e0b24a'); p.p(13, 2, '#ffffff'); };
-const wand = (p, m) => { p.line(1, 14, 9, 6, wd[0]); p.line(2, 14, 10, 6, wd[1]);
-  diag(p, 12, 4.5, -2.2, 3.4, (t) => 2.6 * Math.sin(Math.PI * (0.1 + t * 0.8)), (t, k, u) => (u > 1 ? m[1] : k < -0.4 ? m[1] : k > 0.45 ? m[2] : m[0])); p.p(13, 2, '#ffffff'); };
-const rapier = (p, m) => { p.line(4, 12, 14, 2, m[0]); p.line(5, 12, 15, 2, m[1]); p.line(2, 14, 5, 11, '#6a4528'); p.r(3, 9, 5, 1, m[2]); p.line(3, 10, 7, 12, m[2]); p.p(15, 1, '#ffffff'); };
+const hammer = (p, m) => { shaft(p, 7);
+  diag(p, 9.5, 6.5, -2.3, 2.3, 4.7, (t, k, u) => (u > 1.3 ? m[1] : u < -1.3 ? m[2] : k < -0.55 ? m[1] : k > 0.55 ? m[2] : m[0]));
+  diag(p, 9.5, 6.5, -3.1, -2.3, 3.2, () => '#e0b24a'); p.p(11, 4, '#ffffff'); };
+const wand = (p, m) => { shaft(p, 9);
+  diag(p, 11.5, 4.5, -2.2, 3.4, (t) => 2.6 * Math.sin(Math.PI * (0.1 + t * 0.8)), (t, k, u) => (u > 1 ? m[1] : k < -0.45 ? m[1] : k > 0.45 ? m[2] : m[0])); p.p(12, 3, '#ffffff'); };
+const rapier = (p, m) => { for (let x = 2; x <= 4; x++) p.p(x, 15 - x, x % 2 ? wd[0] : wd[1]); p.p(1, 14, '#e0b24a');
+  for (let k = -2; k <= 2; k++) p.p(5 + k, 10 + k, '#e0b24a'); p.p(6, 10, m[2]); p.p(5, 11, m[2]); p.p(6, 9, m[2]); p.p(4, 10, m[2]);   // a swept hand guard
+  for (let x = 6; x <= 14; x++) p.p(x, 15 - x, x % 2 ? m[0] : m[1]); p.p(15, 0, '#ffffff'); };
 const pistol = (p, m) => { p.r(2, 5, 10, 3, m[0]); p.r(2, 5, 10, 1, m[1]); p.r(11, 4, 3, 5, m[2]); p.r(3, 8, 3, 6, wd[0]); p.r(3, 8, 1, 6, wd[1]); p.r(7, 8, 2, 3, m[2]); p.p(13, 4, '#ffffff'); p.r(6, 3, 2, 2, m[2]); };
 const robe = (p, c) => { const d = shade(c, 0.6), l = tint(c, '#ffffff', 0.35); p.r(4, 2, 8, 3, d); p.r(5, 2, 6, 1, l); p.r(3, 5, 10, 9, c); p.r(3, 5, 10, 1, l); p.r(1, 5, 3, 8, c); p.r(12, 5, 3, 8, c); p.r(7, 5, 2, 9, d); p.r(2, 13, 12, 1, d); p.r(6, 8, 4, 1, '#e0b24a'); p.p(8, 3, '#ffffff'); };
 
@@ -49,8 +55,8 @@ const RINGGEM = { signet: '#ff5a4a', wardring: '#5a9aff', sagering: '#c07aff', g
 const ringIcon = (p, c, kind, m) => { const g = RINGGEM[kind] ?? '#ffe36b'; p.disc(8, 10, 5.5, shade(c, 0.55)); p.disc(8, 10, 4.5, c); p.disc(8, 10, 2.6, '#14101c'); p.r(5, 7, 3, 1, tint(c, '#ffffff', 0.6)); p.r(6, 3, 4, 4, shade(g, 0.5)); p.r(7, 2, 2, 5, g); p.r(6, 4, 4, 2, g); p.p(7, 3, tint(g, '#ffffff', 0.7)); p.p(8, 2, '#ffffff'); if (kind === 'signet') p.r(7, 4, 2, 1, '#ffd0c0'); void m; };
 const oreIcon = (p, a, b, g) => { p.ell(8, 9, 6.5, 5.5, a); p.ell(7, 8, 4.5, 3.5, b); for (const [x, y] of [[4, 7], [9, 5], [10, 10], [6, 11]]) { p.r(x, y, 2, 2, g); p.p(x, y, '#ffffff'); } };
 const ingotIcon = (p, a, l, d) => { p.r(2, 7, 12, 6, a); p.r(2, 7, 12, 2, l); p.r(2, 12, 12, 1, d); p.r(4, 5, 8, 2, a); p.p(5, 8, '#ffffff'); };
-const mace = (p, m) => { p.line(1, 14, 8, 7, wd[0]); p.line(2, 14, 9, 7, wd[1]); p.disc(11, 5.5, 3.5, m[0]); p.disc(10, 4.5, 2, m[1]); for (const [x, y] of [[11, 0], [15, 5], [11, 9], [7, 5]]) p.p(x, y, m[2]); p.p(10, 3, '#ffffff'); };
-const staff = (p, c) => { p.line(1, 14, 9, 6, wd[0]); p.line(2, 14, 10, 6, wd[1]); p.disc(12, 4.5, 3, c); p.disc(11, 3.5, 1.5, tint(c, '#ffffff', 0.6)); p.p(14, 1, '#ffffff'); p.p(15, 6, c); };
+const mace = (p, m) => { shaft(p, 7); p.disc(10.5, 5.5, 3.3, m[0]); p.disc(9.5, 4.5, 1.8, m[1]); for (const [x, y] of [[7, 3], [12, 8], [9, 1], [14, 6], [13, 2]]) p.p(x, y, m[2]); p.p(9, 4, '#ffffff'); };
+const staff = (p, c) => { shaft(p, 8); diag(p, 11.5, 4.5, -4.6, -3, 2.4, () => '#e0b24a'); p.disc(11.5, 4.5, 3.3, c); p.disc(10.5, 3.5, 1.5, tint(c, '#ffffff', 0.6)); p.p(10, 3, '#ffffff'); };
 const coat = (p, c, kind) => { const d = shade(c, 0.6), l = tint(c, '#ffffff', 0.3); p.r(3, 3, 10, 11, c); p.r(3, 3, 10, 1, l); p.r(1, 3, 3, 7, c); p.r(12, 3, 3, 7, c); p.r(1, 3, 3, 1, l); p.r(12, 3, 3, 1, l); p.r(6, 2, 4, 3, shade(c, 0.5)); p.r(7, 3, 2, 8, d); p.r(3, 11, 10, 1, '#3a2a20'); p.p(8, 11, '#e0b24a');
   if (kind === 'mail') for (let y = 5; y < 11; y += 2) for (let x = 4; x < 12; x += 2) p.p(x + (y % 4 ? 1 : 0), y, l);
   if (kind === 'plate') { p.r(0, 2, 4, 3, l); p.r(12, 2, 4, 3, l); p.r(5, 5, 6, 5, l); p.r(7, 6, 2, 3, d); } };
@@ -113,7 +119,15 @@ const tomeIcon = (p, sid) => { const c = CLASSES[SKILLS[sid].cls[0]]?.color ?? '
 for (const t of EXP_TIERS) { ITEM[t.ore] = (p) => oreIcon(p, t.ore3[0], t.ore3[1], t.ore3[2]); ITEM[t.ing] = (p) => ingotIcon(p, t.metal[0], t.metal[1], t.metal[2]); }
 for (const p of EXP_POTIONS) ITEM[p.id] = (q) => bottle(q, p.color, !!p.pct && p.pct >= 0.45 || !!p.mpPct && p.mpPct >= 0.5);
 export function itemIcon(id) {
-  return memo(`i:${id}`, () => sprite(16, 16, (p) => { const it = ITEMS[id]; if (!it) return p.r(4, 4, 8, 8, '#888'); (ITEM[id] ?? (it.skill ? (q) => tomeIcon(q, it.skill) : it.k === 'gear' ? gearIcon(id) : (q) => bottle(q, '#888')))(p); }));
+  return memo(`i:${id}`, () => {
+    const draw = (p) => { const it = ITEMS[id]; if (!it) return p.r(4, 4, 8, 8, '#888'); (ITEM[id] ?? (it.skill ? (q) => tomeIcon(q, it.skill) : it.k === 'gear' ? gearIcon(id) : (q) => bottle(q, '#888')))(p); };
+    // every item sits in the middle of its square: measure what was drawn and shift it by whole art pixels so its bounding box is centred
+    const raw = sprite(16, 16, draw, { outline: null }), d = raw.getContext('2d').getImageData(0, 0, 16, 16).data; let x0 = 16, x1 = -1, y0 = 16, y1 = -1;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (d[(y * 16 + x) * 4 + 3] > 0) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return sprite(16, 16, () => {});
+    const dx = Math.floor((16 - (x1 - x0 + 1)) / 2) - x0, dy = Math.floor((16 - (y1 - y0 + 1)) / 2) - y0;
+    return sprite(16, 16, (p, g) => { g.drawImage(raw, dx, dy); });
+  });
 }
 
 // ── skill icons: shape by kind, colour by damage type ───────────────────────

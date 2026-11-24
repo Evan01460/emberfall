@@ -71,7 +71,7 @@ export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeou
     for (let i = 1; i < gc.length; i++) pline(g, gc[i - 1][0], gc[i - 1][1], gc[i][0], gc[i][1], Math.floor(now / 220) % 2 ? '#5aa0d0' : '#4a88b8', 1);
     for (let i = 0; i < path.length; i += 2) if (covered[i]) { const [x, y] = at(path[i]); px(g, x - C, y - C, '#ffd36a', 4, 4); px(g, x - C, y - C, '#fff2b0', C, C); }
     for (const t of trail) if (!t.ok) { const [x, y] = at([t.u, t.v]); px(g, x, y, '#e0502e', C, C); }
-    const pulse = Math.floor(now / 250) % 2, mk = (p, col, txt) => { const [x, y] = at(p); pdisc(g, x, y, 7, '#161022'); pring(g, x, y, armed ? 7 : 8 + pulse * 2, 2, col); drawText(g, txt, x + 1, y - 5, col, { align: 'center', outline: null }); };
+    const pulse = Math.floor(now / 250) % 2, mk = (p, col, txt) => { const [x, y] = at(p); pring(g, x, y, armed ? 6 : 6 + pulse * 2, 2, col); pdisc(g, x, y, 2, col); void txt; };   // a ring on the groove's end: green = start, red = end
     mk(s0, '#8cff9a', 'S'); mk(s1, '#ff9a8c', 'E');
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += 110 * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
     if (ptr && !finished) { const [cx, cy] = at([mx, my]); pline(g, cx, cy, cx + 12, cy - 14, '#14101c', 3); pline(g, cx + 1, cy - 1, cx + 8, cy - 9, '#b8c0ca', 1); pline(g, cx + 8, cy - 9, cx + 13, cy - 15, '#b07a44', 1); }
@@ -82,7 +82,7 @@ export function createRuneScene(itemId, rune, { onProgress, onComplete, onTimeou
     if (armed && !finished) { const left = Math.max(0, (rune.limit - (now - t0)) / 1000); drawText(g, `${left.toFixed(0)}S`, W - 6, 6, left < 5 ? '#ff8a6a' : '#c8bcd8', { align: 'right' }); }
     drawText(g, (rune.name ?? 'RUNE'), W / 2, 102, '#9adfff', { align: 'center' });
     if (finished) drawText(g, p >= 0.95 ? 'RUNE COMPLETE' : 'TIME', W / 2, 118, p >= 0.95 ? '#8cff9a' : '#ff9a8c', { align: 'center' });
-    else if (!armed) { drawText(g, hint > 0 ? 'PRESS GREEN S FIRST' : 'HOLD ON GREEN S', W / 2, 118, hint > 0 ? '#ff9a8c' : '#ffe9a8', { align: 'center' }); hint = Math.max(0, hint - dt); }
+    else if (!armed) { drawText(g, hint > 0 ? 'PRESS THE GREEN RING' : 'HOLD ON GREEN RING', W / 2, 118, hint > 0 ? '#ff9a8c' : '#ffe9a8', { align: 'center' }); hint = Math.max(0, hint - dt); }
     else if (!pressed) drawText(g, 'FOLLOW THE GLOW', W / 2, 118, '#ffe9a8', { align: 'center' });
   }
   let last = performance.now();
@@ -148,8 +148,8 @@ export function createRevealScene(itemId, res) {
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; if (r.d > 0) { r.d -= dt * 1000; continue; } r.r += 80 * dt; if (r.r > 70) { rings.splice(i, 1); continue; } pring(g, cx, 20, r.r, 2, r.r < 40 ? '#ffe9a8' : '#a8884a'); }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.age += dt; if (s.age > s.life) { sparks.splice(i, 1); continue; } s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt; spark(g, s); }
     if (!res.ok && settle > 0) { pline(g, cx - 8, 8, cx - 2, 20, '#0c0814', 1); pline(g, cx - 2, 20, cx - 8, 32, '#0c0814', 1); pline(g, cx - 2, 20, cx + 8, 28, '#0c0814', 1); }
-    if (settle >= 1) { drawText(g, res.ok ? `+${res.to}` : 'FAILED', cx, 70, res.ok ? col : '#ff9a8c', { scale: 2, align: 'center' }); if (!res.ok) drawText(g, res.dropped ? `DOWN TO +${res.to}` : 'NO CHANGE', cx, 93, '#c8bcd8', { align: 'center' }); }
-    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) drawTag(g, res.steps === 2 ? 'CRITICAL FORGE X2' : 'CRITICAL FORGE X3', cx, 93 + (Math.floor(t / 160) % 2) * 2, res.steps === 3 ? '#ff9aff' : '#ffe36b', { scale: 1 });
+    if (settle >= 1) { drawTag(g, res.ok ? `+${res.to}` : 'FAILED', cx, 90, res.ok ? col : '#ff9a8c', { scale: 1 }); if (!res.ok) drawText(g, res.dropped ? `DOWN TO +${res.to}` : 'NO CHANGE', cx, 95, '#c8bcd8', { align: 'center' }); }
+    if (res.ok && (res.steps ?? 1) > 1 && settle >= 1) drawTag(g, res.steps === 2 ? 'CRITICAL FORGE X2' : 'CRITICAL FORGE X3', cx, 105, res.steps === 3 ? '#ff9aff' : '#ffe36b', { scale: 1 });
     // the chance bar and the roll marker
     const bx = 14, bw = 148, by = 128; px(g, bx - 2, by - 2, '#3a2d52', bw + 4, 14); px(g, bx, by, '#5a2a30', bw, 10); px(g, bx, by, '#3d9a4e', q(bw * res.chance), 10); px(g, bx, by, '#8cffa0', q(bw * res.chance), C);
     for (let i = 1; i < 10; i++) px(g, bx + q((bw * i) / 10), by + 6, 'rgba(0,0,0,.4)', C, 4);
